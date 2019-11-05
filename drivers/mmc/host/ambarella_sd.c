@@ -46,6 +46,8 @@
 #include <plat/rct.h>
 #include <plat/sd.h>
 
+#include <linux/pm.h>
+#include <linux/pm_runtime.h>
 /* ==========================================================================*/
 struct ambarella_sd_dma_desc {
 	u16 attr;
@@ -1484,10 +1486,16 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 
 	setup_timer(&host->timer, ambarella_sd_timer_timeout, (unsigned long)host);
 
+	pm_runtime_get_noresume(&pdev->dev);
+	pm_runtime_set_active(&pdev->dev);
+	pm_runtime_set_autosuspend_delay(&pdev->dev, 50);
+	pm_runtime_use_autosuspend(&pdev->dev);
+	pm_runtime_enable(&pdev->dev);
+
 	rval = mmc_add_host(mmc);
 	if (rval < 0) {
 		dev_err(&pdev->dev, "Can't add mmc host!\n");
-		goto out1;
+		goto out2;
 	}
 
 	rval = devm_request_irq(&pdev->dev, host->irq, ambarella_sd_irq,
@@ -1495,7 +1503,7 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 				dev_name(&pdev->dev), host);
 	if (rval < 0) {
 		dev_err(&pdev->dev, "Can't Request IRQ%u!\n", host->irq);
-		goto out2;
+		goto out3;
 	}
 
 	ambarella_sd_add_debugfs(host);
@@ -1503,10 +1511,18 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, host);
 	dev_info(&pdev->dev, "Max frequency is %uHz\n", mmc->f_max);
 
+	pm_runtime_mark_last_busy(&pdev->dev);
+	pm_runtime_put_autosuspend(&pdev->dev);
+
 	return 0;
 
-out2:
+out3:
 	mmc_remove_host(mmc);
+out2:
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_put_noidle(&pdev->dev);
+
+	del_timer_sync(&host->timer);
 out1:
 	dma_free_coherent(&pdev->dev, PAGE_SIZE, host->desc_virt, host->desc_phys);
 out0:
@@ -1517,6 +1533,8 @@ out0:
 static int ambarella_sd_remove(struct platform_device *pdev)
 {
 	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
+
+	pm_runtime_get_sync(&pdev->dev);
 
 	ambarella_sd_remove_debugfs(host);
 
@@ -1529,6 +1547,9 @@ static int ambarella_sd_remove(struct platform_device *pdev)
 	dma_free_coherent(&pdev->dev, PAGE_SIZE, host->desc_virt, host->desc_phys);
 
 	mmc_free_host(host->mmc);
+
+	pm_runtime_disable(&pdev->dev);
+	pm_runtime_put_noidle(&pdev->dev);
 
 	dev_info(&pdev->dev, "Remove Ambarella SD/MMC Host Controller.\n");
 
@@ -1583,6 +1604,24 @@ static int ambarella_sd_resume(struct platform_device *pdev)
 
 	return 0;
 }
+
+static int ambarella_sd_runtime_suspend(struct device *dev)
+{
+	struct ambarella_mmc_host *host =  dev_get_drvdata(dev);
+
+	ambarella_sd_switch_clk(host, false);
+
+	return 0;
+}
+
+static int ambarella_sd_runtime_resume(struct device *dev)
+{
+	struct ambarella_mmc_host *host =  dev_get_drvdata(dev);
+
+	ambarella_sd_switch_clk(host, true);
+
+	return 0;
+}
 #endif
 
 static const struct of_device_id ambarella_mmc_dt_ids[] = {
@@ -1590,6 +1629,12 @@ static const struct of_device_id ambarella_mmc_dt_ids[] = {
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, ambarella_mmc_dt_ids);
+
+static const struct dev_pm_ops ambarella_mmc_pm_ops = {
+	SET_RUNTIME_PM_OPS(ambarella_sd_runtime_suspend,
+			   ambarella_sd_runtime_resume,
+			   NULL)
+};
 
 static struct platform_driver ambarella_sd_driver = {
 	.probe		= ambarella_sd_probe,
@@ -1601,6 +1646,7 @@ static struct platform_driver ambarella_sd_driver = {
 	.driver		= {
 		.name	= "ambarella-sd",
 		.of_match_table = ambarella_mmc_dt_ids,
+		.pm = &ambarella_mmc_pm_ops,
 	},
 };
 
