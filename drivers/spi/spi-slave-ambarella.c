@@ -38,6 +38,8 @@
 #include <linux/poll.h>
 #include <linux/pinctrl/consumer.h>
 
+#include <linux/seq_file.h>
+#include <linux/proc_fs.h>
 #include <linux/kfifo.h>
 #include <linux/delay.h>
 #include <asm/uaccess.h>
@@ -131,8 +133,11 @@ struct ambarella_slavespi {
 	u32 rx_dma_size;
 	u32 tx_dma_size;
 
-	u32 stat_rxov_cnt;
-	u32 stat_txe_cnt;
+	u32 stat_rx_cnt;	/* packets */
+	u32 stat_rx_drop;	/* bytes */
+	u32 stat_rxov_cnt;	/* bad packet */
+	u32 stat_txe_cnt;	/* shift packet */
+	struct proc_dir_entry *stat_proc;
 
 	struct kfifo	w_fifo;
 	struct kfifo	r_fifo;
@@ -261,6 +266,7 @@ static void ambarella_rx_dma_callback(void *dma_param)
 	}
 
 	if (status == DMA_COMPLETE) {
+		priv->stat_rx_cnt++;
 		avail_size = priv->rx_dma_size - state.residue;
 		/* let cpu own this buf to read data */
 		dma_sync_single_for_cpu(priv->pltdev, priv->rx_dma_phys, priv->rx_dma_size, DMA_FROM_DEVICE);
@@ -272,6 +278,7 @@ static void ambarella_rx_dma_callback(void *dma_param)
 
 	if (avail_size > copied) {
 		printk(KERN_DEBUG "slavespi: rx dma drop %u bytes \n", avail_size - copied);
+		priv->stat_rx_drop += (avail_size - copied);
 	}
 }
 
@@ -566,6 +573,7 @@ void slavespi_drain_rxfifo(struct ambarella_slavespi *priv)
 	len = kfifo_in(&priv->r_fifo, priv->r_buf, rxflr);
 	if (rxflr > len) {
 		printk(KERN_DEBUG "spislave: recv drop %u bytes \n", (rxflr - len));
+		priv->stat_rx_drop += (rxflr - len);
 	}
 
 	return ;
@@ -587,9 +595,11 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 
 	if ((risr & SPI_RXOIS_MASK) || (risr & SPI_TXOIS_MASK)) {
 		if (risr & SPI_RXOIS_MASK) {
+			readl(priv->regbase + SPI_RXOICR_OFFSET);
 			printk(KERN_ALERT "slavespi: speed too fast, rx-overflow \n");
 		}
 		if (risr & SPI_TXOIS_MASK) {
+			readl(priv->regbase + SPI_TXOICR_OFFSET);
 			printk(KERN_ALERT "slavespi: speed too fast, tx-overflow \n");
 		}
 
@@ -892,10 +902,12 @@ static int slavespi_release(struct inode *inode, struct file *filp)
 	printk("slavespi: drop with tx_inbuf: %u bytes, rx_inbuf:%u bytes \n",
 		tx_len, rx_len);
 
-	printk("slavespi: txe: %u , rx_ovflow: %u \n", priv->stat_txe_cnt, priv->stat_rxov_cnt);
+	printk("slavespi: txe: %u , rx_cnt: %u rx_ovflow: %u \n",
+			priv->stat_txe_cnt, priv->stat_rx_cnt, priv->stat_rxov_cnt);
 
 	priv->stat_txe_cnt = 0;
 	priv->stat_rxov_cnt = 0;
+	priv->stat_rx_cnt = 0;
 
 	return 0;
 }
@@ -927,6 +939,48 @@ static struct file_operations slavespi_fops = {
 	.unlocked_ioctl	= slavespi_ioctl,
 	.release	= slavespi_release,
 	.poll		= slavespi_poll,
+};
+
+
+static int slavespi_proc_show(struct seq_file *m, void *v)
+{
+	struct ambarella_slavespi *priv = m->private;
+
+	seq_printf(m, "---show slavespi stat, write to clear ---\n");
+
+	seq_printf(m, "slavespi->txe: %u \n", priv->stat_txe_cnt);
+	seq_printf(m, "slavespi->rx_ov: %u \n", priv->stat_rxov_cnt);
+	seq_printf(m, "slavespi->rx: %u \n", priv->stat_rx_cnt);
+	seq_printf(m, "slavespi->rx_drop_bytes: %u \n", priv->stat_rx_drop);
+
+	return 0;
+}
+
+static ssize_t slavespi_proc_write(struct file *file,
+	const char __user *buffer, size_t count, loff_t *ppos)
+{
+	struct ambarella_slavespi *priv = PDE_DATA(file_inode(file));
+
+	priv->stat_rxov_cnt = 0;
+	priv->stat_rx_cnt = 0;
+	priv->stat_txe_cnt = 0;
+	priv->stat_rx_drop = 0;
+
+	printk(KERN_ALERT "slavespi: all stat clear done \n");
+
+	return count;
+}
+
+static int slavespi_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, slavespi_proc_show, PDE_DATA(inode));
+}
+
+static const struct file_operations slavespi_proc_ops = {
+	.open = slavespi_proc_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.write = slavespi_proc_write,
 };
 
 static int ambarella_slavespi_probe(struct platform_device *pdev)
@@ -1067,6 +1121,12 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 			printk(KERN_ALERT "slavespi: Request spi interrupt error \n");
 			goto ambarella_slavespi_probe_exit;
 		}
+	}
+
+	priv->stat_proc = proc_create_data("slavespi", S_IRUGO|S_IWUSR, NULL,
+			&slavespi_proc_ops, priv);
+	if (!priv->stat_proc) {
+		printk(KERN_ALERT "slavespi without proc supported \n");
 	}
 
 	platform_set_drvdata(pdev, priv);
