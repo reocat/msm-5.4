@@ -274,10 +274,13 @@ static void ambarella_rx_dma_callback(void *dma_param)
 		ambarella_slavespi_start_rx_dma(priv);		/* re-start rx-dma again */
 	}
 
+#if 0
+	priv->wakeup_mask |= CAN_WAKEUP_POLL;
+	tasklet_schedule(&priv->wakeup_helper);
+#else
 	wake_up_interruptible(&priv->wq_poll);
-
+#endif
 	if (avail_size > copied) {
-		printk(KERN_DEBUG "slavespi: rx dma drop %u bytes \n", avail_size - copied);
 		priv->stat_rx_drop += (avail_size - copied);
 	}
 }
@@ -356,23 +359,18 @@ static void ambarella_tx_dma_callback(void *dma_param)
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		if (w_fifo_len > 0) {
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
-			spin_lock(&priv->w_buf_lock);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
-			spin_unlock(&priv->w_buf_lock);
 			priv->tx_dma_size = copied;
-		} else { /* tranfer fixed-len=64 dummy byte */
-			memset(priv->tx_dma_buf, 0x00, 64);
-			priv->tx_dma_size = 64;
-			priv->tx_dma_inprocess = 0;	/* you can over write txdma buf */
+			ambarella_slavespi_start_tx_dma(priv);
 		}
-		ambarella_slavespi_start_tx_dma(priv);
 	}
 
+#if 0
+	priv->wakeup_mask |= CAN_WAKEUP_POLL;
+	tasklet_schedule(&priv->wakeup_helper);
+#else
 	wake_up_interruptible(&priv->wq_poll);
-
-	if (copied != w_fifo_size) {
-		printk(KERN_DEBUG "spislave: wfifo output bytes mismatch \n");
-	}
+#endif
 }
 
 void ambarella_slavespi_start_tx_dma(struct ambarella_slavespi *priv)
@@ -418,16 +416,16 @@ static void wakeup_tasklet(unsigned long data)
 	priv->wakeup_mask = 0;
 	spin_unlock_irqrestore(&priv->wakeup_lock, flags);
 
+	if (mask & CAN_WAKEUP_POLL) {
+		wake_up_interruptible(&priv->wq_poll);
+	}
+
 	if (mask & CAN_WAKEUP_BLOCK_W) {
 		wake_up_interruptible(&priv->wq_whead);
 	}
 
 	if (mask & CAN_WAKEUP_BLOCK_R) {
 		wake_up_interruptible(&priv->wq_rhead);
-	}
-
-	if (mask & CAN_WAKEUP_POLL) {
-		wake_up_interruptible(&priv->wq_poll);
 	}
 }
 
@@ -479,7 +477,7 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 		ctrl0_reg.s.rx_lsb = 0;
 	}
 
-	ctrl0_reg.s.byte_ws = 0;		/* byte-wise fifo configure */
+	ctrl0_reg.s.byte_ws = 1;		/* byte-wise fifo configure */
 	if (priv->bpw > 8) {
 		ctrl0_reg.s.byte_ws = 0;	/* bit-per-word >8 bits, no byte_wise */
 	}
@@ -572,7 +570,6 @@ void slavespi_drain_rxfifo(struct ambarella_slavespi *priv)
 
 	len = kfifo_in(&priv->r_fifo, priv->r_buf, rxflr);
 	if (rxflr > len) {
-		printk(KERN_DEBUG "spislave: recv drop %u bytes \n", (rxflr - len));
 		priv->stat_rx_drop += (rxflr - len);
 	}
 
@@ -723,12 +720,18 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 	}
 
 	if (priv->dma_used) {
-		spin_lock_irqsave(&priv->w_buf_lock, flags);
 		if (priv->tx_dma_inprocess) {
-			spin_unlock_irqrestore(&priv->w_buf_lock, flags);
 			return copied;
 		}
-		priv->tx_dma_inprocess = 1;
+
+		spin_lock(&priv->w_buf_lock);
+		if (priv->tx_dma_inprocess) {
+			spin_unlock(&priv->w_buf_lock);
+			return copied;
+		} else {
+			priv->tx_dma_inprocess = 1;
+			spin_unlock(&priv->w_buf_lock);
+		}
 
 		w_fifo_len = kfifo_len(&priv->w_fifo);
 		if (priv->bpw > 8) {
@@ -737,17 +740,11 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 		dma_copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
-		spin_unlock_irqrestore(&priv->w_buf_lock, flags);
-
 		if (dma_copied > 0) {
 			priv->tx_dma_size = dma_copied;
 			ambarella_slavespi_start_tx_dma(priv);
 		} else {
 			priv->tx_dma_inprocess = 0;	/* can over write dma buf */
-		}
-
-		if (dma_copied != w_fifo_size) {
-			printk(KERN_DEBUG "spislave: write mis-match \n");
 		}
 
 		return copied;
@@ -893,21 +890,22 @@ static int slavespi_release(struct inode *inode, struct file *filp)
 
 	tx_len = kfifo_len(&priv->w_fifo);
 	rx_len = kfifo_len(&priv->r_fifo);
-
 	kfifo_reset(&priv->w_fifo);
 	kfifo_reset(&priv->r_fifo);
 
-	atomic_inc(&priv->open_once);
-
-	printk("slavespi: drop with tx_inbuf: %u bytes, rx_inbuf:%u bytes \n",
-		tx_len, rx_len);
-
-	printk("slavespi: txe: %u , rx_cnt: %u rx_ovflow: %u \n",
-			priv->stat_txe_cnt, priv->stat_rx_cnt, priv->stat_rxov_cnt);
+	printk("slavespi->tx_buf: %u bytes, slavespi->rx_buf: %u bytes \n",
+			tx_len, rx_len);
+	printk("slavespi->txe: %u packet, rx_cnt: %u packet \n",
+			priv->stat_txe_cnt, priv->stat_rx_cnt);
+	printk("slavespi->rxov: %u packet, rx_drop: %u bytes \n",
+			priv->stat_rxov_cnt, priv->stat_rx_drop);
 
 	priv->stat_txe_cnt = 0;
 	priv->stat_rxov_cnt = 0;
 	priv->stat_rx_cnt = 0;
+	priv->stat_rx_drop = 0;
+
+	atomic_inc(&priv->open_once);
 
 	return 0;
 }
