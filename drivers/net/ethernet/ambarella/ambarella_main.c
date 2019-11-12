@@ -331,22 +331,17 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	writel(val, lp->regbase + ETH_DMA_BUS_MODE_OFFSET);
 	writel(0, lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
 
-	if(lp->ndev->mtu > 4000) {
-		val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
-			ETH_DMA_OPMODE_FUF;
-	} else {
-		val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
-			ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF | ETH_DMA_OPMODE_RSF;
-	}
+	val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
+		ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF | ETH_DMA_OPMODE_RSF;
 
 	writel(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
 
-	if(lp->ndev->mtu > ETH_DATA_LEN)
-		writel((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE | ETH_MAC_CFG_JE | ETH_MAC_CFG_JD),
-			lp->regbase + ETH_MAC_CFG_OFFSET);
-	else
-		writel((ETH_MAC_CFG_TE | ETH_MAC_CFG_RE),
-			lp->regbase + ETH_MAC_CFG_OFFSET);
+	writel(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE, lp->regbase + ETH_MAC_CFG_OFFSET);
+
+	if (lp->ndev->mtu > 1500)
+		setbitsl(ETH_MAC_CFG_2K, lp->regbase + ETH_MAC_CFG_OFFSET);
+	if (lp->ndev->mtu > 2000)
+		setbitsl(ETH_MAC_CFG_JE, lp->regbase + ETH_MAC_CFG_OFFSET);
 
 	val = (0x3f << 1) | (0xff << 16);
 	writel(val, lp->regbase + ETH_DMA_AXI_BUS_MODE_OFFSET);
@@ -1562,46 +1557,17 @@ drop:
 
 static int ambeth_change_mtu(struct net_device *dev, int new_mtu)
 {
-#if defined(CONFIG_NET_VENDOR_AMBARELLA_JUMBO_FRAME)
-	struct ambeth_info *lp = netdev_priv(dev);
-	u32 val = 0;
+	struct ambeth_info *priv = netdev_priv(dev);
 
-	if(new_mtu < 68 || new_mtu > AMBETH_RX_COPYBREAK ) {
-		return  -EINVAL;
-	} else if(new_mtu > ETH_DATA_LEN) {
-		napi_disable(&lp->napi);
-		val = readl(lp->regbase + ETH_MAC_CFG_OFFSET);
-		val |= ETH_MAC_CFG_JE | ETH_MAC_CFG_JD;
-		writel(val, lp->regbase + ETH_MAC_CFG_OFFSET);
-		if(new_mtu > 4000) {
-			val = readl(lp->regbase + ETH_DMA_OPMODE_OFFSET);
-			val &= ~(ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF);
-			writel(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-		} else {
-			val = readl(lp->regbase + ETH_DMA_OPMODE_OFFSET);
-			val |= (ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF);
-			writel(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-		}
-
-		napi_enable(&lp->napi);
-	} else {
-		napi_disable(&lp->napi);
-		val = readl(lp->regbase + ETH_MAC_CFG_OFFSET);
-		val &= ~(ETH_MAC_CFG_JE | ETH_MAC_CFG_JD);
-		writel(val, lp->regbase + ETH_MAC_CFG_OFFSET);
-
-		val = readl(lp->regbase + ETH_DMA_OPMODE_OFFSET);
-		val |= ETH_DMA_OPMODE_RSF | ETH_DMA_OPMODE_TSF;
-		writel(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
-		napi_enable(&lp->napi);
+	if (netif_running(dev)) {
+		netdev_err(priv->ndev, "must be stopped to change its MTU\n");
+		return -EBUSY;
 	}
+
 	dev->mtu = new_mtu;
+
 	netdev_update_features(dev);
-#else
-	if (new_mtu < 68 || new_mtu > ETH_DATA_LEN)
-		return -EINVAL;
-	dev->mtu = new_mtu;
-#endif
+
 	return 0;
 }
 
@@ -2535,6 +2501,9 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
         ndev->ethtool_ops = &ambeth_ethtool_ops;
+
+	/* Refer to Stmicro MAC driver.It is HW specific max */
+	ndev->max_mtu = SKB_MAX_HEAD(NET_SKB_PAD + NET_IP_ALIGN);
 
 	ret_val = register_netdev(ndev);
 	if (ret_val) {

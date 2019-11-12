@@ -65,6 +65,9 @@
 				AMBETH_TXDMA_INTEN)
 
 /*------------------------------------------------------------------------*/
+#define setbitsl(v, a)   (writel(((v) | readl(a)), (a)))
+#define clrbitsl(v, a)   (writel(((~(v)) & readl(a)), (a)))
+
 
 struct ambeth_desc {
 	u32				status;
