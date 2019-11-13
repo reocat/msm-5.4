@@ -127,6 +127,10 @@ struct nand_flash_dev nand_flash_ids[] = {
 		{ .id = {0xc8, 0xb2, 0x48} },
 		SZ_2K, SZ_256, SZ_128K, LP_OPTIONS, 3, 128},
 
+	{"GD5F2GQ5UE SPINAND 2Gb 3.3V 8-bit",
+		{ .id = {0xc8, 0x52, 0x00, 0x00, 0x00} },
+		SZ_2K, SZ_256, SZ_128K, 0, 2, 64},
+
 	{"HYF1GQ4UBACAE SPINAND 1Gb 3.3V 8-bit",
 		{ .id = {0xc9, 0x59, 0x1b} },
 		SZ_2K, SZ_128, SZ_128K, LP_OPTIONS, 3, 128},
