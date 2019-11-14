@@ -1223,6 +1223,11 @@ static int ambarella_slavespi_remove(struct platform_device *pdev)
 		priv->devno = 0;
 	}
 
+	if (priv->stat_proc) {
+		remove_proc_entry("slavespi", NULL);
+		priv->stat_proc = NULL;
+	}
+
 	/* shutdown controller */
 	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
 	return 0;
