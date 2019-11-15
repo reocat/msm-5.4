@@ -165,6 +165,33 @@ void ambarella_spislave_reset(struct ambarella_slavespi *priv)
 	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
 }
 
+static void ambarella_slave_fill_txfifo(struct ambarella_slavespi *priv)
+{
+	u32 i = 0;
+	u32 tx_len = 0;
+	u32 tx_wfifo_len = 0;
+	u32 tx_hwfifo_free = 0;
+
+	tx_wfifo_len = kfifo_len(&priv->w_fifo);
+	tx_hwfifo_free = priv->fifo_depth - readl_relaxed(priv->regbase + SPI_TXFLR_OFFSET);
+	if (priv->bpw > 8) {
+		tx_hwfifo_free = tx_hwfifo_free * 2;
+	}
+
+	tx_len = kfifo_out(&priv->w_fifo, priv->w_buf, min_t(u32, tx_wfifo_len, tx_hwfifo_free));
+	if (priv->bpw > 8) {
+		tx_len = tx_len >> 1;
+	}
+
+	for (i = 0; i < tx_len; i++) {
+		if (priv->bpw > 8) {
+			writel(((u16 *)priv->w_buf)[i], priv->regbase + SPI_DR_OFFSET);
+		} else {
+			writel(((u8 *)priv->w_buf)[i], priv->regbase + SPI_DR_OFFSET);
+		}
+	}
+}
+
 static int
 ambarella_spislave_dma_allocate(struct ambarella_slavespi *priv,
 	bool dma_to_memory)
@@ -356,14 +383,24 @@ static void ambarella_tx_dma_callback(void *dma_param)
 		if (priv->bpw > 8) {
 			w_fifo_len &= SPI_ALIGN_2_MASK;
 		}
-		w_fifo_len &= SPI_DMA_ALIGN_MASK;
-		if (w_fifo_len > 0) {
+
+		if ((w_fifo_len & SPI_DMA_ALIGN_MASK) > 0) {	/* block data using dma to transfer */
+			w_fifo_len &= SPI_DMA_ALIGN_MASK;
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 			priv->tx_dma_size = copied;
 			ambarella_slavespi_start_tx_dma(priv);
+			goto out_tx;
 		}
+
+		if (w_fifo_len > 0) {	/* non-block data using pio to transfer */
+			ambarella_slave_fill_txfifo(priv);
+		}
+
+		priv->tx_dma_inprocess = 0;	/* can over-write dma buf */
 	}
+
+out_tx:
 
 #if 0
 	priv->wakeup_mask |= CAN_WAKEUP_POLL;
@@ -578,12 +615,9 @@ void slavespi_drain_rxfifo(struct ambarella_slavespi *priv)
 
 static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 {
-	int i = 0;
 	u32 isr = 0;
 	u32 imr = 0;
 	u32 risr = 0;
-	u32 data_len = 0;
-	u32 hw_free_len = 0;
 
 	struct ambarella_slavespi *priv	= dev_data;
 
@@ -615,23 +649,7 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 			writel(imr, priv->regbase + SPI_IMR_OFFSET);
 			priv->wakeup_mask |= CAN_WAKEUP_BLOCK_W | CAN_WAKEUP_POLL;
 		} else {
-			hw_free_len = priv->fifo_depth - readl(priv->regbase + SPI_TXFLR_OFFSET);
-			if (priv->bpw > 8) {
-				hw_free_len *= 2; /* must fill 2*n bytes */
-			}
-			data_len = kfifo_out(&priv->w_fifo, priv->w_buf, hw_free_len);
-			if (priv->bpw > 8) {
-				data_len = data_len >> 1;
-			}
-			for (i = 0; i < data_len; i++) {
-				if (priv->bpw > 8) {
-					writel(((u16 *)priv->w_buf)[i], \
-						priv->regbase + SPI_DR_OFFSET);
-				} else {
-					writel(((u8 *)priv->w_buf)[i], \
-						priv->regbase + SPI_DR_OFFSET);
-				}
-			}
+			ambarella_slave_fill_txfifo(priv);
 			priv->wakeup_mask |= CAN_WAKEUP_POLL;
 			if (kfifo_len(&priv->w_fifo) < (FIFO_DEPTH_MULTI * priv->fifo_depth)) {
 				priv->wakeup_mask |= CAN_WAKEUP_BLOCK_W;
@@ -687,16 +705,10 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 static ssize_t
 slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *f_pos)
 {
-	int i = 0;
 	int err = 0;
 	u32 imr = 0;
-
 	u32 copied = 0;
 	u32 dma_copied = 0;
-
-	u32 txfifo_free = 0;
-	u32 txfifo_len = 0;
-
 	u32 w_fifo_size = 0;
 	u32 w_fifo_len = 0;
 
@@ -752,23 +764,8 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 
 	/* no dma avail, using interrupt pio to transfer */
 	spin_lock_irqsave(&priv->w_buf_lock, flags);
-	txfifo_free = priv->fifo_depth - readl(priv->regbase + SPI_TXFLR_OFFSET);
-	if (priv->bpw > 8) {
-		txfifo_free *= 2;
-	}
-	txfifo_len = kfifo_out(&priv->w_fifo, priv->w_buf, txfifo_free);
-	if (priv->bpw > 8) {
-		txfifo_len >>= 1;
-	}
-	for (i = 0; i < txfifo_len; i++) {
-		if (priv->bpw > 8) {
-			writel(((u16 *)priv->w_buf)[i], \
-				priv->regbase + SPI_DR_OFFSET);
-		} else {
-			writel(((u8 *)priv->w_buf)[i], \
-				priv->regbase + SPI_DR_OFFSET);
-		}
-	}
+
+	ambarella_slave_fill_txfifo(priv);
 
 	imr = readl(priv->regbase + SPI_IMR_OFFSET);
 	writel((imr | SPI_TXEIS_MASK), priv->regbase + SPI_IMR_OFFSET);
@@ -938,7 +935,6 @@ static struct file_operations slavespi_fops = {
 	.release	= slavespi_release,
 	.poll		= slavespi_poll,
 };
-
 
 static int slavespi_proc_show(struct seq_file *m, void *v)
 {
