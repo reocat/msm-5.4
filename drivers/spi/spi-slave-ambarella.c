@@ -94,7 +94,6 @@ struct slavespi_ioctl_args {
 
 /* slavespi controller */
 struct ambarella_slavespi {
-
 	int irq;
 	void __iomem	*regbase;
 
@@ -106,7 +105,6 @@ struct ambarella_slavespi {
 
 	u32	mode;
 	u32	bpw;
-	u32	byte_wise;
 	u32	fifo_depth;
 
 	u32	buf_size;
@@ -148,9 +146,6 @@ struct ambarella_slavespi {
 	spinlock_t wakeup_lock;
 
 	atomic_t open_once;
-	struct mutex um_mtx;
-
-	int timeout;
 	u32 wakeup_mask;	/* bit0: read, bit1: write , bit2 poll */
 	wait_queue_head_t wq_rhead;
 	wait_queue_head_t wq_whead;
@@ -301,12 +296,8 @@ static void ambarella_rx_dma_callback(void *dma_param)
 		ambarella_slavespi_start_rx_dma(priv);		/* re-start rx-dma again */
 	}
 
-#if 0
-	priv->wakeup_mask |= CAN_WAKEUP_POLL;
-	tasklet_schedule(&priv->wakeup_helper);
-#else
 	wake_up_interruptible(&priv->wq_poll);
-#endif
+
 	if (avail_size > copied) {
 		priv->stat_rx_drop += (avail_size - copied);
 	}
@@ -380,34 +371,18 @@ static void ambarella_tx_dma_callback(void *dma_param)
 
 	if (status == DMA_COMPLETE) {
 		w_fifo_len = kfifo_len(&priv->w_fifo);
-		if (priv->bpw > 8) {
-			w_fifo_len &= SPI_ALIGN_2_MASK;
-		}
-
-		if ((w_fifo_len & SPI_DMA_ALIGN_MASK) > 0) {	/* block data using dma to transfer */
+		w_fifo_len &= SPI_DMA_ALIGN_MASK;
+		if (w_fifo_len > 0) {	/* block data using dma to transfer */
 			w_fifo_len &= SPI_DMA_ALIGN_MASK;
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 			priv->tx_dma_size = copied;
 			ambarella_slavespi_start_tx_dma(priv);
-			goto out_tx;
 		}
-
-		if (w_fifo_len > 0) {	/* non-block data using pio to transfer */
-			ambarella_slave_fill_txfifo(priv);
-		}
-
 		priv->tx_dma_inprocess = 0;	/* can over-write dma buf */
 	}
 
-out_tx:
-
-#if 0
-	priv->wakeup_mask |= CAN_WAKEUP_POLL;
-	tasklet_schedule(&priv->wakeup_helper);
-#else
 	wake_up_interruptible(&priv->wq_poll);
-#endif
 }
 
 void ambarella_slavespi_start_tx_dma(struct ambarella_slavespi *priv)
@@ -1021,10 +996,8 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	priv->mode = 3;			/* Attention [only support mode 3!!!], force!!! */
 	priv->bpw = 8;			/* use dts to determinate ? */
 	priv->irq = irq;
-	priv->byte_wise = 0;
 	priv->fifo_depth = SPI_FIFO_DEPTH;
 	priv->buf_size = SLAVE_SPI_BUF_SIZE;
-	priv->timeout = 0;		/* no timeout any more; use poll instead */
 	priv->pltdev = &pdev->dev;
 	priv->dma_used = 0;
 
@@ -1033,7 +1006,6 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	init_waitqueue_head(&priv->wq_whead);
 	init_waitqueue_head(&priv->wq_poll);
 
-	mutex_init(&priv->um_mtx);
 	spin_lock_init(&priv->r_buf_lock);
 	spin_lock_init(&priv->w_buf_lock);
 	spin_lock_init(&priv->wakeup_lock);
