@@ -373,13 +373,13 @@ static void ambarella_tx_dma_callback(void *dma_param)
 		w_fifo_len = kfifo_len(&priv->w_fifo);
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		if (w_fifo_len > 0) {	/* block data using dma to transfer */
-			w_fifo_len &= SPI_DMA_ALIGN_MASK;
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 			priv->tx_dma_size = copied;
 			ambarella_slavespi_start_tx_dma(priv);
+		} else {
+			priv->tx_dma_inprocess = 0;	/* can over-write dma buf */
 		}
-		priv->tx_dma_inprocess = 0;	/* can over-write dma buf */
 	}
 
 	wake_up_interruptible(&priv->wq_poll);
@@ -721,12 +721,11 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		}
 
 		w_fifo_len = kfifo_len(&priv->w_fifo);
-		if (priv->bpw > 8) {
-			w_fifo_len &= SPI_ALIGN_2_MASK;
-		}
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
-		dma_copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
+		if (w_fifo_size > 0) {
+			dma_copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
+		}
 		if (dma_copied > 0) {
 			priv->tx_dma_size = dma_copied;
 			ambarella_slavespi_start_tx_dma(priv);
