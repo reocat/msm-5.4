@@ -952,3 +952,24 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 {
 	return pmd_none(*pmd);
 }
+
+#ifdef CONFIG_MEMORY_HOTPLUG
+int arch_add_memory(int nid, u64 start, u64 size, bool want_memblock)
+{
+	int flags = 0;
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+	int ret;
+
+	__create_pgd_mapping(swapper_pg_dir, start, __phys_to_virt(start), size,
+		PAGE_KERNEL, pgd_pgtable_alloc, flags);
+
+	ret = __add_pages(nid, start_pfn, nr_pages, want_memblock);
+
+	if (ret)
+		pr_warn("%s: Problem encountered in __add_pages() as ret=%d\n",
+			__func__, ret);
+
+	return ret;
+}
+#endif
