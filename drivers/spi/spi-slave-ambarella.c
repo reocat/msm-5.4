@@ -87,6 +87,9 @@
 #define CAN_WAKEUP_BLOCK_W (0x2)
 #define CAN_WAKEUP_POLL (0x4)
 
+/* 1:stream dma memory;    0:corherent dma memory */
+#define USING_STREAM_DMA		(0)
+
 /* export to user-space used by ioctl, not support now */
 #define SPI_SLAVE_MAGIC   (250)
 struct slavespi_ioctl_args {
@@ -205,8 +208,34 @@ ambarella_spislave_dma_allocate(struct ambarella_slavespi *priv,
 		return ret;
 	}
 
+#if (USING_STREAM_DMA > 0)
+	dma_buf = kzalloc(priv->buf_size, GFP_KERNEL);
+	if (!dma_buf) {
+		ret = -ENOMEM;
+		printk(KERN_ALERT "slavespi: alloc memory failed for %s \n",
+					dma_to_memory ? "rx" : "tx");
+		dma_release_channel(dma_chan);
+		dma_chan = NULL;
+		return ret;
+	}
+
+	if (dma_to_memory) {
+		dma_phys = dma_map_single(priv->pltdev, dma_buf, priv->buf_size, DMA_FROM_DEVICE);
+	} else {
+		dma_phys = dma_map_single(priv->pltdev, dma_buf, priv->buf_size, DMA_TO_DEVICE);
+	}
+
+	if (dma_mapping_error(priv->pltdev, dma_phys)) {
+		printk("slavespi: dma streaming mapping error for %s \n",
+					dma_to_memory ? "rx" : "tx");
+		kfree(dma_buf);
+		dma_buf = NULL;
+	}
+#else
 	dma_buf = dma_alloc_coherent(priv->pltdev, priv->buf_size,
 				&dma_phys, GFP_KERNEL);
+#endif
+
 	if (!dma_buf) {
 		printk(KERN_ALERT "slavespi: Not able to allocate the dma buffer\n");
 		dma_release_channel(dma_chan);
@@ -252,7 +281,17 @@ ambarella_spi_slave_dma_free(struct ambarella_slavespi *priv,
 		return;
 	}
 
+#if (USING_STREAM_DMA > 0)
+	if (dma_to_memory) {
+		dma_unmap_single(priv->pltdev, dma_phys, priv->buf_size, DMA_FROM_DEVICE);
+	} else {
+		dma_unmap_single(priv->pltdev, dma_phys, priv->buf_size, DMA_TO_DEVICE);
+	}
+	kfree(dma_buf);
+	dma_buf = NULL;
+#else
 	dma_free_coherent(priv->pltdev, priv->buf_size, dma_buf, dma_phys);
+#endif
 	dma_release_channel(dma_chan);
 }
 
@@ -263,7 +302,6 @@ static int
 ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv);
 
 static void slavespi_drain_rxfifo(struct ambarella_slavespi *priv);
-
 
 static void ambarella_rx_dma_callback(void *dma_param)
 {
@@ -278,20 +316,16 @@ static void ambarella_rx_dma_callback(void *dma_param)
 	risr = readl(priv->regbase + SPI_RISR_OFFSET);
 	if (risr & SPI_RXOIS_MASK) {
 		priv->stat_rxov_cnt++;
-		printk(KERN_DEBUG "slavespi: rx overflow %u \n", priv->stat_rxov_cnt);
 		readl(priv->regbase + SPI_RXOICR_OFFSET);
 	}
 
 	status = dmaengine_tx_status(priv->rx_dma_chan, priv->rx_cookie, &state);
-	if (status == DMA_IN_PROGRESS) {
-		return ;
-	}
-
 	if (status == DMA_COMPLETE) {
 		priv->stat_rx_cnt++;
 		avail_size = priv->rx_dma_size - state.residue;
 		/* let cpu own this buf to read data */
-		dma_sync_single_for_cpu(priv->pltdev, priv->rx_dma_phys, priv->rx_dma_size, DMA_FROM_DEVICE);
+		dma_sync_single_for_cpu(priv->pltdev, priv->rx_dma_phys,
+					priv->rx_dma_size, DMA_FROM_DEVICE);
 		copied = kfifo_in(&priv->r_fifo, priv->rx_dma_buf, avail_size);
 		ambarella_slavespi_start_rx_dma(priv);		/* re-start rx-dma again */
 	}
@@ -321,7 +355,7 @@ static int ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv)
 		rx_cfg.src_maxburst	= 8;
 	} else {
 		rx_cfg.src_addr_width	= DMA_SLAVE_BUSWIDTH_2_BYTES;
-		rx_cfg.src_maxburst	= 4;
+		rx_cfg.src_maxburst	= 8;
 	}
 	rx_cfg.direction = DMA_DEV_TO_MEM;
 	BUG_ON(dmaengine_slave_config(priv->rx_dma_chan, &rx_cfg) < 0);
@@ -337,8 +371,8 @@ static int ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv)
 	priv->rx_dma_desc->callback_param = priv;
 
 	/* let device own this buf to write received data from outside */
-	/*dma_sync_single_for_device(priv->pltdev, priv->rx_dma_phys,
-		priv->rx_dma_size, DMA_FROM_DEVICE);*/
+	dma_sync_single_for_device(priv->pltdev, priv->rx_dma_phys,
+		priv->rx_dma_size, DMA_FROM_DEVICE);
 	priv->rx_cookie = dmaengine_submit(priv->rx_dma_desc);
 	dma_async_issue_pending(priv->rx_dma_chan);
 
@@ -361,19 +395,16 @@ static void ambarella_tx_dma_callback(void *dma_param)
 	sr = readl(priv->regbase + SPI_SR_OFFSET);
 	if (sr & SPI_SR_TXE_MSK) {
 		priv->stat_txe_cnt++;
-		printk(KERN_DEBUG "slavespi: txe %u \n", priv->stat_txe_cnt);
 	}
 
 	status = dmaengine_tx_status(priv->tx_dma_chan, priv->tx_cookie, &state);
-	if (status == DMA_IN_PROGRESS) {
-		return ;
-	}
-
 	if (status == DMA_COMPLETE) {
 		w_fifo_len = kfifo_len(&priv->w_fifo);
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		if (w_fifo_len > 0) {	/* block data using dma to transfer */
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
+			/* let cpu own this buf to write data into dma buf */
+			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys, priv->buf_size, DMA_TO_DEVICE);
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 			priv->tx_dma_size = copied;
 			ambarella_slavespi_start_tx_dma(priv);
@@ -396,7 +427,7 @@ void ambarella_slavespi_start_tx_dma(struct ambarella_slavespi *priv)
 		tx_cfg.dst_maxburst	= 8;
 	} else {
 		tx_cfg.dst_addr_width	= DMA_SLAVE_BUSWIDTH_2_BYTES;
-		tx_cfg.dst_maxburst	= 4;
+		tx_cfg.dst_maxburst	= 8;
 	}
 
 	tx_cfg.direction = DMA_MEM_TO_DEV;
@@ -439,22 +470,6 @@ static void wakeup_tasklet(unsigned long data)
 	if (mask & CAN_WAKEUP_BLOCK_R) {
 		wake_up_interruptible(&priv->wq_rhead);
 	}
-}
-
-int ambarella_slavespi_tx_dummy(struct ambarella_slavespi *priv)
-{
-	u32 i = 0;
-
-	/* fill hardware-txfifo with dummy data */
-	for (i = 0; i < priv->fifo_depth; i++) {
-		writel(0x00, priv->regbase + SPI_DR_OFFSET);
-	}
-
-	/* fill tx-dma buffer with dummy data */
-	memset(priv->tx_dma_buf, 0x00, priv->fifo_depth);
-	priv->tx_dma_size = priv->fifo_depth;
-
-	return 0;
 }
 
 static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
@@ -537,12 +552,6 @@ static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
 	if (priv->dma_used) {
 		priv->rx_dma_inprocess = 1;
 		err = ambarella_slavespi_start_rx_dma(priv);
-#if 0
-		ambarella_slavespi_tx_dummy(priv);
-		priv->tx_dma_inprocess = 0;
-		priv->tx_dma_size = priv->fifo_depth;
-		ambarella_slavespi_start_tx_dma(priv);
-#endif
 		/* finally start hardware */
 		writel(SPI_DMA_TX_EN|SPI_DMA_RX_EN, priv->regbase + SPI_DMAC_OFFSET);
 	}
@@ -608,11 +617,12 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 			readl(priv->regbase + SPI_TXOICR_OFFSET);
 			printk(KERN_ALERT "slavespi: speed too fast, tx-overflow \n");
 		}
-
+#if 0
 		/* reset fifo to clear error */
 		writel(0, priv->regbase + SPI_SSIENR_OFFSET);
 		udelay(1);
 		writel(1, priv->regbase + SPI_SSIENR_OFFSET);
+#endif
 	}
 
 	if (isr & SPI_TXEIS_MASK) {
@@ -650,6 +660,10 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 
 	writel(0, priv->regbase + SPI_ISR_OFFSET);
 	writel(0, priv->regbase + SPI_RISR_OFFSET);
+
+	readl(priv->regbase + SPI_RXOICR_OFFSET);
+	readl(priv->regbase + SPI_TXOICR_OFFSET);
+	readl(priv->regbase + SPI_ICR_OFFSET);		/* double sure to clear */
 
 	tasklet_schedule(&priv->wakeup_helper);
 	return IRQ_HANDLED;
@@ -724,6 +738,7 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 		if (w_fifo_size > 0) {
+			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys, priv->buf_size, DMA_TO_DEVICE);
 			dma_copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 		}
 		if (dma_copied > 0) {
@@ -738,13 +753,10 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 
 	/* no dma avail, using interrupt pio to transfer */
 	spin_lock_irqsave(&priv->w_buf_lock, flags);
-
 	ambarella_slave_fill_txfifo(priv);
-
 	imr = readl(priv->regbase + SPI_IMR_OFFSET);
 	writel((imr | SPI_TXEIS_MASK), priv->regbase + SPI_IMR_OFFSET);
 	spin_unlock_irqrestore(&priv->w_buf_lock, flags);
-
 	wait_event_interruptible(priv->wq_whead, !kfifo_is_full(&priv->w_fifo));
 
 	return copied;
@@ -1095,7 +1107,12 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, priv);
+
 	printk(KERN_ALERT "slavespi: probe ok using %s \n", priv->dma_used ? "dma-mode":"irq-mode");
+	if (priv->dma_used) {
+		printk(KERN_ALERT "slavespi: dma-mode is %s \n",
+			USING_STREAM_DMA > 0 ? "stream":"corherent");
+	}
 
 	return 0;
 
