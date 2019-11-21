@@ -106,8 +106,8 @@ struct ambarella_slavespi {
 	const char *dname;
 	struct class *dclass;
 
-	u32	mode;
 	u32	bpw;
+	u32	spi_mode;
 	u32	fifo_depth;
 
 	u32	buf_size;
@@ -472,99 +472,6 @@ static void wakeup_tasklet(unsigned long data)
 	}
 }
 
-static int ambarella_slavespi_setup(struct ambarella_slavespi *priv)
-{
-	int err = 0;
-	struct pinctrl *pins = NULL;
-	spi_ctrl0_reg_t ctrl0_reg;
-
-	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
-
-	ctrl0_reg.w = 0;
-	ctrl0_reg.s.dfs = (priv->bpw - 1);
-	ctrl0_reg.s.frf = 0;
-
-	if (priv->mode & SPI_CPHA) {
-		ctrl0_reg.s.scph = 1;
-	} else {
-		ctrl0_reg.s.scph = 0;
-	}
-	if (priv->mode & SPI_CPOL) {
-		ctrl0_reg.s.scpol = 1;
-	} else {
-		ctrl0_reg.s.scpol = 0;
-	}
-
-	ctrl0_reg.s.tmod = SPI_WRITE_READ;
-	if (priv->mode & SPI_LSB_FIRST) {
-		ctrl0_reg.s.tx_lsb = 1;
-		ctrl0_reg.s.rx_lsb = 1;
-	} else {
-		ctrl0_reg.s.tx_lsb = 0;
-		ctrl0_reg.s.rx_lsb = 0;
-	}
-
-	ctrl0_reg.s.byte_ws = 1;		/* byte-wise fifo configure */
-	if (priv->bpw > 8) {
-		ctrl0_reg.s.byte_ws = 0;	/* bit-per-word >8 bits, no byte_wise */
-	}
-
-	if (ctrl0_reg.s.byte_ws) {
-		priv->fifo_depth = priv->fifo_depth * 2;
-	}
-
-	ctrl0_reg.s.hold = 0;
-	ctrl0_reg.s.fc_en = 0;
-	ctrl0_reg.s.residue = 1;
-	writel(ctrl0_reg.w, priv->regbase + SPI_CTRLR0_OFFSET);
-
-	/* reset read/write fifo */
-	kfifo_reset(&priv->w_fifo);
-	kfifo_reset(&priv->r_fifo);
-
-	/* clear any error */
-	readl(priv->regbase + SPI_TXOICR_OFFSET);
-	readl(priv->regbase + SPI_RXOICR_OFFSET);
-	readl(priv->regbase + SPI_RXUICR_OFFSET);
-	readl(priv->regbase + SPI_ICR_OFFSET);
-
-	/* disable dma & interrupt */
-	writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
-	writel(0, priv->regbase + SPI_IMR_OFFSET);
-	priv->tx_dma_inprocess = 0;
-	priv->rx_dma_inprocess = 0;
-
-	/* TX_Threshold(half-fifo) <=16(32 if byte wise)bytes, >=RX_Threadhold 8bytes */
-	writel(((priv->fifo_depth / 2) - 1), priv->regbase + SPI_TXFTLR_OFFSET);
-	writel((8 - 1), priv->regbase + SPI_RXFTLR_OFFSET);
-
-	/* recvfifo interrupt */
-	if (priv->dma_used) {
-		dmaengine_terminate_sync(priv->tx_dma_chan);
-		dmaengine_terminate_sync(priv->rx_dma_chan);
-	} else {
-		writel(0x0, priv->regbase + SPI_DMAC_OFFSET);
-		writel(SPI_RXFIS_MASK, priv->regbase + SPI_IMR_OFFSET);
-	}
-	smp_wmb();
-	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
-
-	if (priv->dma_used) {
-		priv->rx_dma_inprocess = 1;
-		err = ambarella_slavespi_start_rx_dma(priv);
-		/* finally start hardware */
-		writel(SPI_DMA_TX_EN|SPI_DMA_RX_EN, priv->regbase + SPI_DMAC_OFFSET);
-	}
-
-	/* pinctrl */
-	pins = devm_pinctrl_get_select_default(priv->pltdev);
-	if (IS_ERR(pins)) {
-		printk(KERN_ALERT "spislave: Failed to request pinctrl \n");
-		err = PTR_ERR(pins);
-	}
-
-	return err;
-}
 
 /* drain any data in hardware rxfifo , used with spinlock */
 void slavespi_drain_rxfifo(struct ambarella_slavespi *priv)
@@ -617,12 +524,8 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 			readl(priv->regbase + SPI_TXOICR_OFFSET);
 			printk(KERN_ALERT "slavespi: speed too fast, tx-overflow \n");
 		}
-#if 0
-		/* reset fifo to clear error */
-		writel(0, priv->regbase + SPI_SSIENR_OFFSET);
-		udelay(1);
-		writel(1, priv->regbase + SPI_SSIENR_OFFSET);
-#endif
+
+		ambarella_spislave_reset(priv);
 	}
 
 	if (isr & SPI_TXEIS_MASK) {
@@ -669,6 +572,288 @@ static irqreturn_t ambarella_slavespi_isr(int irq, void *dev_data)
 	return IRQ_HANDLED;
 }
 
+static int ambarella_slavespi_sfifo_init(struct ambarella_slavespi *priv)
+{
+	int err = 0;
+
+	priv->w_buf = kzalloc(priv->buf_size, GFP_KERNEL);
+	if (!priv->w_buf) {
+		printk(KERN_ALERT "slavespi: Not able to allocate the write buffer\n");
+		goto w_buf_err;
+	}
+
+	if (!kfifo_initialized(&priv->w_fifo)) { /* wfifo = 256PAGE */
+		err = kfifo_alloc(&priv->w_fifo, priv->buf_size << 8, GFP_KERNEL);
+		if (err) {
+			printk(KERN_ALERT "slavespi: Alloc w_kfifo failed \n");
+			goto w_fifo_err;
+		}
+	}
+
+	priv->r_buf = kzalloc(priv->buf_size, GFP_KERNEL);
+	if (!priv->r_buf) {
+		printk(KERN_ALERT "slavespi: Not able to allocate the read buffer\n");
+		goto r_buf_err;
+	}
+
+	if (!kfifo_initialized(&priv->r_fifo)) { /* rfifo = 256PAGE */
+		err = kfifo_alloc(&priv->r_fifo, priv->buf_size << 8, GFP_KERNEL);
+		if (err) {
+			printk(KERN_ALERT "slavespi: Alloc r_kfifo failed \n");
+			goto r_fifo_err;
+		}
+	}
+
+	kfifo_reset(&priv->w_fifo);
+	kfifo_reset(&priv->r_fifo);
+
+	return 0;
+
+
+r_fifo_err:
+	kfree(priv->r_buf);
+	priv->r_buf = NULL;
+
+r_buf_err:
+	kfifo_free(&priv->w_fifo);
+
+w_fifo_err:
+	kfree(priv->w_buf);
+	priv->w_buf = NULL;
+
+w_buf_err:
+	return -ENOMEM;
+}
+
+static void ambarella_slavespi_sfifo_deinit(struct ambarella_slavespi *priv)
+{
+	if (priv->r_buf) {
+		kfree(priv->r_buf);
+		priv->r_buf = NULL;
+	}
+
+	if (kfifo_initialized(&priv->r_fifo)) {
+		kfifo_free(&priv->r_fifo);
+	}
+
+	if (priv->w_buf) {
+		kfree(priv->w_buf);
+		priv->w_buf = NULL;
+	}
+
+	if (kfifo_initialized(&priv->w_fifo)) {
+		kfifo_free(&priv->w_fifo);
+	}
+}
+
+static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
+{
+	int err = 0;
+	struct pinctrl *pins = NULL;
+	spi_ctrl0_reg_t ctrl0_reg;
+
+	priv->wakeup_mask = 0;
+	priv->spi_mode = SPI_MODE_3;	/* Attention [only support mode 3!!!], force!!! */
+	priv->bpw = 8;			/* spi-bit = 8 */
+	priv->fifo_depth = SPI_FIFO_DEPTH;
+	priv->buf_size = SLAVE_SPI_BUF_SIZE;
+
+	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
+
+	ctrl0_reg.w = 0;
+	ctrl0_reg.s.dfs = (priv->bpw - 1);
+	ctrl0_reg.s.frf = 0;
+
+	if (priv->spi_mode & SPI_CPHA) {
+		ctrl0_reg.s.scph = 1;
+	} else {
+		ctrl0_reg.s.scph = 0;
+	}
+	if (priv->spi_mode & SPI_CPOL) {
+		ctrl0_reg.s.scpol = 1;
+	} else {
+		ctrl0_reg.s.scpol = 0;
+	}
+
+	ctrl0_reg.s.tmod = SPI_WRITE_READ;
+	if (priv->spi_mode & SPI_LSB_FIRST) {
+		ctrl0_reg.s.tx_lsb = 1;
+		ctrl0_reg.s.rx_lsb = 1;
+	} else {
+		ctrl0_reg.s.tx_lsb = 0;
+		ctrl0_reg.s.rx_lsb = 0;
+	}
+
+	ctrl0_reg.s.byte_ws = 1;		/* byte-wise fifo configure */
+	if (priv->bpw > 8) {
+		ctrl0_reg.s.byte_ws = 0;	/* bit-per-word >8 bits, no byte_wise */
+	}
+
+	if (ctrl0_reg.s.byte_ws) {
+		priv->fifo_depth = priv->fifo_depth * 2;
+	}
+
+	ctrl0_reg.s.hold = 0;
+	ctrl0_reg.s.fc_en = 0;
+	ctrl0_reg.s.residue = 1;
+	writel(ctrl0_reg.w, priv->regbase + SPI_CTRLR0_OFFSET);
+
+	/* clear any error */
+	readl(priv->regbase + SPI_TXOICR_OFFSET);
+	readl(priv->regbase + SPI_RXOICR_OFFSET);
+	readl(priv->regbase + SPI_RXUICR_OFFSET);
+	readl(priv->regbase + SPI_ICR_OFFSET);
+
+	/* disable dma & interrupt */
+	writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
+	writel(0, priv->regbase + SPI_IMR_OFFSET);
+
+	/* TX_Threshold(half-fifo) <=16(32 if byte wise)bytes, >=RX_Threadhold 8bytes */
+	writel(((priv->fifo_depth / 2) - 1), priv->regbase + SPI_TXFTLR_OFFSET);
+	writel((8 - 1), priv->regbase + SPI_RXFTLR_OFFSET);
+
+	/* NO-interrupt  && NO-dma-request */
+	writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
+	writel(0, priv->regbase + SPI_IMR_OFFSET);
+	smp_wmb();
+
+	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
+
+	if (priv->dma_used) {
+		writel(SPI_DMA_TX_EN|SPI_DMA_RX_EN, priv->regbase + SPI_DMAC_OFFSET);
+	}
+
+	/* pinctrl */
+	pins = devm_pinctrl_get_select_default(priv->pltdev);
+	if (IS_ERR(pins)) {
+		printk(KERN_ALERT "spislave: Failed to request pinctrl \n");
+		err = PTR_ERR(pins);
+	}
+}
+static void ambarella_slavespi_hardware_deinit(struct ambarella_slavespi *priv)
+{
+	u32 ctrl0 = 0;
+
+	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
+	udelay(2);
+	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
+	udelay(2);
+
+	/* reset ctrl0 to default, disable slave-txe */
+	ctrl0 = 0x407;	/* slave.ove = 1 disable tx, frame-bit=7 */
+	writel(ctrl0, priv->regbase + SPI_CTRLR0_OFFSET);
+
+	/* clear any error */
+	readl(priv->regbase + SPI_TXOICR_OFFSET);
+	readl(priv->regbase + SPI_RXOICR_OFFSET);
+	readl(priv->regbase + SPI_RXUICR_OFFSET);
+	readl(priv->regbase + SPI_ICR_OFFSET);
+
+	/* reset dma-req & interrupt to default */
+	writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
+	writel(0x1F, priv->regbase + SPI_IMR_OFFSET);
+
+	/* reset TX_Threshold RX_Threadhold */
+	writel(0, priv->regbase + SPI_TXFTLR_OFFSET);
+	writel(0, priv->regbase + SPI_RXFTLR_OFFSET);
+}
+
+static int ambarella_slavespi_dma_init(struct ambarella_slavespi *priv)
+{
+	int err = 0;
+
+	priv->tx_dma_inprocess = 0;
+	priv->rx_dma_inprocess = 0;
+
+	err = ambarella_spislave_dma_allocate(priv, SPI_DMA_TX);
+	if (err) {
+		return err;
+	}
+
+	err = ambarella_spislave_dma_allocate(priv, SPI_DMA_RX);
+	if (err) {
+		ambarella_spi_slave_dma_free(priv, SPI_DMA_TX);
+		return err;
+	}
+
+	dmaengine_terminate_sync(priv->tx_dma_chan);
+	dmaengine_terminate_sync(priv->rx_dma_chan);
+
+	return 0;
+}
+
+static void ambarella_slavespi_dma_deinit(struct ambarella_slavespi *priv)
+{
+	dmaengine_terminate_sync(priv->tx_dma_chan);
+	dmaengine_terminate_sync(priv->rx_dma_chan);
+
+	priv->tx_dma_inprocess = 0;
+	priv->rx_dma_inprocess = 0;
+
+	ambarella_spi_slave_dma_free(priv, SPI_DMA_TX);
+	ambarella_spi_slave_dma_free(priv, SPI_DMA_RX);
+}
+
+static int ambarella_slavespi_open_init(struct ambarella_slavespi *priv)
+{
+	int err = 0;
+
+	ambarella_slavespi_hardware_init(priv);
+
+	err = ambarella_slavespi_sfifo_init(priv);
+	if (err) {
+		ambarella_slavespi_hardware_deinit(priv);
+		return err;
+	}
+
+	if (priv->dma_used) {
+		err = ambarella_slavespi_dma_init(priv);
+		if (err) {
+			ambarella_slavespi_sfifo_deinit(priv);
+			ambarella_slavespi_hardware_deinit(priv);
+			return err;
+		}
+		priv->rx_dma_inprocess = 1;
+		err = ambarella_slavespi_start_rx_dma(priv);
+	} else {
+		err = devm_request_irq(priv->pltdev, priv->irq, ambarella_slavespi_isr,
+			IRQF_TRIGGER_HIGH, dev_name(priv->pltdev), priv);
+		if (err) {
+			printk(KERN_ALERT "slavespi: Request spi interrupt error \n");
+		}
+	}
+
+	if (err) {
+		if (priv->dma_used) {
+			ambarella_slavespi_dma_deinit(priv);
+		}
+		ambarella_slavespi_sfifo_deinit(priv);
+		ambarella_slavespi_hardware_deinit(priv);
+	}
+
+	priv->stat_txe_cnt = 0;
+	priv->stat_rxov_cnt = 0;
+	priv->stat_rx_cnt = 0;
+	priv->stat_rx_drop = 0;
+
+	return err;
+}
+
+static void ambarella_slavespi_close_deinit(struct ambarella_slavespi *priv)
+{
+	priv->stat_txe_cnt = 0;
+	priv->stat_rxov_cnt = 0;
+	priv->stat_rx_cnt = 0;
+	priv->stat_rx_drop = 0;
+
+	if (priv->dma_used) {
+		ambarella_slavespi_dma_deinit(priv);
+	}
+
+	ambarella_slavespi_sfifo_deinit(priv);
+	ambarella_slavespi_hardware_deinit(priv);
+}
+
 static int slavespi_open(struct inode *inode, struct file *filp)
 {
 	int err = 0;
@@ -687,7 +872,7 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 		return -EBUSY;
 	}
 
-	err = ambarella_slavespi_setup(priv);
+	err = ambarella_slavespi_open_init(priv);
 	return err;
 }
 
@@ -738,7 +923,8 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		w_fifo_len &= SPI_DMA_ALIGN_MASK;
 		w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 		if (w_fifo_size > 0) {
-			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys, priv->buf_size, DMA_TO_DEVICE);
+			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys,
+							priv->buf_size, DMA_TO_DEVICE);
 			dma_copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 		}
 		if (dma_copied > 0) {
@@ -846,50 +1032,12 @@ slavespi_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 static int slavespi_release(struct inode *inode, struct file *filp)
 {
-	u32 tx_len = 0;
-	u32 rx_len = 0;
 	struct ambarella_slavespi *priv = NULL;
 	priv = (struct ambarella_slavespi *)filp->private_data;
 
-	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
-	writel(0, priv->regbase + SPI_ISR_OFFSET);
-	writel(0, priv->regbase + SPI_RISR_OFFSET);
-
-	readl(priv->regbase + SPI_TXOICR_OFFSET);
-	readl(priv->regbase + SPI_RXOICR_OFFSET);
-	readl(priv->regbase + SPI_RXUICR_OFFSET);
-	readl(priv->regbase + SPI_ICR_OFFSET);
-
-	if (priv->dma_used) {
-		writel(0, priv->regbase + SPI_DMAC_OFFSET);
-		writel(0, priv->regbase + SPI_IMR_OFFSET);
-
-		dmaengine_terminate_sync(priv->tx_dma_chan);
-		dmaengine_terminate_sync(priv->rx_dma_chan);
-
-		priv->tx_dma_inprocess = 0;
-		priv->rx_dma_inprocess = 0;
-	}
-
-	tx_len = kfifo_len(&priv->w_fifo);
-	rx_len = kfifo_len(&priv->r_fifo);
-	kfifo_reset(&priv->w_fifo);
-	kfifo_reset(&priv->r_fifo);
-
-	printk("slavespi->tx_buf: %u bytes, slavespi->rx_buf: %u bytes \n",
-			tx_len, rx_len);
-	printk("slavespi->txe: %u packet, rx_cnt: %u packet \n",
-			priv->stat_txe_cnt, priv->stat_rx_cnt);
-	printk("slavespi->rxov: %u packet, rx_drop: %u bytes \n",
-			priv->stat_rxov_cnt, priv->stat_rx_drop);
-
-	priv->stat_txe_cnt = 0;
-	priv->stat_rxov_cnt = 0;
-	priv->stat_rx_cnt = 0;
-	priv->stat_rx_drop = 0;
+	ambarella_slavespi_close_deinit(priv);
 
 	atomic_inc(&priv->open_once);
-
 	return 0;
 }
 
@@ -921,6 +1069,60 @@ static struct file_operations slavespi_fops = {
 	.release	= slavespi_release,
 	.poll		= slavespi_poll,
 };
+
+static int ambarella_slavespi_cdev_init(struct ambarella_slavespi *priv)
+{
+	int err = 0;
+
+	priv->dname = "slavespi";
+	err = alloc_chrdev_region(&priv->devno, 0, 1, priv->dname);
+	if (err) {
+		printk(KERN_ALERT "slavespi: alloc chrdevno failed \n");
+		goto cdev_alloc_err;
+	}
+
+	cdev_init(&priv->cdevx, &slavespi_fops);
+	priv->cdevx.owner = THIS_MODULE;
+	cdev_add(&priv->cdevx, priv->devno, 1);
+
+	priv->dclass = class_create(THIS_MODULE, priv->dname);
+	if (IS_ERR(priv->dclass)) {
+		printk(KERN_ALERT "slavespi: Unable to create class\n");
+		goto cdev_class_err;
+
+	}
+
+	priv->device = device_create(priv->dclass, NULL, priv->devno, priv, priv->dname);
+	if (IS_ERR(priv->device)) {
+		printk(KERN_ALERT "slavespi: Unable to create device\n");
+		goto cdev_device_err;
+	}
+
+	return 0;
+
+cdev_device_err:
+	class_destroy(priv->dclass);
+	priv->dclass = NULL;
+
+cdev_class_err:
+	cdev_del(&priv->cdevx);
+	unregister_chrdev_region(priv->devno, 1);
+
+cdev_alloc_err:
+	return (-ENODEV);
+}
+
+static void ambarella_slavespi_cdev_deinit(struct ambarella_slavespi *priv)
+{
+	device_destroy(priv->dclass, priv->devno);
+	priv->device = NULL;
+
+	class_destroy(priv->dclass);
+	priv->dclass = NULL;
+
+	cdev_del(&priv->cdevx);
+	unregister_chrdev_region(priv->devno, 1);
+}
 
 static int slavespi_proc_show(struct seq_file *m, void *v)
 {
@@ -1001,18 +1203,13 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
+	atomic_set(&priv->open_once, 1);
 	priv->phys = res->start;
-	priv->wakeup_mask = 0;
 	priv->regbase = reg;
-	priv->mode = 3;			/* Attention [only support mode 3!!!], force!!! */
-	priv->bpw = 8;			/* use dts to determinate ? */
 	priv->irq = irq;
-	priv->fifo_depth = SPI_FIFO_DEPTH;
-	priv->buf_size = SLAVE_SPI_BUF_SIZE;
 	priv->pltdev = &pdev->dev;
 	priv->dma_used = 0;
 
-	atomic_set(&priv->open_once, 1);
 	init_waitqueue_head(&priv->wq_rhead);
 	init_waitqueue_head(&priv->wq_whead);
 	init_waitqueue_head(&priv->wq_poll);
@@ -1022,82 +1219,13 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	spin_lock_init(&priv->wakeup_lock);
 	tasklet_init(&priv->wakeup_helper, wakeup_tasklet, (unsigned long)priv);
 
-	if (of_find_property(pdev->dev.of_node, "amb,dma-used", NULL)) {
+	if (of_find_property(priv->pltdev->of_node, "amb,dma-used", NULL)) {
 		priv->dma_used = 1;
-		err = ambarella_spislave_dma_allocate(priv, SPI_DMA_TX);
-		if (err) {
-			goto err_out;
-		}
-		err = ambarella_spislave_dma_allocate(priv, SPI_DMA_RX);
-		if (err) {
-			ambarella_spi_slave_dma_free(priv, SPI_DMA_TX);
-			goto err_out;
-		}
 	}
 
-	priv->dname = "slavespi";
-	err = alloc_chrdev_region(&priv->devno, 0, 1, priv->dname);
+	err = ambarella_slavespi_cdev_init(priv);
 	if (err) {
-		printk(KERN_ALERT "slavespi: alloc chrdevno failed \n");
-		err = -ENODEV;
 		goto err_out;
-	}
-	cdev_init(&priv->cdevx, &slavespi_fops);
-	priv->cdevx.owner = THIS_MODULE;
-	cdev_add(&priv->cdevx, priv->devno, 1);
-	priv->dclass = class_create(THIS_MODULE, priv->dname);
-	if (IS_ERR(priv->dclass)) {
-		err = -EIO;
-		printk(KERN_ALERT "slavespi: Unable to create class\n");
-		goto ambarella_slavespi_probe_exit;
-	}
-	priv->device = device_create(priv->dclass, NULL, priv->devno, priv, priv->dname);
-	if (IS_ERR(priv->device)) {
-		err = -EIO;
-		printk(KERN_ALERT "slavespi: Unable to create device\n");
-		goto ambarella_slavespi_probe_exit;
-	}
-
-	if (!kfifo_initialized(&priv->w_fifo)) { /* wfifo = 256PAGE */
-		err = kfifo_alloc(&priv->w_fifo, priv->buf_size << 8, GFP_KERNEL);
-		if (err) {
-			err = -ENOMEM;
-			printk(KERN_ALERT "slavespi: Alloc w_kfifo failed \n");
-			goto ambarella_slavespi_probe_exit;
-		}
-	}
-
-	priv->w_buf = kmalloc(priv->buf_size, GFP_KERNEL);
-	if (!priv->w_buf) {
-		err = -ENOMEM;
-		printk(KERN_ALERT "slavespi: Not able to allocate the write buffer\n");
-		goto ambarella_slavespi_probe_exit;
-	}
-
-	if (!kfifo_initialized(&priv->r_fifo)) { /* rfifo = 256PAGE */
-		err = kfifo_alloc(&priv->r_fifo, priv->buf_size << 8, GFP_KERNEL);
-		if (err) {
-			err = -ENOMEM;
-			printk(KERN_ALERT "slavespi: Alloc r_kfifo failed \n");
-			goto ambarella_slavespi_probe_exit;
-		}
-	}
-
-	priv->r_buf = kmalloc(priv->buf_size, GFP_KERNEL);
-	if (!priv->r_buf) {
-		err = -ENOMEM;
-		printk(KERN_ALERT "slavespi: Not able to allocate the read buffer\n");
-		goto ambarella_slavespi_probe_exit;
-	}
-
-	if (0 == priv->dma_used) {
-		err = devm_request_irq(&pdev->dev, priv->irq, ambarella_slavespi_isr,
-			IRQF_TRIGGER_HIGH, dev_name(&pdev->dev), priv);
-		if (err) {
-			err = -EIO;
-			printk(KERN_ALERT "slavespi: Request spi interrupt error \n");
-			goto ambarella_slavespi_probe_exit;
-		}
 	}
 
 	priv->stat_proc = proc_create_data("slavespi", S_IRUGO|S_IWUSR, NULL,
@@ -1106,50 +1234,14 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "slavespi without proc supported \n");
 	}
 
-	platform_set_drvdata(pdev, priv);
-
 	printk(KERN_ALERT "slavespi: probe ok using %s \n", priv->dma_used ? "dma-mode":"irq-mode");
 	if (priv->dma_used) {
 		printk(KERN_ALERT "slavespi: dma-mode is %s \n",
 			USING_STREAM_DMA > 0 ? "stream":"corherent");
 	}
 
+	platform_set_drvdata(pdev, priv);
 	return 0;
-
-ambarella_slavespi_probe_exit:
-	if (priv->r_buf) {
-		kfree(priv->r_buf);
-		priv->r_buf = NULL;
-	}
-
-	if (kfifo_initialized(&priv->r_fifo)) {
-		kfifo_free(&priv->r_fifo);
-	}
-
-	if (priv->w_buf) {
-		kfree(priv->w_buf);
-		priv->w_buf = NULL;
-	}
-
-	if (kfifo_initialized(&priv->w_fifo)) {
-		kfifo_free(&priv->w_fifo);
-	}
-
-	if (priv->device) {
-		device_destroy(priv->dclass, priv->devno);
-		priv->device = NULL;
-	}
-
-	if (priv->dclass) {
-		class_destroy(priv->dclass);
-		priv->dclass = NULL;
-	}
-
-	if (priv->devno) {
-		cdev_del(&priv->cdevx);
-		unregister_chrdev_region(priv->devno, 1);
-		priv->devno = 0;
-	}
 
 err_out:
 	printk(KERN_ALERT "spislave probe failed \n");
@@ -1162,58 +1254,16 @@ static int ambarella_slavespi_remove(struct platform_device *pdev)
 
 	priv = platform_get_drvdata(pdev);
 
-	if (priv->dma_used) {
-		writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
-		writel(0, priv->regbase + SPI_IMR_OFFSET);
-
-		dmaengine_terminate_sync(priv->tx_dma_chan);
-		dmaengine_terminate_sync(priv->rx_dma_chan);
-
-		ambarella_spi_slave_dma_free(priv, SPI_DMA_TX);
-		ambarella_spi_slave_dma_free(priv, SPI_DMA_RX);
-	}
-
-	if (priv->r_buf) {
-		kfree(priv->r_buf);
-		priv->r_buf = NULL;
-	}
-
-	if (kfifo_initialized(&priv->r_fifo)) {
-		kfifo_free(&priv->r_fifo);
-	}
-
-	if (priv->w_buf) {
-		kfree(priv->w_buf);
-		priv->w_buf = NULL;
-	}
-
-	if (kfifo_initialized(&priv->w_fifo)) {
-		kfifo_free(&priv->w_fifo);
-	}
-
-	if (priv->device) {
-		device_destroy(priv->dclass, priv->devno);
-		priv->device = NULL;
-	}
-
-	if (priv->dclass) {
-		class_destroy(priv->dclass);
-		priv->dclass = NULL;
-	}
-
-	if (priv->devno) {
-		cdev_del(&priv->cdevx);
-		unregister_chrdev_region(priv->devno, 1);
-		priv->devno = 0;
-	}
-
 	if (priv->stat_proc) {
 		remove_proc_entry("slavespi", NULL);
 		priv->stat_proc = NULL;
 	}
 
+	ambarella_slavespi_cdev_deinit(priv);
+
 	/* shutdown controller */
 	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
+
 	return 0;
 }
 
