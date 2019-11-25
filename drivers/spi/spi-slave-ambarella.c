@@ -52,6 +52,9 @@
 #include <plat/spi.h>
 #include <plat/dma.h>
 
+/* inc this number for each version */
+#define SLAVE_SPI_VERSION_NUM (0x0001)
+
 #define SPI_RXFIS_MASK 		0x00000010
 #define SPI_RXOIS_MASK 		0x00000008
 #define SPI_RXUIS_MASK 		0x00000004
@@ -64,11 +67,11 @@
 #define SPI_SR_TXE_MSK	(0x20)
 
 #define SPI_FIFO_DEPTH		(SPI_DATA_FIFO_SIZE_32)
-#define SPI_FIFO_DEPTH_MSK	(SPI_FIFO_DEPTH - 1)
 #define SLAVE_SPI_BUF_SIZE	PAGE_SIZE
 
-#define SPI_ALIGN_2_MASK	(0xFFFFFFFE)
-#define SPI_DMA_ALIGN_MASK	(0xFFFFFFF8)	/* down-align-to 8 */
+#define SPI_DMA_ALIGN_8_MASK	(0xFFFFFFF8)	/* down-align-to 8 */
+#define SPI_DMA_ALIGN_16_MASK	(0xFFFFFFF0)	/* down-align-to 16 */
+
 #define FIFO_DEPTH_MULTI	(4)
 
 #define SPI_DMA_TX	(0)
@@ -88,7 +91,7 @@
 #define CAN_WAKEUP_POLL (0x4)
 
 /* 1:stream dma memory;    0:corherent dma memory */
-#define USING_STREAM_DMA		(0)
+#define USING_STREAM_DMA		(1)
 
 /* export to user-space used by ioctl, not support now */
 #define SPI_SLAVE_MAGIC   (250)
@@ -115,6 +118,7 @@ struct ambarella_slavespi {
 	void	*r_buf;
 
 	u32	dma_used;
+	u32	dma_size_mask;
 	u32	phys;
 	struct	device *pltdev;
 	struct dma_chan	*tx_dma_chan;
@@ -323,9 +327,12 @@ static void ambarella_rx_dma_callback(void *dma_param)
 	if (status == DMA_COMPLETE) {
 		priv->stat_rx_cnt++;
 		avail_size = priv->rx_dma_size - state.residue;
+
+#if (USING_STREAM_DMA > 0)
 		/* let cpu own this buf to read data */
 		dma_sync_single_for_cpu(priv->pltdev, priv->rx_dma_phys,
 					priv->rx_dma_size, DMA_FROM_DEVICE);
+#endif
 		copied = kfifo_in(&priv->r_fifo, priv->rx_dma_buf, avail_size);
 		ambarella_slavespi_start_rx_dma(priv);		/* re-start rx-dma again */
 	}
@@ -370,9 +377,12 @@ static int ambarella_slavespi_start_rx_dma(struct ambarella_slavespi *priv)
 	priv->rx_dma_desc->callback = ambarella_rx_dma_callback;
 	priv->rx_dma_desc->callback_param = priv;
 
+#if (USING_STREAM_DMA > 0)
 	/* let device own this buf to write received data from outside */
 	dma_sync_single_for_device(priv->pltdev, priv->rx_dma_phys,
 		priv->rx_dma_size, DMA_FROM_DEVICE);
+#endif
+
 	priv->rx_cookie = dmaengine_submit(priv->rx_dma_desc);
 	dma_async_issue_pending(priv->rx_dma_chan);
 
@@ -400,11 +410,15 @@ static void ambarella_tx_dma_callback(void *dma_param)
 	status = dmaengine_tx_status(priv->tx_dma_chan, priv->tx_cookie, &state);
 	if (status == DMA_COMPLETE) {
 		w_fifo_len = kfifo_len(&priv->w_fifo);
-		w_fifo_len &= SPI_DMA_ALIGN_MASK;
+		w_fifo_len &= priv->dma_size_mask;
 		if (w_fifo_len > 0) {	/* block data using dma to transfer */
 			w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
+
+#if (USING_STREAM_DMA > 0)
 			/* let cpu own this buf to write data into dma buf */
-			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys, priv->buf_size, DMA_TO_DEVICE);
+			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys,
+							priv->buf_size, DMA_TO_DEVICE);
+#endif
 			copied = kfifo_out(&priv->w_fifo, priv->tx_dma_buf, w_fifo_size);
 			priv->tx_dma_size = copied;
 			ambarella_slavespi_start_tx_dma(priv);
@@ -434,8 +448,11 @@ void ambarella_slavespi_start_tx_dma(struct ambarella_slavespi *priv)
 
 	BUG_ON(dmaengine_slave_config(priv->tx_dma_chan, &tx_cfg) < 0);
 
+#if (USING_STREAM_DMA > 0)
 	/* now let device own this buf to tranfer data to outside */
-	dma_sync_single_for_device(priv->pltdev, priv->tx_dma_phys, priv->tx_dma_size, DMA_TO_DEVICE);
+	dma_sync_single_for_device(priv->pltdev, priv->tx_dma_phys,
+					priv->tx_dma_size, DMA_TO_DEVICE);
+#endif
 
 	priv->tx_dma_desc = dmaengine_prep_slave_single(priv->tx_dma_chan,
 		priv->tx_dma_phys, priv->tx_dma_size, DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
@@ -649,14 +666,16 @@ static void ambarella_slavespi_sfifo_deinit(struct ambarella_slavespi *priv)
 static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 {
 	int err = 0;
+	struct clk *clk = NULL;
 	struct pinctrl *pins = NULL;
 	spi_ctrl0_reg_t ctrl0_reg;
 
-	priv->wakeup_mask = 0;
-	priv->spi_mode = SPI_MODE_3;	/* Attention [only support mode 3!!!], force!!! */
-	priv->bpw = 8;			/* spi-bit = 8 */
-	priv->fifo_depth = SPI_FIFO_DEPTH;
-	priv->buf_size = SLAVE_SPI_BUF_SIZE;
+	clk = clk_get(NULL, "gclk_ssi2");
+	if (IS_ERR_OR_NULL(clk)) {
+		printk(KERN_ALERT "spislave: no slave spi clock \n");
+	} else {
+		clk_set_rate(clk, 192000000);
+	}
 
 	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
 
@@ -689,6 +708,11 @@ static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 		ctrl0_reg.s.byte_ws = 0;	/* bit-per-word >8 bits, no byte_wise */
 	}
 
+	if (0 == priv->dma_used) {		/* only dma-mode support byte-wise, irq can not support byte-wise */
+		ctrl0_reg.s.byte_ws = 0;
+	}
+
+	priv->fifo_depth = SPI_FIFO_DEPTH;
 	if (ctrl0_reg.s.byte_ws) {
 		priv->fifo_depth = priv->fifo_depth * 2;
 	}
@@ -712,16 +736,17 @@ static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 	writel(((priv->fifo_depth / 2) - 1), priv->regbase + SPI_TXFTLR_OFFSET);
 	writel((8 - 1), priv->regbase + SPI_RXFTLR_OFFSET);
 
-	/* NO-interrupt  && NO-dma-request */
-	writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
-	writel(0, priv->regbase + SPI_IMR_OFFSET);
-	smp_wmb();
-
-	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
-
+	/* configure interrupt or dma-request */
 	if (priv->dma_used) {
+		writel(0, priv->regbase + SPI_IMR_OFFSET);
 		writel(SPI_DMA_TX_EN|SPI_DMA_RX_EN, priv->regbase + SPI_DMAC_OFFSET);
+	} else {
+		writel(SPI_RXFIS_MASK, priv->regbase + SPI_IMR_OFFSET);
+		writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
 	}
+
+	smp_wmb();
+	writel(1, priv->regbase + SPI_SSIENR_OFFSET);
 
 	/* pinctrl */
 	pins = devm_pinctrl_get_select_default(priv->pltdev);
@@ -798,11 +823,13 @@ static int ambarella_slavespi_open_init(struct ambarella_slavespi *priv)
 {
 	int err = 0;
 
-	ambarella_slavespi_hardware_init(priv);
+	priv->stat_txe_cnt = 0;
+	priv->stat_rxov_cnt = 0;
+	priv->stat_rx_cnt = 0;
+	priv->stat_rx_drop = 0;
 
 	err = ambarella_slavespi_sfifo_init(priv);
 	if (err) {
-		ambarella_slavespi_hardware_deinit(priv);
 		return err;
 	}
 
@@ -810,33 +837,28 @@ static int ambarella_slavespi_open_init(struct ambarella_slavespi *priv)
 		err = ambarella_slavespi_dma_init(priv);
 		if (err) {
 			ambarella_slavespi_sfifo_deinit(priv);
-			ambarella_slavespi_hardware_deinit(priv);
 			return err;
 		}
 		priv->rx_dma_inprocess = 1;
 		err = ambarella_slavespi_start_rx_dma(priv);
+		if (err) {
+			priv->rx_dma_inprocess = 0;
+			ambarella_slavespi_sfifo_deinit(priv);
+			return err;
+		}
 	} else {
 		err = devm_request_irq(priv->pltdev, priv->irq, ambarella_slavespi_isr,
 			IRQF_TRIGGER_HIGH, dev_name(priv->pltdev), priv);
 		if (err) {
 			printk(KERN_ALERT "slavespi: Request spi interrupt error \n");
+			ambarella_slavespi_sfifo_deinit(priv);
+			return err;
 		}
 	}
 
-	if (err) {
-		if (priv->dma_used) {
-			ambarella_slavespi_dma_deinit(priv);
-		}
-		ambarella_slavespi_sfifo_deinit(priv);
-		ambarella_slavespi_hardware_deinit(priv);
-	}
+	ambarella_slavespi_hardware_init(priv);
 
-	priv->stat_txe_cnt = 0;
-	priv->stat_rxov_cnt = 0;
-	priv->stat_rx_cnt = 0;
-	priv->stat_rx_drop = 0;
-
-	return err;
+	return 0;
 }
 
 static void ambarella_slavespi_close_deinit(struct ambarella_slavespi *priv)
@@ -845,9 +867,12 @@ static void ambarella_slavespi_close_deinit(struct ambarella_slavespi *priv)
 	priv->stat_rxov_cnt = 0;
 	priv->stat_rx_cnt = 0;
 	priv->stat_rx_drop = 0;
+	priv->wakeup_mask = 0;
 
 	if (priv->dma_used) {
 		ambarella_slavespi_dma_deinit(priv);
+	} else {
+		devm_free_irq(priv->pltdev, priv->irq, priv);
 	}
 
 	ambarella_slavespi_sfifo_deinit(priv);
@@ -873,6 +898,9 @@ static int slavespi_open(struct inode *inode, struct file *filp)
 	}
 
 	err = ambarella_slavespi_open_init(priv);
+	if (err) {
+		atomic_inc(&priv->open_once);
+	}
 	return err;
 }
 
@@ -920,7 +948,7 @@ slavespi_write(struct file *filp, const char __user *buf, size_t count, loff_t *
 		}
 
 		w_fifo_len = kfifo_len(&priv->w_fifo);
-		w_fifo_len &= SPI_DMA_ALIGN_MASK;
+		w_fifo_len &= priv->dma_size_mask;
 		w_fifo_size = min_t(u32, w_fifo_len, priv->buf_size);
 		if (w_fifo_size > 0) {
 			dma_sync_single_for_cpu(priv->pltdev, priv->tx_dma_phys,
@@ -1209,6 +1237,39 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	priv->irq = irq;
 	priv->pltdev = &pdev->dev;
 	priv->dma_used = 0;
+	priv->buf_size = SLAVE_SPI_BUF_SIZE;
+	priv->wakeup_mask = 0;
+
+	if (of_find_property(priv->pltdev->of_node, "amb,dma-used", NULL)) {
+		priv->dma_used = 1;
+	}
+
+#if 0
+	if (of_find_property(priv->pltdev->of_node, "spi-cpol", NULL)) {
+		priv->spi_mode |= SPI_CPOL;
+	}
+
+	if (of_find_property(priv->pltdev->of_node, "spi-cpha", NULL)) {
+		priv->spi_mode |= SPI_CPHA;
+	}
+
+	if (of_find_property(priv->pltdev->of_node, "bits-per-word", NULL)) {
+		of_property_read_u32_index(priv->pltdev->of_node, "bits-per-word", 0, &priv->bpw);
+	}
+#else
+	priv->bpw = 8;			/* bits-per-word = 8 */
+	priv->spi_mode = SPI_MODE_3;	/* [only support mode 3!!!], force!!! */
+#endif
+
+	if (of_find_property(priv->pltdev->of_node, "spi-lsb-first", NULL)) {
+		priv->spi_mode |= SPI_LSB_FIRST;
+	}
+
+	if (priv->bpw > 8) {
+		priv->dma_size_mask = SPI_DMA_ALIGN_16_MASK;
+	} else {
+		priv->dma_size_mask = SPI_DMA_ALIGN_8_MASK;
+	}
 
 	init_waitqueue_head(&priv->wq_rhead);
 	init_waitqueue_head(&priv->wq_whead);
@@ -1218,10 +1279,6 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 	spin_lock_init(&priv->w_buf_lock);
 	spin_lock_init(&priv->wakeup_lock);
 	tasklet_init(&priv->wakeup_helper, wakeup_tasklet, (unsigned long)priv);
-
-	if (of_find_property(priv->pltdev->of_node, "amb,dma-used", NULL)) {
-		priv->dma_used = 1;
-	}
 
 	err = ambarella_slavespi_cdev_init(priv);
 	if (err) {
@@ -1234,7 +1291,8 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "slavespi without proc supported \n");
 	}
 
-	printk(KERN_ALERT "slavespi: probe ok using %s \n", priv->dma_used ? "dma-mode":"irq-mode");
+	printk(KERN_ALERT "slavespi: probe ok ver:%u using %s \n", SLAVE_SPI_VERSION_NUM,
+				priv->dma_used ? "dma-mode":"irq-mode");
 	if (priv->dma_used) {
 		printk(KERN_ALERT "slavespi: dma-mode is %s \n",
 			USING_STREAM_DMA > 0 ? "stream":"corherent");
