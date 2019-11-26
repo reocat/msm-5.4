@@ -503,3 +503,13 @@ config USB_G_WEBCAM
 
 	  Say "y" to link the driver statically, or "m" to build a
 	  dynamically linked module called "g_webcam".
+
+config USB_G_AMB_WEBCAM
+	tristate "Ambarella USB Webcam Gadget"
+	depends on VIDEO_DEV
+	select USB_LIBCOMPOSITE
+	select VIDEOBUF2_VMALLOC
+	select USB_F_UVC
+	help
+		Ambarella Webcam Gadget is an extension gadget for supporting H.264
+		and MJPG on Ambarella platform.
