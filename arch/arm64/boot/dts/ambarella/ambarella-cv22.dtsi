@@ -185,6 +185,7 @@
 			amb,rct-regmap = <&rct_syscon>;
 			amb,scaler-1v8 = <0x01>;
 			amb,t2v-channel = <2>;
+			otp-t2v-calib;
 			status = "disabled";
 		};
 

@@ -590,6 +590,12 @@
 #define RCT_TIMER2_CTRL_REG		RCT_REG(RCT_TIMER2_CTRL_OFFSET)
 
 /* ==========================================================================*/
+#if (CHIP_REV == CV22) || (CHIP_REV == CV2)
+#define RCT_OTP_T2V_CALIB_OFFSET	0x770
+#else
+#define RCT_OTP_T2V_CALIB_OFFSET	RCT_INVALID_OFFSET
+#endif
+/* ==========================================================================*/
 
 #define RCT_STATUS_HOLD0_OFFSET		0x780
 #define RCT_STATUS_HOLD1_OFFSET		0x784

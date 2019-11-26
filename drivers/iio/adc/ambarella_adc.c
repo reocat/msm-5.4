@@ -62,6 +62,9 @@
 /* Typical sensor slope coefficient at all temperatures */
 #define AMBARELLA_ADC_T2V_COEFF		70
 
+/* Set 25C as a calibrate temperature base when using otp calibration */
+#define AMBARELLA_CALIB_T2V_OFFSET	25000
+
 #define AMBARELLA_ADC_KEY_DEBOUNCE	100
 
 struct ambadc_keymap {
@@ -89,6 +92,7 @@ struct ambarella_adc {
 	int t2v_channel;
 	u32 t2v_offset;
 	u32 t2v_coeff;
+	bool otp_t2v_calib;
 
 	struct work_struct work;
 	u32 data_intr;
@@ -513,7 +517,11 @@ static int ambarella_adc_read_raw(struct iio_dev *indio_dev,
 
 		mutex_lock(&ambadc->mtx);
 		tmp = readl_relaxed(ambadc->regbase + ADC_DATA_X_OFFSET(chan->channel));
-		*val = tmp * ambadc->t2v_coeff - ambadc->t2v_offset;
+		if (ambadc->otp_t2v_calib)
+			*val = AMBARELLA_CALIB_T2V_OFFSET +
+				tmp * ambadc->t2v_coeff - ambadc->t2v_coeff * ambadc->t2v_offset;
+		else
+			*val = tmp * ambadc->t2v_coeff - ambadc->t2v_offset;
 		*val2 = 1000;
 		mutex_unlock(&ambadc->mtx);
 		return IIO_VAL_FRACTIONAL;
@@ -826,6 +834,7 @@ static void ambarella_adc_parse_dt(struct ambarella_adc *ambadc)
 {
 	struct device_node *np = ambadc->dev->of_node;
 	u32 channels_used, scalers_1v8, clk_rate;
+	int ret;
 
 	if (of_property_read_u32(np, "amb,channels-used", &channels_used) < 0)
 		bitmap_fill(&ambadc->channels_mask, ADC_NUM_CHANNELS);
@@ -850,10 +859,21 @@ static void ambarella_adc_parse_dt(struct ambarella_adc *ambadc)
 	}
 
 	if (ambadc->t2v_channel >= 0) {
+		ambadc->otp_t2v_calib = !!of_find_property(np, "otp-t2v-calib", NULL);
+
 		set_bit(ambadc->t2v_channel, &ambadc->channels_mask);
 
-		if (of_property_read_u32(np, "amb,t2v-offset", &ambadc->t2v_offset) < 0)
-			ambadc->t2v_offset = AMBARELLA_ADC_T2V_OFFSET;
+		if(ambadc->otp_t2v_calib) {
+			ret = regmap_read(ambadc->reg_rct, RCT_OTP_T2V_CALIB_OFFSET,
+					&ambadc->t2v_offset);
+			if (ret) {
+				dev_err(ambadc->dev, "can not read calibration data: %d\n", ret);
+				ambadc->t2v_offset = 0;
+			}
+		} else {
+			if (of_property_read_u32(np, "amb,t2v-offset", &ambadc->t2v_offset) < 0)
+				ambadc->t2v_offset = AMBARELLA_ADC_T2V_OFFSET;
+		}
 
 		if (of_property_read_u32(np, "amb,t2v-coeff", &ambadc->t2v_coeff) < 0)
 			ambadc->t2v_coeff = AMBARELLA_ADC_T2V_COEFF;
