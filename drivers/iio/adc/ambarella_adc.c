@@ -92,7 +92,6 @@ struct ambarella_adc {
 	int t2v_channel;
 	u32 t2v_offset;
 	u32 t2v_coeff;
-	bool otp_t2v_calib;
 
 	struct work_struct work;
 	u32 data_intr;
@@ -517,7 +516,7 @@ static int ambarella_adc_read_raw(struct iio_dev *indio_dev,
 
 		mutex_lock(&ambadc->mtx);
 		tmp = readl_relaxed(ambadc->regbase + ADC_DATA_X_OFFSET(chan->channel));
-		if (ambadc->otp_t2v_calib)
+		if (RCT_OTP_T2V_CALIB_OFFSET != RCT_INVALID_OFFSET)
 			*val = AMBARELLA_CALIB_T2V_OFFSET +
 				tmp * ambadc->t2v_coeff - ambadc->t2v_coeff * ambadc->t2v_offset;
 		else
@@ -859,11 +858,9 @@ static void ambarella_adc_parse_dt(struct ambarella_adc *ambadc)
 	}
 
 	if (ambadc->t2v_channel >= 0) {
-		ambadc->otp_t2v_calib = !!of_find_property(np, "otp-t2v-calib", NULL);
-
 		set_bit(ambadc->t2v_channel, &ambadc->channels_mask);
 
-		if(ambadc->otp_t2v_calib) {
+		if(RCT_OTP_T2V_CALIB_OFFSET != RCT_INVALID_OFFSET) {
 			ret = regmap_read(ambadc->reg_rct, RCT_OTP_T2V_CALIB_OFFSET,
 					&ambadc->t2v_offset);
 			if (ret) {
