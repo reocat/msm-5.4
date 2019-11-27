@@ -27,6 +27,7 @@
 #define	AMBA_RNG_DATA				0x04
 
 #define AMBA_RNG_DELAY_MS			25
+#define AMBA_RNG_HW_MAX_SIZE                    16
 
 struct ambarella_rng_private {
 	struct hwrng rng;
@@ -42,8 +43,12 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 	struct ambarella_rng_private *priv;
 	u32 val, start_time, timeout, *data = buf;
 	size_t read = 0;
+	size_t maxsize;
 
 	priv = container_of(rng, struct ambarella_rng_private, rng);
+
+	/* calculate max size bytes can be transfered back */
+	maxsize = min_t(size_t, AMBA_RNG_HW_MAX_SIZE, max);
 
 	/* start rng */
 	val = amb_readl(priv->base + AMBA_RNG_CONTROL);
@@ -65,9 +70,10 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 
 	/* need to delay before read random data,why? */
 	mdelay(100);
-	while (read * 8 < max) {
+	while (maxsize >= sizeof(u32)) {
 		*data++ = amb_readl(priv->base + AMBA_RNG_DATA + read);
-		read += 4;
+		read += sizeof(u32);
+		maxsize -= sizeof(u32);
 	}
 
 out:
