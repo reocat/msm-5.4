@@ -238,8 +238,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 			len >>= 1;
 	}
 
-	dma_sync_single_for_cpu(bus->dev, bus->tx_dma_phys, len, DMA_TO_DEVICE);
-
 	switch (bus->rw) {
 	case SPI_WRITE_ONLY:
 	case SPI_WRITE_READ:
@@ -283,8 +281,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 
 		BUG_ON(dmaengine_slave_config(bus->tx_dma_chan, &tx_cfg) < 0);
 
-		dma_sync_single_for_device(bus->dev, bus->tx_dma_phys, len, DMA_TO_DEVICE);
-
 		txd = dmaengine_prep_slave_single(bus->tx_dma_chan, bus->tx_dma_phys, len,
 			DMA_MEM_TO_DEV, DMA_PREP_INTERRUPT | DMA_CTRL_ACK);
 		BUG_ON (!txd);
@@ -314,8 +310,6 @@ static void ambarella_spi_start_transfer(struct ambarella_spi *bus)
 		rxd->callback		= ambarella_spi_next_transfer;
 		rxd->callback_param	= bus;
 
-		dma_sync_single_for_device(bus->dev, bus->rx_dma_phys, len, DMA_FROM_DEVICE);
-
 		dmaengine_submit(rxd);
 		dma_async_issue_pending(bus->rx_dma_chan);
 	} else {
@@ -335,7 +329,6 @@ static void ambarella_spi_next_transfer(void *args)
 		switch (bus->rw) {
 		case SPI_WRITE_READ:
 		case SPI_READ_ONLY:
-			dma_sync_single_for_cpu(bus->dev, bus->rx_dma_phys, xfer->len, DMA_FROM_DEVICE);
 			memcpy(xfer->rx_buf, bus->rx_dma_buf, xfer->len);
 			break;
 		default:
