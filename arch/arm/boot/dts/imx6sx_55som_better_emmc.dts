@@ -11,7 +11,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
-#include "imx6sx.dtsi"
+#include "imx6sx-x2.dtsi"
 
 / {
 	model = "Freescale i.MX6 SoloX CCM base Board";
@@ -32,7 +32,7 @@
 
 	pxp_v4l2_out {
 		compatible = "fsl,imx6sx-pxp-v4l2", "fsl,imx6sl-pxp-v4l2";
-		status = "okay";
+		status = "disabled";
 	};
 
 	regulators {
@@ -206,10 +206,6 @@
 			IMX6SX_CLK_EPIT1 IMX6SX_CLK_EPIT2>;
 	fsl,shared-mem-addr = <0x91F000>;
 	fsl,shared-mem-size = <0x1000>;
-};
-
-&pxp {
-    status = "okay";
 };
 
 &snvs{
@@ -517,7 +513,6 @@
 
                 pinctrl_usb_otg1_id: usbotg1idgrp {
                         fsl,pins = <
-                                MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2        0x17059
                                 MX6SX_PAD_SD3_DATA1__GPIO7_IO_3         0x17059
                         >;
                 };
@@ -580,5 +575,21 @@
 			>;
 		};
 
+		pinctrl_pcie: pciegrp {
+			fsl,pins = <
+				MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24	0x10b0
+				MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2	0x10b0
+				MX6SX_PAD_LCD1_DATA22__GPIO3_IO_23	0x10b0
+			>;
+		};
 	};
+};
+
+&pcie {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie>;
+	reset-gpio = <&gpio3 23 0>;
+	power-on-gpio = <&gpio3 24 0>;
+	disable-gpio = <&gpio4 2 0>;
+	status = "okay";
 };
