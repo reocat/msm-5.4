@@ -15,20 +15,20 @@
 / {
 	model = "Freescale i.MX6 SoloX SG base Board";
 	compatible = "fsl,imx6sx-sg", "fsl,imx6sx";
-	
+
 	aliases {
-        
+
     };
-	
+
 	chosen {
 		stdout-path = &uart1;
 		//stdout-path = &mxcfb1;
 	};
 
 	memory {
-		linux,usable-memory = <0x80000000 0x20000000>;
+		linux,usable-memory = <0x80000000 0x1ff00000>;
 	};
-	
+
 	lcd-control {
 		compatible = "gpio-leds";
 		lcd_standby_iso {
@@ -106,7 +106,7 @@
 			regulator-min-microvolt = <3300000>;
 			regulator-max-microvolt = <3300000>;
 		};
-		
+
 		reg_psu_5v: regulator@3 {
 			compatible = "regulator-fixed";
 			reg = <3>;
@@ -149,13 +149,13 @@
 			"Mic Bias", "AMIC";
 		mux-int-port = <2>;
 		mux-ext-port = <3>;
-	};	
+	};
 };
 
 &gpmi {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_gpmi_nand>;
-	status = "disabled"; 
+	status = "disabled";
 	partition@0 {
 	label = "uboot";
 	reg = <0 0x800000>;
@@ -189,11 +189,11 @@
 	pinctrl-0 = <&pinctrl_enet1_1>;
 	phy-mode = "rmii";
 	phy-handle = <&ethphy1>;
-	phy-reset-gpios = <&gpio2 4 1>; 
+	phy-reset-gpios = <&gpio2 4 1>;
 	phy-reset-duration =<20>;
    	local-mac-address = [00 04 9F 01 1B 58];
 	status = "okay";
-	
+
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -202,35 +202,35 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
 		};
-			
+
 	};
-        
-	
+
+
 };
 
 &fec2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet2_1>;
 	phy-mode = "rmii";
-	phy-handle = <&ethphy2>;  	
-	phy-reset-gpios = <&gpio2 8 1>; 
+	phy-handle = <&ethphy2>;
+	phy-reset-gpios = <&gpio2 8 1>;
 	phy-reset-duration =<20>;
    	local-mac-address = [00 04 9F 01 1B 68];
 	status = "okay";
-       
+
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		
+
 		ethphy2: ethernet-phy@2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <2>;
 		};
 
-		
+
 	};
-	
+
 };
 
 &lcdif2 {
@@ -295,10 +295,10 @@
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_i2c1>;
         status = "okay";
-	m41t11: m41t11@68 {  
-		compatible = "st,m41t11"; 
+	m41t11: m41t11@68 {
+		compatible = "st,m41t11";
 		reg = <0x68>;
-            	status = "okay"; 
+            	status = "okay";
 	};
 
 	tca6416: tca6416@21 {
@@ -383,7 +383,7 @@
                         };
                 };
 	};*/
-	
+
 };
 
 &i2c3 {
@@ -397,7 +397,7 @@
 		reg = <0x20>;
 		#gpio-cells = <2>;
 		gpio-controller;
-	};	
+	};
 
 	codec: nau8822@1a {
 		compatible = "wlf,nau8822";
@@ -529,10 +529,10 @@
 	status = "okay";
 };
 
-&audmux {  
-    pinctrl-names = "default";  
-    pinctrl-0 = <&pinctrl_audmux>;  
-    status = "okay";  
+&audmux {
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_audmux>;
+    status = "okay";
 };
 
 &uart1 {
@@ -677,11 +677,11 @@
 				MX6SX_PAD_USB_H_DATA__GPIO7_IO_10	0x83030
 			>;
 		};
-		
+
 		pinctrl_enet1_1: enet1grp-1 {
 			fsl,pins = <
-				MX6SX_PAD_ENET2_COL__ENET1_MDC        	0xa089 
-				MX6SX_PAD_ENET2_CRS__ENET1_MDIO        	0xa089 
+				MX6SX_PAD_ENET2_COL__ENET1_MDC        	0xa089
+				MX6SX_PAD_ENET2_CRS__ENET1_MDIO        	0xa089
 				MX6SX_PAD_RGMII1_RX_CTL__ENET1_RX_EN   	0xb099
 				MX6SX_PAD_RGMII1_RD0__ENET1_RX_DATA_0   0xb099
 				MX6SX_PAD_RGMII1_RD1__ENET1_RX_DATA_1   0xb099
@@ -690,29 +690,29 @@
 				MX6SX_PAD_RGMII1_TD0__ENET1_TX_DATA_0   0xb099
 				MX6SX_PAD_RGMII1_TD1__ENET1_TX_DATA_1   0xb099
 				MX6SX_PAD_ENET1_RX_CLK__GPIO2_IO_4 	0xb099
-				MX6SX_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4000b099 	
-				
+				MX6SX_PAD_ENET1_TX_CLK__ENET1_REF_CLK1  0x4000b099
+
 			>;
 		};
 
-		
+
 		pinctrl_enet2_1: enet2grp-1{
 			fsl,pins = <
-				MX6SX_PAD_ENET1_MDIO__ENET2_MDIO        0xa089 
+				MX6SX_PAD_ENET1_MDIO__ENET2_MDIO        0xa089
 				MX6SX_PAD_ENET1_MDC__ENET2_MDC          0xa089
 				MX6SX_PAD_RGMII2_RX_CTL__ENET2_RX_EN    0xb099
 				MX6SX_PAD_RGMII2_RD0__ENET2_RX_DATA_0   0xb099
 				MX6SX_PAD_RGMII2_RD1__ENET2_RX_DATA_1   0xb099
                 		MX6SX_PAD_RGMII2_RXC__ENET2_RX_ER       0xb099
 				MX6SX_PAD_RGMII2_TX_CTL__ENET2_TX_EN    0xb099
-				MX6SX_PAD_RGMII2_TD0__ENET2_TX_DATA_0   0xb099 
+				MX6SX_PAD_RGMII2_TD0__ENET2_TX_DATA_0   0xb099
 				MX6SX_PAD_RGMII2_TD1__ENET2_TX_DATA_1   0xb099
-				MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8       0xb099   
+				MX6SX_PAD_ENET2_RX_CLK__GPIO2_IO_8       0xb099
 				MX6SX_PAD_ENET2_TX_CLK__ENET2_REF_CLK2	0x4000b099
                 >;
 		};
 
-		
+
                 pinctrl_csi_0: csigrp-0 {
                         fsl,pins = <
                                 MX6SX_PAD_LCD1_DATA07__CSI1_MCLK        0x110b0
@@ -733,10 +733,10 @@
                                 //MX6SX_PAD_LCD1_RESET__GPIO3_IO_27       0x80000000
                                 //MX6SX_PAD_LCD1_VSYNC__GPIO3_IO_28       0x80000000
 
-				//MX6SX_PAD_LCD1_DATA03__GPIO3_IO_4 0x80000000                        
-				//MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3 0x80000000                        
+				//MX6SX_PAD_LCD1_DATA03__GPIO3_IO_4 0x80000000
+				//MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3 0x80000000
 
-				MX6SX_PAD_LCD1_DATA16__GPIO3_IO_17 0x80000000                        
+				MX6SX_PAD_LCD1_DATA16__GPIO3_IO_17 0x80000000
 				MX6SX_PAD_LCD1_DATA17__GPIO3_IO_18  0x80000000
                         >;
                 };
@@ -771,7 +771,7 @@
 
 		pinctrl_i2c2: i2c2grp {
 			fsl,pins = <
-				MX6SX_PAD_QSPI1B_DATA2__I2C2_SDA 0x4001b8b1                          
+				MX6SX_PAD_QSPI1B_DATA2__I2C2_SDA 0x4001b8b1
 				MX6SX_PAD_QSPI1B_DATA3__I2C2_SCL  0x4001b8b1
 			>;
 		};
@@ -793,11 +793,11 @@
 		pinctrl_lcd: lcdgrp {
 			fsl,pins = <
 				//MX6SX_PAD_RGMII1_RXC__GPIO5_IO_5		0x80000000
-				//MX6SX_PAD_ENET1_RX_CLK__GPIO2_IO_4       0xb099 
+				//MX6SX_PAD_ENET1_RX_CLK__GPIO2_IO_4       0xb099
 				//MX6SX_PAD_ENET2_COL__GPIO2_IO_6			0x80000000
 			>;
 		};
-		
+
 		pinctrl_mqs: mqsgrp {
 			fsl,pins = <
 				MX6SX_PAD_SD2_CLK__MQS_RIGHT 0x120b0
@@ -809,14 +809,14 @@
 			fsl,pins = <
 				/*MX6SX_PAD_RGMII2_RD2__GPIO5_IO_14 0x10b0
 				MX6SX_PAD_RGMII1_RXC__GPIO5_IO_5 0x10b0
-				MX6SX_PAD_LCD1_DATA20__GPIO3_IO_21 0x10b0                       
+				MX6SX_PAD_LCD1_DATA20__GPIO3_IO_21 0x10b0
 				MX6SX_PAD_RGMII2_TD2__GPIO5_IO_20 0x10b0
 				MX6SX_PAD_RGMII1_TX_CTL__GPIO5_IO_10 0x10b0  */
 
 				MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24    0x10b0
 				MX6SX_PAD_NAND_CE1_B__GPIO4_IO_2   0x10b0
 				MX6SX_PAD_LCD1_DATA22__GPIO3_IO_23    0x10b0
-                    
+
 			>;
 		};
 
@@ -837,7 +837,7 @@
 			fsl,pins = <
 				MX6SX_PAD_GPIO1_IO12__PWM3_OUT 0x1b0b1	//old: 0x110b0
 			>;
-		};	
+		};
 
 		pinctrl_pwm4_0: pwm4grp-0 {
 			fsl,pins = <
@@ -845,14 +845,14 @@
 			>;
 		};
 
-		
+
 		pinctrl_uart1: uart1grp {// uart1 is used by A9 console
 			fsl,pins = <
 				MX6SX_PAD_GPIO1_IO04__UART1_TX		0x1b0b1
 				MX6SX_PAD_GPIO1_IO05__UART1_RX		0x1b0b1
 			>;
 		};
-		
+
 		pinctrl_uart2: uart2grp {// J7 for modbus 485
 			fsl,pins = <
 				MX6SX_PAD_GPIO1_IO06__UART2_TX		0x1b0b1
@@ -892,7 +892,7 @@
 				//MX6SX_PAD_CSI_DATA07__UART6_CTS_B       0x1b0b1
 			>;
 		};
-		
+
 		pinctrl_ecspi1: ecspi1grp {
 			fsl,pins = <
 				/*MX6SX_PAD_KEY_ROW0__ECSPI1_MOSI			0x1b089//QSPI1A_DATA0
@@ -914,7 +914,7 @@
 				MX6SX_PAD_QSPI1B_SS0_B__ECSPI3_SS0      0x0b0b9
 			>;
 		};
-		
+
 		pinctrl_ecspi5: ecspi5grp {
 			fsl,pins = <
 				MX6SX_PAD_QSPI1A_DQS__ECSPI5_MOSI	0x1b0b9//QSPI1A_DQS
@@ -923,7 +923,7 @@
 				MX6SX_PAD_QSPI1B_DQS__ECSPI5_SS0      	0x0b0b9//QSPI1B_DQS
 			>;
 		};
-		
+
 		pinctrl_audmux: audmuxgrp {
 			fsl,pins = <
 				/*MX6SX_PAD_CSI_DATA00__AUDMUX_AUD6_TXC	0x130b0
@@ -938,7 +938,7 @@
 				MX6SX_PAD_LCD1_VSYNC__AUDMUX_AUD3_TXFS   0x130b0
 				MX6SX_PAD_CSI_PIXCLK__AUDMUX_MCLK        0x130b0
 			>;
-		};		
+		};
 
 		pinctrl_usb_otg1_vbus: usbotg1vbusgrp {
 			fsl,pins = <
@@ -953,7 +953,7 @@
 			>;
 		};
 
-		
+
 		pinctrl_usdhc1: usdhc1grp {
 			fsl,pins = <
 				MX6SX_PAD_SD1_CMD__USDHC1_CMD		0x17059
@@ -964,7 +964,7 @@
 				MX6SX_PAD_SD1_DATA3__USDHC1_DATA3	0x17059
 			>;
 		};
-		
+
 		pinctrl_usdhc4_1: usdhc4grp-1 {
 			fsl,pins = <
 				MX6SX_PAD_SD4_CMD__USDHC4_CMD		0x17059
@@ -1010,7 +1010,7 @@
 				MX6SX_PAD_SD4_DATA7__USDHC4_DATA7	0x170f9
 			>;
 		};
-		
+
 	};
 };
 
