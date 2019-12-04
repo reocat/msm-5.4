@@ -96,6 +96,8 @@ struct ambarella_mmc_host {
 	int				bypass_tx_clk;
 	int				invert_rx_clk;
 	int				invert_dll_clk;
+	u32                             phy_timing[4];
+	bool                            fixed_timing;
 	bool				auto_cmd12;
 	bool				force_v18;
 
@@ -844,6 +846,14 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	tmp |= SD_HOST_HIGH_SPEED;
 	writeb_relaxed(tmp, host->regbase + SD_HOST_OFFSET);
 
+	if(host->fixed_timing) {
+		writel_relaxed(host->phy_timing[0], host->regbase + SD_LAT_CTRL_OFFSET);
+		regmap_field_write(host->phy_ctrl, host->phy_timing[1]);
+		ambarella_sd_set_dll(host, host->phy_timing[3]);
+		regmap_field_write(host->phy_sel, host->phy_timing[2]);
+		return 0;
+	}
+
 retry:
 	if (doing_retune) {
 		tmp = clk_get_rate(clk_get_parent(host->clk));
@@ -1307,6 +1317,11 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	if (of_property_read_u32(np, "amb,tuning-dll-clk", &host->invert_dll_clk) < 0)
 		host->invert_dll_clk = -1;
+
+	if(of_property_read_u32_array(np, "amb,phy-timing", host->phy_timing, ARRAY_SIZE(host->phy_timing)))
+		host->fixed_timing = false;
+	else
+		host->fixed_timing = true;
 
 	host->auto_cmd12 = of_property_read_bool(np, "amb,auto-cmd12");
 	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
