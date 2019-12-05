@@ -569,6 +569,9 @@ Optional properties:
   correctly in 400KHz.
 - amb,pwr-up-dly: specify the delay when power up and down. If it is not declared,
   the default value is 300ms. It's helpful for speeding up the system boot time.
+- amb,phy-timing: specify the fixed phy timing, including four u32 element, 1st element is
+  for SD_read_latency_control register setting, 2nd and 3rd element is for sd phyctrl 0 and
+  phyctrl 1 (phy sel) setting, the last element is for phy sbc setting
 
 iii) Example
 -----------
