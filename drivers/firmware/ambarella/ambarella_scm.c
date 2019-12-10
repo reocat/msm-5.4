@@ -112,37 +112,41 @@ static void ambarella_pm_sip(void)
 int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width)
 {
 	struct arm_smccc_res res;
-	struct vm_struct *vm;
+	struct vm_struct *area;
 	u64 offset;
-	u32 fn, cmd;
+	u32 op, cmd;
 
-	vm = find_vm_area((const void *)addr);
-	if (!vm) {
-		pr_err("SMCCC read: can't find vm info.\n");
+	area = find_vm_area((void *)addr);
+	if (!area) {
+		pr_err("SMCCC READ error.\n");
 		return -ENXIO;
 	}
 
-	offset = (u64)addr & (vm->size - PAGE_SIZE - 1);
+	offset = (u64)addr & (get_vm_area_size(area) - 1);
+
 	switch (width) {
 	case 64:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ64);
+		op = AMBA_SIP_ACCESS_REG_READ64;
 		break;
 	case 32:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ32);
+		op = AMBA_SIP_ACCESS_REG_READ32;
 		break;
 	case 16:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ16);
+		op = AMBA_SIP_ACCESS_REG_READ16;
 		break;
 	case 8:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ8);
+		op = AMBA_SIP_ACCESS_REG_READ8;
 		break;
 	default:
 		return -ENOEXEC;
 	}
 
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP, fn);
-	arm_smccc_smc(cmd, (unsigned long)vm->phys_addr + offset,
+	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL,
+			ARM_SMCCC_SMC_64,
+			ARM_SMCCC_OWNER_SIP,
+			SVC_SCM_FN(AMBA_SIP_ACCESS_REG, op));
+
+	arm_smccc_smc(cmd, (unsigned long)area->phys_addr + offset,
 			0, 0, 0, 0, 0, 0, &res);
 	*val = res.a0;
 
@@ -154,37 +158,41 @@ EXPORT_SYMBOL(__smccc_read);
 int __smccc_write(volatile void __iomem *addr, u64 val, u8 width)
 {
 	struct arm_smccc_res res;
-	struct vm_struct *vm;
-	u32 fn, cmd;
+	struct vm_struct *area;
+	u32 op, cmd;
 	u64 offset;
 
-	vm = find_vm_area((const void *)addr);
-	if (!vm) {
-		pr_err("SMCCC write: can't find vm info.\n");
+	area = find_vm_area((const void *)addr);
+	if (!area) {
+		pr_err("SMCCC WRITE error.\n");
 		return -ENXIO;
 	}
 
-	offset = (u64)addr & (vm->size - PAGE_SIZE - 1);
+	offset = (u64)addr & (get_vm_area_size(area) - 1);
+
 	switch (width) {
 	case 64:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE64);
+		op = AMBA_SIP_ACCESS_REG_WRITE64;
 		break;
 	case 32:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE32);
+		op = AMBA_SIP_ACCESS_REG_WRITE32;
 		break;
 	case 16:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE16);
+		op = AMBA_SIP_ACCESS_REG_WRITE16;
 		break;
 	case 8:
-		fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE8);
+		op = AMBA_SIP_ACCESS_REG_WRITE8;
 		break;
 	default:
 		return -ENOEXEC;
 	}
 
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP, fn);
-	arm_smccc_smc(cmd, (unsigned long)vm->phys_addr + offset,
+	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL,
+			ARM_SMCCC_SMC_64,
+			ARM_SMCCC_OWNER_SIP,
+			SVC_SCM_FN(AMBA_SIP_ACCESS_REG, op));
+
+	arm_smccc_smc(cmd, (unsigned long)area->phys_addr + offset,
 			val, 0, 0, 0, 0, 0, &res);
 	return 0;
 }
