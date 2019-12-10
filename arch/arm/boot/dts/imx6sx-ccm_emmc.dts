@@ -416,7 +416,7 @@
 /* Override the watchdog driver type
  */
 &wdog1 {
-        compatible = "iotgw-mx6-wdt";
+        compatible = "fsl,imx21-wdt";
         status = "okay";
 };
 &iomuxc {
