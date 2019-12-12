@@ -851,7 +851,7 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 		regmap_field_write(host->phy_ctrl, host->phy_timing[1]);
 		ambarella_sd_set_dll(host, host->phy_timing[3]);
 		regmap_field_write(host->phy_sel, host->phy_timing[2]);
-		//after set timing, should reset the controller
+		/* after set timing, should reset the controller */
 		ambarella_sd_recovery(host);
 		return 0;
 	}
