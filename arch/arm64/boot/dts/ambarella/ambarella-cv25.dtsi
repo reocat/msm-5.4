@@ -1392,8 +1392,6 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
-			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <504000000>;
 		};
 
 		gclk_so: gclk-so {

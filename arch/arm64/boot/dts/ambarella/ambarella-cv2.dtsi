@@ -1509,8 +1509,6 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_vision";
-			assigned-clocks = <&gclk_vision>;
-			assigned-clock-rates = <1008000000>;
 		};
 
 		gclk_fex: gclk-fex {
