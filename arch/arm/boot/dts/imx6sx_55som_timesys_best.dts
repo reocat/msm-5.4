@@ -239,18 +239,16 @@
 };
 
 &lcdif2 {
-	//pinctrl-names = "default";
-	//pinctrl-0 = <&pinctrl_lcd>;
 	display = <&display1>;
 	disp-dev = "ldb";
 	status = "okay";
-	display1: display {
+	display1: display@1 {
 		bits-per-pixel = <32>;
 		bus-width = <24>;
 	};
 };
 &ldb {
-    status = "okay";
+	status = "okay";
 	lvds-channel@0 {
 		fsl,data-mapping = "spwg";//"jeida";
 		fsl,data-width = <24>;
@@ -270,15 +268,6 @@
 				vsync-len = <15>;
 				//de-active = <1>;
 			};
-		};
-	};
-};
-
-&csi2 {
-	status = "okay";
-	port {
-		csi2_ep: endpoint {
-			remote-endpoint = <&vadc_ep>;
 		};
 	};
 };
@@ -328,19 +317,29 @@
 };
 
 &csi1 {
-        status = "okay";
+	status = "okay";
 
-        port {
-                csi1_ep: endpoint {
-                        remote-endpoint = <&hi253_ep>;
-                };
-        };
+	port {
+		csi1_ep: endpoint {
+			remote-endpoint = <&hi253_ep>;
+		};
+	};
+};
+
+&csi2 {
+	status = "okay";
+
+	port {
+		csi2_ep: endpoint {
+			remote-endpoint = <&vadc_ep>;
+		};
+	};
 };
 
 &i2c2 {
 	clock-frequency = <100000>;
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_i2c2>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
 	at24@52 {
@@ -365,30 +364,6 @@
 		compatible = "MFI337S3959";
 		reg = <0x11>;
 	};
-
-	/*Hi253@20 {
-		compatible = "Hi253,Hi253";
-		reg = <0x20>;
-		pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_csi_0>;
-                clocks = <&clks IMX6SX_CLK_CSI>;
-                clock-names = "csi_mclk";
-                pwn-gpios = <&gpio3 18 1>;
-                rst-gpios = <&gpio3 17 0>;
-
-                cam18v-en-gpios = <&gpio3 3 0>;
-                cam28v-en-gpios = <&gpio3 4 0>;
-
-                csi_id = <0>;
-                mclk = <19000000>;
-                mclk_source = <0>;
-                port {
-                        hi253_ep: endpoint {
-                                remote-endpoint = <&csi1_ep>;
-                        };
-                };
-	};*/
-
 };
 
 &i2c3 {
@@ -410,80 +385,49 @@
 		clocks = <&clks IMX6SX_CLK_AUDIO>;
 	};*/
 
-    pixcir_ts@58 {
-        compatible = "pixcir,pixcir_tangoc";//"pixcir,tangoc_ts";
-        reg = <0x58>;
-        interrupt-parent = <&gpio1>;
-        interrupts = <15 2>;
-        //reset is done by code in pwm_bl.c //gpio_rst = <&gpio5 0 0>;
+	pixcir_ts@58 {
+		compatible = "pixcir,pixcir_tangoc";//"pixcir,tangoc_ts";
+		reg = <0x58>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <15 2>;
+		//reset is done by code in pwm_bl.c //gpio_rst = <&gpio5 0 0>;
 		attb-gpio = <&gpio1 15 0>;//old kernel name: gpio_attb = <&gpio5 6 0>;
 		//no need: gpio_lcd_id = <&gpio4 28 0>;
 		touchscreen-size-x = <1024>;
 		touchscreen-size-y = <600>;
-    };
+	};
 };
 
 &i2c4 {
-    status = "okay";
-    clock-frequency = <100000>;
-    pinctrl-names = "default";
-    pinctrl-0 = <&pinctrl_i2c4>;
-
-    /*pixcir_ts@58 {
-        compatible = "pixcir,pixcir_tangoc";//"pixcir,tangoc_ts";
-        reg = <0x58>;
-        interrupt-parent = <&gpio5>;
-        interrupts = <6 2>;
-        //reset is done by code in pwm_bl.c //gpio_rst = <&gpio5 0 0>;
-		attb-gpio = <&gpio5 6 0>;//old kernel name: gpio_attb = <&gpio5 6 0>;
-		//no need: gpio_lcd_id = <&gpio4 28 0>;
-		touchscreen-size-x = <1024>;
-		touchscreen-size-y = <600>;
-    };*/
+	status = "okay";
+	clock-frequency = <100000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_i2c4>;
 
 	Hi253@20 {
 		compatible = "Hi253,Hi253";
 		reg = <0x20>;
 		pinctrl-names = "default";
-                pinctrl-0 = <&pinctrl_csi_0>;
-                clocks = <&clks IMX6SX_CLK_CSI>;
-                clock-names = "csi_mclk";
-                pwn-gpios = <&gpio3 18 1>;
-                rst-gpios = <&gpio3 17 0>;
-
-                //cam18v-en-gpios = <&gpio3 3 0>;
-                //cam28v-en-gpios = <&gpio3 4 0>;
-				cam18v-en-gpios = <&tca6416power 2 0>;
-                cam28v-en-gpios = <&tca6416power 3 0>;
-
-                csi_id = <0>;
-                mclk = <24000000>;
-                mclk_source = <0>;
-                port {
-                        hi253_ep: endpoint {
-                                remote-endpoint = <&csi1_ep>;
-                        };
-                };
+		pinctrl-0 = <&pinctrl_csi_0>;
+		clocks = <&clks IMX6SX_CLK_CSI>;
+		clock-names = "csi_mclk";
+		pwn-gpios = <&gpio3 18 1>;
+		rst-gpios = <&gpio3 17 0>;
+		cam18v-en-gpios = <&tca6416power 2 0>;
+		cam28v-en-gpios = <&tca6416power 3 0>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
+		port {
+			hi253_ep: endpoint {
+				remote-endpoint = <&csi1_ep>;
+			};
+		};
 	};
 };
 
 &ocram {
 	reg = <0x00901000 0xf000>;
-};
-
-&qspi1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1>;
-	ddrsmp = <0>;
-	status = "okay";
-
-	flash0: w25q128@0 {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "winbond,w25q128";
-		spi-max-frequency = <15625000>;
-		reg = <0>;
-	};
 };
 
 &qspi2 {
@@ -494,7 +438,7 @@
 	status = "okay";
 };
 
-&rpmsg{
+&rpmsg {
 	status = "okay";
 };
 
@@ -534,15 +478,13 @@
 	status = "okay";
 };
 
-
 &pxp {
-    status = "okay";
+	status = "okay";
 };
 
 &snvs{
 	status = "okay";
 };
-
 
 &ssi2 {
 	fsl,mode = "i2s-slave";
@@ -662,22 +604,6 @@
 	status = "okay";
 };
 
-/*&usdhc4 {
-	pinctrl-names = "default";//, "state_100mhz", "state_200mhz";
-	pinctrl-0 = <&pinctrl_usdhc4_1>;
-	//pinctrl-1 = <&pinctrl_usdhc4_1_100mhz>;
-	//pinctrl-2 = <&pinctrl_usdhc4_1_200mhz>;
-	bus-width = <8>;
-	/*
-	 * overwrite cd-gpios and wp-gpios since they are reused as eMMC DATA
-	 * signals after rework
-	 */
-	/*cd-gpios = <>;
-	wp-gpios = <>;
-	no-1-8-v;
-	non-removable;
-	status = "disabled";
-};*/
 &usdhc4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc4_1>;
@@ -688,6 +614,27 @@
 	enable-sdio-wakeup;
 	status = "okay";
 };
+
+&vadc {
+	vadc_in = <0>;
+	csi_id = <1>;
+	status = "okay";
+	port {
+		vadc_ep: endpoint {
+			remote-endpoint = <&csi2_ep>;
+		};
+	};
+};
+
+&pcie {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_pcie>;
+	reset-gpio = <&gpio3 23 0>;
+	power-on-gpio = <&gpio3 24 0>;
+	disable-gpio = <&gpio4 2 0>;
+	status = "okay";
+};
+
 &iomuxc {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_hog_1>;
@@ -733,34 +680,24 @@
 		};
 
 
-                pinctrl_csi_0: csigrp-0 {
-                        fsl,pins = <
-                                MX6SX_PAD_LCD1_DATA07__CSI1_MCLK        0x110b0
-                                MX6SX_PAD_LCD1_DATA06__CSI1_PIXCLK      0x110b9
-                                MX6SX_PAD_LCD1_DATA04__CSI1_VSYNC       0x110b0
-                                MX6SX_PAD_LCD1_DATA05__CSI1_HSYNC       0x110b0
-                                //MX6SX_PAD_LCD1_DATA17__CSI1_DATA_0      0x110b0
-                                //MX6SX_PAD_LCD1_DATA16__CSI1_DATA_1      0x110b0
-                                MX6SX_PAD_LCD1_DATA15__CSI1_DATA_2      0x110b0
-                                MX6SX_PAD_LCD1_DATA14__CSI1_DATA_3      0x110b0
-                                MX6SX_PAD_LCD1_DATA13__CSI1_DATA_4      0x110b0
-                                MX6SX_PAD_LCD1_DATA12__CSI1_DATA_5      0x110b0
-                                MX6SX_PAD_LCD1_DATA11__CSI1_DATA_6      0x110b0
-                                MX6SX_PAD_LCD1_DATA10__CSI1_DATA_7      0x110b0
-                                MX6SX_PAD_LCD1_DATA09__CSI1_DATA_8      0x110b0
-                                MX6SX_PAD_LCD1_DATA08__CSI1_DATA_9      0x110b0
-
-                                //MX6SX_PAD_LCD1_RESET__GPIO3_IO_27       0x80000000
-                                //MX6SX_PAD_LCD1_VSYNC__GPIO3_IO_28       0x80000000
-
-				//MX6SX_PAD_LCD1_DATA03__GPIO3_IO_4 0x80000000
-				//MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3 0x80000000
-
-				MX6SX_PAD_LCD1_DATA16__GPIO3_IO_17 0x80000000
-				MX6SX_PAD_LCD1_DATA17__GPIO3_IO_18  0x80000000
-                        >;
-                };
-
+		pinctrl_csi_0: csigrp-0 {
+			fsl,pins = <
+				MX6SX_PAD_LCD1_DATA07__CSI1_MCLK	0x110b0
+				MX6SX_PAD_LCD1_DATA06__CSI1_PIXCLK	0x110b9
+				MX6SX_PAD_LCD1_DATA04__CSI1_VSYNC	0x110b0
+				MX6SX_PAD_LCD1_DATA05__CSI1_HSYNC	0x110b0
+				MX6SX_PAD_LCD1_DATA15__CSI1_DATA_2	0x110b0
+				MX6SX_PAD_LCD1_DATA14__CSI1_DATA_3	0x110b0
+				MX6SX_PAD_LCD1_DATA13__CSI1_DATA_4	0x110b0
+				MX6SX_PAD_LCD1_DATA12__CSI1_DATA_5	0x110b0
+				MX6SX_PAD_LCD1_DATA11__CSI1_DATA_6	0x110b0
+				MX6SX_PAD_LCD1_DATA10__CSI1_DATA_7	0x110b0
+				MX6SX_PAD_LCD1_DATA09__CSI1_DATA_8	0x110b0
+				MX6SX_PAD_LCD1_DATA08__CSI1_DATA_9	0x110b0
+				MX6SX_PAD_LCD1_DATA16__GPIO3_IO_17	0x80000000
+				MX6SX_PAD_LCD1_DATA17__GPIO3_IO_18	0x80000000
+			>;
+		};
 
 		pinctrl_gpmi_nand: gpmi-nand {
 			fsl,pins = <
@@ -807,14 +744,6 @@
 			fsl,pins = <
 				MX6SX_PAD_SD3_DATA0__I2C4_SCL		0x4001b8b1
 				MX6SX_PAD_SD3_DATA1__I2C4_SDA		0x4001b8b1
-			>;
-		};
-
-		pinctrl_lcd: lcdgrp {
-			fsl,pins = <
-				//MX6SX_PAD_RGMII1_RXC__GPIO5_IO_5		0x80000000
-				//MX6SX_PAD_ENET1_RX_CLK__GPIO2_IO_4       0xb099
-				//MX6SX_PAD_ENET2_COL__GPIO2_IO_6			0x80000000
 			>;
 		};
 
@@ -1030,28 +959,4 @@
 		};
 
 	};
-};
-
-&vadc {
-	vadc_in = <0>;
-	csi_id = <1>;
-	status = "okay";
-	port {
-		vadc_ep: endpoint {
-			remote-endpoint = <&csi2_ep>;
-		};
-	};
-};
-
-&pcie {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pcie>;
-	//reset-gpio = <&gpio3 21 0>;
-	//power-on-gpio = <&gpio5 20 0>;
-	//disable-gpio = <&gpio5 10 0>;
-	reset-gpio = <&gpio3 23 0>;
-	power-on-gpio = <&gpio3 24 0>;
-	disable-gpio = <&gpio4 2 0>;
-	//ext-gpio = <&gpio5 5 0>;
-	status = "okay";
 };
