@@ -170,6 +170,8 @@ enum power_event {
 #define GMAC_CONFIG_SARC		GENMASK(30, 28)
 #define GMAC_CONFIG_SARC_SHIFT		28
 #define GMAC_CONFIG_IPC			BIT(27)
+#define GMAC_CONFIG_IPG			GENMASK(26, 24)
+#define GMAC_CONFIG_IPG_SHIFT		24
 #define GMAC_CONFIG_2K			BIT(22)
 #define GMAC_CONFIG_ACS			BIT(20)
 #define GMAC_CONFIG_BE			BIT(18)
@@ -177,11 +179,17 @@ enum power_event {
 #define GMAC_CONFIG_JE			BIT(16)
 #define GMAC_CONFIG_PS			BIT(15)
 #define GMAC_CONFIG_FES			BIT(14)
+#define GMAC_CONFIG_FES_SHIFT		14
 #define GMAC_CONFIG_DM			BIT(13)
 #define GMAC_CONFIG_LM			BIT(12)
 #define GMAC_CONFIG_DCRS		BIT(9)
 #define GMAC_CONFIG_TE			BIT(1)
 #define GMAC_CONFIG_RE			BIT(0)
+
+/* MAC extended config */
+#define GMAC_CONFIG_EIPG		GENMASK(29, 25)
+#define GMAC_CONFIG_EIPG_SHIFT		25
+#define GMAC_CONFIG_EIPG_EN		BIT(24)
 
 /* MAC HW features0 bitmap */
 #define GMAC_HW_FEAT_SAVLANINS		BIT(27)
@@ -217,6 +225,9 @@ enum power_event {
 
 /* MAC HW features3 bitmap */
 #define GMAC_HW_FEAT_ASP		GENMASK(29, 28)
+#define GMAC_HW_FEAT_ESTWID		GENMASK(21, 20)
+#define GMAC_HW_FEAT_ESTDEP		GENMASK(19, 17)
+#define GMAC_HW_FEAT_ESTSEL		BIT(16)
 #define GMAC_HW_FEAT_FRPES		GENMASK(14, 13)
 #define GMAC_HW_FEAT_FRPBS		GENMASK(12, 11)
 #define GMAC_HW_FEAT_FRPSEL		BIT(10)
