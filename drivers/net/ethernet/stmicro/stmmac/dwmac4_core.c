@@ -870,6 +870,7 @@ const struct stmmac_ops dwmac410_ops = {
 	.enable_vlan = dwmac4_enable_vlan,
 	.set_arp_offload = dwmac4_set_arp_offload,
 	.est_configure = dwmac5_est_configure,
+	.fpe_configure = dwmac5_fpe_configure,
 };
 
 const struct stmmac_ops dwmac510_ops = {
@@ -912,6 +913,7 @@ const struct stmmac_ops dwmac510_ops = {
 	.enable_vlan = dwmac4_enable_vlan,
 	.set_arp_offload = dwmac4_set_arp_offload,
 	.est_configure = dwmac5_est_configure,
+	.fpe_configure = dwmac5_fpe_configure,
 };
 
 int dwmac4_setup(struct stmmac_priv *priv)
