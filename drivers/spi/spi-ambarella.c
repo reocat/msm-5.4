@@ -758,6 +758,14 @@ static int ambarella_spi_remove(struct platform_device *pdev)
 static int ambarella_spi_suspend(struct platform_device *pdev,
 	pm_message_t state)
 {
+	struct spi_master		*master;
+	struct ambarella_spi		*bus;
+
+	master	= platform_get_drvdata(pdev);
+	bus	= spi_master_get_devdata(master);
+
+	clk_set_rate(bus->clk, 0);
+
 	dev_dbg(&pdev->dev, "%s exit with 0 @ %d\n", __func__, state.event);
 
 	return 0;
