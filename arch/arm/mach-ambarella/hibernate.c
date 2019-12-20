@@ -135,9 +135,9 @@ static int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 {
 
 	int loff = ofs;
-	int block = 0;
+	int block = ofs / mtd->erasesize;
 
-	while(mtd_block_isbad(mtd, loff) > 0){
+	while (mtd_block_isbad(mtd, loff) > 0){
 
 		if(loff > mtd->size){
 			printk("SWP: overflow mtd device ...\n");
@@ -145,12 +145,11 @@ static int hibernate_mtd_check(struct mtd_info *mtd, int ofs)
 			break;
 		}
 
-		printk("SWP: offset %08x block %d is a bad block\n",
-				loff, loff / mtd->erasesize);
-
-		block = loff / mtd->erasesize;
-		loff = (block + 1) * mtd->erasesize;
+		printk("SWP: of.%08x or b.%d is a bad block\n", loff, block);
+		block ++;
+		loff += mtd->erasesize;
 	}
+
 	return loff / PAGE_SIZE;
 }
 
