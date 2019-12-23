@@ -67,6 +67,7 @@ struct ambarella_spi {
 	u32					msb_first_only:1;
 	u32					ridx, widx;
 	u32					cspol;
+	u32					ext_rx_dly;
 	int					cs_pins[AMBARELLA_SPI_MAX_CS_NUM];
 	int					xfer_id, n_xfer;
 	int					cs_active;
@@ -132,6 +133,7 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 	cr0.s.byte_ws = 0;
 	cr0.s.fc_en = 0;
 	cr0.s.residue = 1;
+	cr0.s.rxd_mg = bus->ext_rx_dly;
 	writel_relaxed(cr0.w, bus->virt + SPI_CTRLR0_OFFSET);
 
 	ssi_clk = bus->clk_freq;
@@ -668,6 +670,15 @@ static int ambarella_spi_probe(struct platform_device *pdev)
 	master->transfer_one_message	= ambarella_spi_one_message;
 	master->setup = ambarella_spi_hw_setup;
 	platform_set_drvdata(pdev, master);
+
+	err = of_property_read_u32(pdev->dev.of_node, "amb,ext_rx_dly",
+		&bus->ext_rx_dly);
+	if (err < 0) {
+		dev_dbg(&pdev->dev, "Missing extra-rx-delay, assuming 0!\n");
+		bus->ext_rx_dly = 0;
+	} else if (bus->ext_rx_dly > 0xF){
+		bus->ext_rx_dly = 0xF;
+	}
 
 	/* check if hw only supports msb first tx/rx */
 	if (of_find_property(pdev->dev.of_node, "amb,msb-first-only", NULL)) {
