@@ -150,6 +150,11 @@
 			     <1 10 0xf08>;	/* Hyp IRQ */
 	};
 
+	s_axi@f2000000 {
+		compatible = "ambarella,axi";
+		reg = <0xf2000000 0x1000>;
+	};
+
 	n_apb@e4000000 { /* Non-Secure APB, but configurable */
 		compatible = "simple-bus";
 		#address-cells = <1>;
@@ -277,6 +282,7 @@
 			amb,rct-regmap = <&rct_syscon>;
 			/* interrupts = <0 42 0x4>; */
 			timeout-sec = <15>;
+			amb,secure-ctrl-bit = <49>;
 		};
 
 		pinctrl: pinctrl@0xec003000 {
@@ -1154,12 +1160,21 @@
 		rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
+			amb,secure-ctrl-bit = <31>;
 		};
 
 		rng@e8001000 {
 			compatible = "ambarella,hw-rng";
 			reg = <0xe8001000 0x14>;
 			amb,rct-regmap = <&rct_syscon>;
+			amb,secure-ctrl-bit = <31>;
+		};
+
+		s_scratchpad@e8001000 {
+			compatible = "ambarella,sec-scratchpad";
+			reg = <0xe8001000 0x1000>;
+			amb,secure-device;
+			amb,secure-ctrl-bit = <31>;
 		};
 	};
 

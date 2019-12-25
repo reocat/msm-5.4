@@ -152,6 +152,11 @@
 			     <1 10 0xf08>;	/* Hyp IRQ */
 	};
 
+	s_axi@f2000000 {
+		compatible = "ambarella,axi";
+		reg = <0xf2000000 0x1000>;
+	};
+
 	n_apb@e4000000 { /* Non-Secure APB */
 		compatible = "simple-bus";
 		#address-cells = <1>;
