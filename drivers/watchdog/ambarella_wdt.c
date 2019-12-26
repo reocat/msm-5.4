@@ -35,6 +35,7 @@
 #include <linux/mfd/syscon.h>
 #include <plat/wdt.h>
 #include <plat/rct.h>
+#include <mach/io.h>
 
 
 #define AMBARELLA_WDT_MAX_CYCLE		0xffffffff
@@ -47,6 +48,9 @@ static bool nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, bool, 0);
 MODULE_PARM_DESC(nowayout, "Watchdog cannot be stopped once started (default="
 				__MODULE_STRING(WATCHDOG_NOWAYOUT) ")");
+
+static u32 (*amb_readl)(volatile void __iomem *base);
+static void (*amb_writel)(u32 value, volatile void __iomem *base);
 
 struct ambarella_wdt {
 	void __iomem	 		*regbase;
@@ -75,11 +79,11 @@ static int ambarella_wdt_start(struct watchdog_device *wdd)
 	ctrl_val |= WDOG_CTR_EN;
 
 	if (ctrl_val & WDOG_CTR_INT_EN)
-		writel_relaxed(0x0, ambwdt->regbase + WDOG_RST_WD_OFFSET);
+		amb_writel(0x0, ambwdt->regbase + WDOG_RST_WD_OFFSET);
 	else
-		writel_relaxed(0xFF, ambwdt->regbase + WDOG_RST_WD_OFFSET);
+		amb_writel(0xFF, ambwdt->regbase + WDOG_RST_WD_OFFSET);
 
-	writel_relaxed(ctrl_val, ambwdt->regbase + WDOG_CONTROL_OFFSET);
+	amb_writel(ctrl_val, ambwdt->regbase + WDOG_CONTROL_OFFSET);
 
 	return 0;
 }
@@ -88,7 +92,7 @@ static int ambarella_wdt_stop(struct watchdog_device *wdd)
 {
 	struct ambarella_wdt *ambwdt = watchdog_get_drvdata(wdd);
 
-	writel_relaxed(0, ambwdt->regbase + WDOG_CONTROL_OFFSET);
+	amb_writel(0, ambwdt->regbase + WDOG_CONTROL_OFFSET);
 
 	return 0;
 }
@@ -97,8 +101,8 @@ static int ambarella_wdt_keepalive(struct watchdog_device *wdd)
 {
 	struct ambarella_wdt *ambwdt = watchdog_get_drvdata(wdd);
 
-	writel_relaxed(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
-	writel_relaxed(WDT_RESTART_VAL, ambwdt->regbase + WDOG_RESTART_OFFSET);
+	amb_writel(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
+	amb_writel(WDT_RESTART_VAL, ambwdt->regbase + WDOG_RESTART_OFFSET);
 
 	return 0;
 }
@@ -112,7 +116,7 @@ static int ambarella_wdt_set_timeout(struct watchdog_device *wdd, u32 time)
 
 	freq = clk_get_rate(clk_get(NULL, "gclk_apb"));
 	ambwdt->timeout = time * freq;
-	writel_relaxed(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
+	amb_writel(ambwdt->timeout, ambwdt->regbase + WDOG_RELOAD_OFFSET);
 
 	return 0;
 }
@@ -121,7 +125,7 @@ static irqreturn_t ambarella_wdt_irq(int irq, void *devid)
 {
 	struct ambarella_wdt *ambwdt = devid;
 
-	writel_relaxed(0x01, ambwdt->regbase + WDOG_CLR_TMO_OFFSET);
+	amb_writel(0x01, ambwdt->regbase + WDOG_CLR_TMO_OFFSET);
 
 	dev_info(ambwdt->wdd.parent, "Watchdog timer expired!\n");
 
@@ -208,6 +212,9 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 		regmap_update_bits(ambwdt->rct_reg, UNLOCK_WDT_RST_L_OFFSET,
 			UNLOCK_WDT_RST_L_VAL, 0x0);
 	}
+
+	ambarella_fixup_secure_world(of_property_read_bool(np, "amb,secure-device"),
+			&amb_readl, &amb_writel);
 
 	/* make sure software reboot bit is low, otherwise WDT cannot reset the chip */
 	regmap_update_bits(ambwdt->rct_reg, SOFT_OR_DLL_RESET_OFFSET, 0x1, 0x0);
