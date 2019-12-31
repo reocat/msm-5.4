@@ -829,7 +829,9 @@ static int ambarella_sd_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios
 static int ambarella_sd_card_busy(struct mmc_host *mmc)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
-	return !(readl_relaxed(host->regbase + SD_STA_OFFSET) & 0x1F00000);
+
+	/* only check if data0 is low */
+	return !(readl_relaxed(host->regbase + SD_STA_OFFSET) & 0x100000);
 }
 
 static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
