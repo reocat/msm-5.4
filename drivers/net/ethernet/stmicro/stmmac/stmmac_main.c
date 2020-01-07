@@ -4238,12 +4238,14 @@ static void stmmac_init_fs(struct net_device *dev)
 			    &stmmac_dma_cap_fops);
 
 	rtnl_unlock();
+	register_netdevice_notifier(&stmmac_notifier);
 }
 
 static void stmmac_exit_fs(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
 
+	unregister_netdevice_notifier(&stmmac_notifier);
 	debugfs_remove_recursive(priv->dbgfs_dir);
 }
 #endif /* CONFIG_DEBUG_FS */
