@@ -108,9 +108,25 @@ static inline void dai_rx_enable(struct amb_i2s_priv *priv_data)
 static inline void dai_tx_disable(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
+	int i, j;
+
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val &= ~I2S_TX_ENABLE_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
+
+	if (priv_data->ws_set_support == 0) {
+		for (j = 0; j < 100; j++){
+			val = readl_relaxed(priv_data->regbase + I2S_TX_STATUS_OFFSET);
+			if ((val & 0x10) == 0x10)
+				break;
+			for (i = 0; i <8; i++)
+				writel(0, priv_data->regbase + I2S_TX_LEFT_DATA_OFFSET);
+		}
+
+		val = readl_relaxed(priv_data->regbase + I2S_TX_STATUS_OFFSET);
+		if ((val & 0x10) != 0x10)
+			printk("Try to disable tx failed \n");
+	}
 }
 
 static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
@@ -128,9 +144,24 @@ static inline void dai_rx_disable(struct amb_i2s_priv *priv_data)
 static inline void dai_tx_fifo_rst(struct amb_i2s_priv *priv_data)
 {
 	u32 val;
+	struct ambarella_i2s_interface *i2s_intf = &priv_data->i2s_intf;
+
 	val = readl_relaxed(priv_data->regbase + I2S_INIT_OFFSET);
 	val |= I2S_TX_FIFO_RESET_BIT;
 	writel_relaxed(val, priv_data->regbase + I2S_INIT_OFFSET);
+
+	if ((priv_data->ws_set_support == 0) && (i2s_intf->mode == I2S_DSP_MODE)) {
+		int i, j;
+
+		val = readl_relaxed(priv_data->regbase + I2S_TX_CTRL_OFFSET);
+		if ((val & I2S_TX_UNISON_BIT) == I2S_TX_UNISON_BIT)
+			j = (i2s_intf->slots - 1) >> 1;
+		else
+			j = i2s_intf->slots - 1;
+
+		for (i = 0; i < j; i++)
+			writel(0, priv_data->regbase + I2S_TX_LEFT_DATA_OFFSET);
+	}
 }
 
 static inline void dai_rx_fifo_rst(struct amb_i2s_priv *priv_data)
