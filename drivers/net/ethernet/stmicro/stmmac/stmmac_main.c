@@ -112,6 +112,27 @@ static void stmmac_exit_fs(struct net_device *dev);
 
 #define STMMAC_COAL_TIMER(x) (jiffies + usecs_to_jiffies(x))
 
+static int stmmac_bus_clks_enable(struct stmmac_priv *priv, bool enabled)
+{
+	int ret = 0;
+
+	if (enabled) {
+		ret = clk_prepare_enable(priv->plat->stmmac_clk);
+		if (ret)
+			return ret;
+		ret = clk_prepare_enable(priv->plat->pclk);
+		if (ret) {
+			clk_disable_unprepare(priv->plat->stmmac_clk);
+			return ret;
+		}
+	} else {
+		clk_disable_unprepare(priv->plat->stmmac_clk);
+		clk_disable_unprepare(priv->plat->pclk);
+	}
+
+	return ret;
+}
+
 /**
  * stmmac_verify_args - verify the driver parameters.
  * Description: it checks the driver parameters and set a default in case of
@@ -2646,11 +2667,19 @@ static void stmmac_hw_teardown(struct net_device *dev)
 static int stmmac_open(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
+	struct platform_device *pdev = to_platform_device(priv->device);
 	int bfsize = 0;
 	u32 chan;
 	int ret;
 
-	if (priv->hw->pcs != STMMAC_PCS_TBI &&
+	ret = stmmac_bus_clks_enable(priv, true);
+	if (ret)
+		return ret;
+	if (priv->plat->init)
+		priv->plat->init(pdev, priv->plat->bsp_priv);
+
+	if (priv->hw->pcs != STMMAC_PCS_RGMII &&
+	    priv->hw->pcs != STMMAC_PCS_TBI &&
 	    priv->hw->pcs != STMMAC_PCS_RTBI) {
 		ret = stmmac_init_phy(dev);
 		if (ret) {
@@ -2768,6 +2797,8 @@ dma_desc_error:
 static int stmmac_release(struct net_device *dev)
 {
 	struct stmmac_priv *priv = netdev_priv(dev);
+	struct platform_device *pdev = to_platform_device(priv->device);
+
 	u32 chan;
 
 	/* Stop and disconnect the PHY */
@@ -2803,6 +2834,10 @@ static int stmmac_release(struct net_device *dev)
 	netif_carrier_off(dev);
 
 	stmmac_release_ptp(priv);
+
+	if (priv->plat->exit)
+		priv->plat->exit(pdev, priv->plat->bsp_priv);
+	stmmac_bus_clks_enable(priv, false);
 
 	return 0;
 }
@@ -4313,6 +4348,11 @@ static int stmmac_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vi
 {
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	bool is_double = false;
+	int ret;
+
+	ret = stmmac_bus_clks_enable(priv, true);
+	if (ret)
+		return ret;
 
 	if (!priv->dma_cap.vlhash)
 		return -EOPNOTSUPP;
@@ -4320,7 +4360,10 @@ static int stmmac_vlan_rx_kill_vid(struct net_device *ndev, __be16 proto, u16 vi
 		is_double = true;
 
 	clear_bit(vid, priv->active_vlans);
-	return stmmac_vlan_update(priv, is_double);
+	ret = stmmac_vlan_update(priv, is_double);
+
+	stmmac_bus_clks_enable(priv, false);
+	return ret;
 }
 
 static const struct net_device_ops stmmac_netdev_ops = {
@@ -4487,6 +4530,7 @@ int stmmac_dvr_probe(struct device *device,
 		     struct plat_stmmacenet_data *plat_dat,
 		     struct stmmac_resources *res)
 {
+	struct platform_device *pdev = to_platform_device(device);
 	struct net_device *ndev = NULL;
 	struct stmmac_priv *priv;
 	u32 queue, rxq, maxq;
@@ -4717,6 +4761,10 @@ int stmmac_dvr_probe(struct device *device,
 	stmmac_init_fs(ndev);
 #endif
 
+	if (priv->plat->exit)
+		priv->plat->exit(pdev, priv->plat->bsp_priv);
+	stmmac_bus_clks_enable(priv, false);
+
 	return ret;
 
 error_netdev_register:
@@ -4751,6 +4799,7 @@ int stmmac_dvr_remove(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct stmmac_priv *priv = netdev_priv(ndev);
+	bool netif_status = netif_running(ndev);
 
 	netdev_info(priv->dev, "%s: removing driver", __func__);
 
@@ -4765,9 +4814,10 @@ int stmmac_dvr_remove(struct device *dev)
 	phylink_destroy(priv->phylink);
 	if (priv->plat->stmmac_rst)
 		reset_control_assert(priv->plat->stmmac_rst);
-	clk_disable_unprepare(priv->plat->pclk);
-	clk_disable_unprepare(priv->plat->stmmac_clk);
-	if (priv->hw->pcs != STMMAC_PCS_TBI &&
+	if (netif_status)
+		stmmac_bus_clks_enable(priv, false);
+	if (priv->hw->pcs != STMMAC_PCS_RGMII &&
+	    priv->hw->pcs != STMMAC_PCS_TBI &&
 	    priv->hw->pcs != STMMAC_PCS_RTBI)
 		stmmac_mdio_unregister(ndev);
 	destroy_workqueue(priv->wq);
@@ -4828,8 +4878,7 @@ int stmmac_suspend(struct device *dev)
 		/* Disable clock in case of PWM is off */
 		if (priv->plat->clk_ptp_ref)
 			clk_disable_unprepare(priv->plat->clk_ptp_ref);
-		clk_disable_unprepare(priv->plat->pclk);
-		clk_disable_unprepare(priv->plat->stmmac_clk);
+		stmmac_bus_clks_enable(priv, false);
 	}
 	mutex_unlock(&priv->lock);
 
@@ -4876,6 +4925,7 @@ int stmmac_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct stmmac_priv *priv = netdev_priv(ndev);
+	int ret = 0;
 
 	if (!netif_running(ndev))
 		return 0;
@@ -4894,8 +4944,9 @@ int stmmac_resume(struct device *dev)
 	} else {
 		pinctrl_pm_select_default_state(priv->device);
 		/* enable the clk previously disabled */
-		clk_prepare_enable(priv->plat->stmmac_clk);
-		clk_prepare_enable(priv->plat->pclk);
+		ret = stmmac_bus_clks_enable(priv, true);
+		if (ret)
+			return ret;
 		if (priv->plat->clk_ptp_ref)
 			clk_prepare_enable(priv->plat->clk_ptp_ref);
 		/* reset the phy so that it's ready */
