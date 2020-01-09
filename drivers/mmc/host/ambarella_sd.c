@@ -76,6 +76,8 @@ struct ambarella_mmc_host {
 	struct timer_list		timer;
 	u32				irq_status;
 	u32				ac12es;
+	u32				adma_err_status;
+	u32				visited_rpmb;
 
 	struct clk			*clk;
 	u32				clock;
@@ -686,9 +688,15 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 
 	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
-		dev_dbg(host->dev, "Start %s[%u], arg = %u\n",
+		dev_dbg(host->dev, "Start %s[%u], arg = 0x%08x\n",
 			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
 	}
+
+	/* use MMC_SWITCH cmd and arg to identify switch to and leave RPMB partition */
+	if(unlikely((cmd->opcode == MMC_SWITCH) && (cmd->arg == 0x03b30b01)))
+		host->visited_rpmb = 1;
+	if(unlikely(host->visited_rpmb && (cmd->opcode == MMC_SWITCH) && (cmd->arg == 0x03b30801)))
+		host->visited_rpmb = 0;
 
 	rval = ambarella_sd_check_ready(host);
 	if (rval < 0) {
@@ -843,7 +851,6 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 
 	if (!host->reg_rct)
 		return 0;
-
 	tmp = readb_relaxed(host->regbase + SD_HOST_OFFSET);
 	tmp |= SD_HOST_HIGH_SPEED;
 	writeb_relaxed(tmp, host->regbase + SD_HOST_OFFSET);
@@ -1049,7 +1056,7 @@ static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 {
 	struct mmc_command *cmd = host->cmd;
 	u32 resp0, resp1, resp2, resp3;
-	u16 nis, eis, ac12es;
+	u16 nis, eis, ac12es, adma_err_sta;
 
 	if (cmd == NULL)
 		return;
@@ -1057,6 +1064,7 @@ static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 	nis = host->irq_status & 0xffff;
 	eis = host->irq_status >> 16;
 	ac12es = host->ac12es;
+	adma_err_sta = host->adma_err_status;
 
 	if (nis & SD_NIS_ERROR) {
 		if (eis & (SD_EIS_CMD_BIT_ERR | SD_EIS_CMD_CRC_ERR))
@@ -1074,8 +1082,13 @@ static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 				cmd->data->error = -EILSEQ;
 			else if (eis & SD_EIS_DATA_TMOUT_ERR)
 				cmd->data->error = -ETIMEDOUT;
-			else if (eis & SD_EIS_ADMA_ERR)
-				cmd->data->error = -EIO;
+			else if (eis & SD_EIS_ADMA_ERR) {
+				/* when vistit rpmb partition, ignore ADMA error */
+				if (host->visited_rpmb)
+					goto finish;
+				else
+					cmd->data->error = -EIO;
+			}
 		}
 
 		if (cmd->data && cmd->data->stop && (eis & SD_EIS_ACMD12_ERR)) {
@@ -1096,9 +1109,9 @@ static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 		if (cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
 			dev_dbg(host->dev, "%s[%u] error: "
-				"nis[0x%04x], eis[0x%04x], ac12es[0x%08x]!\n",
+				"nis[0x%04x], eis[0x%04x], ac12es[0x%08x], adam_err_status[0x%08x]!\n",
 				cmd->data ? "data" : "cmd", cmd->opcode,
-				nis, eis, ac12es);
+				nis, eis, ac12es, adma_err_sta);
 		}
 
 		goto finish;
@@ -1154,7 +1167,7 @@ static void ambarella_sd_tasklet_finish(unsigned long param)
 
 	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
-		dev_dbg(host->dev, "End %s[%u], arg = %u\n",
+		dev_dbg(host->dev, "End %s[%u], arg = 0x%08x\n",
 			cmd->data ? "data" : "cmd", cmd->opcode, cmd->arg);
 	}
 
@@ -1214,14 +1227,15 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 	/* Read and clear the interrupt registers. Note: ac12es has to be
 	 * read here to clear auto_cmd12 error irq. */
 	spin_lock(&host->lock);
+	host->adma_err_status = readb_relaxed(host->regbase + SD_ADMA_STA_OFFSET);
 	host->ac12es = readl_relaxed(host->regbase + SD_AC12ES_OFFSET);
 	host->irq_status = readl_relaxed(host->regbase + SD_NIS_OFFSET);
 	writel_relaxed(host->irq_status, host->regbase + SD_NIS_OFFSET);
 
 	if (cmd && cmd->opcode != MMC_SEND_TUNING_BLOCK &&
 			cmd->opcode != MMC_SEND_TUNING_BLOCK_HS200) {
-		dev_dbg(host->dev, "irq_status = 0x%08x, ac12es = 0x%08x\n",
-			host->irq_status, host->ac12es);
+		dev_dbg(host->dev, "irq_status = 0x%08x, ac12es = 0x%08x, adma_err_status = 0x%08x\n",
+			host->irq_status, host->ac12es, host->adma_err_status);
 	}
 
 	if (host->irq_status & SD_NIS_CARD)
