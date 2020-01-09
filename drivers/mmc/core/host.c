@@ -74,10 +74,7 @@ void mmc_retune_pause(struct mmc_host *host)
 {
 	if (!host->retune_paused) {
 		host->retune_paused = 1;
-		/* comment return needed, it seems no need to retune when switch to
-		 * RPMB partition ervery time.
-		 */
-		//mmc_retune_needed(host);
+		mmc_retune_needed(host);
 		mmc_retune_hold(host);
 	}
 }

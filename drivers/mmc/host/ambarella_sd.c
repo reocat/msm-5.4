@@ -102,6 +102,7 @@ struct ambarella_mmc_host {
 	bool                            fixed_timing;
 	bool				auto_cmd12;
 	bool				force_v18;
+	bool				tuning_fixed_clk_freq;
 
 	int				pwr_gpio;
 	u8				pwr_gpio_active;
@@ -866,7 +867,7 @@ static int ambarella_sd_execute_tuning(struct mmc_host *mmc, u32 opcode)
 	}
 
 retry:
-	if (doing_retune) {
+	if (doing_retune && !host->tuning_fixed_clk_freq) {
 		tmp = clk_get_rate(clk_get_parent(host->clk));
 		clock = tmp / (tmp / host->clock + 1);
 		if (clock <= 48000000)
@@ -1335,6 +1336,11 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 
 	if (of_property_read_u32(np, "amb,tuning-dll-clk", &host->invert_dll_clk) < 0)
 		host->invert_dll_clk = -1;
+
+	if (of_property_read_bool(np, "amb,tuning-fixed-clk-freq"))
+		host->tuning_fixed_clk_freq = true;
+	else
+		host->tuning_fixed_clk_freq = false;
 
 	if(of_property_read_u32_array(np, "amb,phy-timing", host->phy_timing, ARRAY_SIZE(host->phy_timing)))
 		host->fixed_timing = false;

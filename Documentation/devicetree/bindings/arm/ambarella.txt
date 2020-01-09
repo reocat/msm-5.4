@@ -572,6 +572,8 @@ Optional properties:
 - amb,phy-timing: specify the fixed phy timing, including four u32 element, 1st element is
   for SD_read_latency_control register setting, 2nd and 3rd element is for sd phyctrl 0 and
   phyctrl 1 (phy sel) setting, the last element is for phy sbc setting
+- amb,tuning-fixed-clk-freq: specifies the tuning option for using fixed clock, donot reduce
+  clock frequecy. When visiting RPMB partition in kernel, this property must be set.
 
 iii) Example
 -----------
