@@ -322,8 +322,8 @@
 		pinctrl-0 = <&pinctrl_csi_0>;
 		clocks = <&clks IMX6SX_CLK_CSI>;
 		clock-names = "csi_mclk";
-		cam18v-en-gpios = <&tca6416 16 0>;
-		cam28v-en-gpios = <&tca6416 17 0>;
+		cam18v-en-gpios = <&tca6416 14 0>;
+		cam28v-en-gpios = <&tca6416 15 0>;
 		pwn-gpios = <&gpio3 18 1>;
 		rst-gpios = <&gpio3 17 0>;
 		csi_id = <0>;
