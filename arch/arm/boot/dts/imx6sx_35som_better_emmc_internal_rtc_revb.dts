@@ -1,0 +1,11 @@
+
+#include "imx6sx_35som_better_emmc_revb.dtsi"
+&m41t82{
+    status = "disabled"; 
+};
+
+&snvs_rtc { 
+    status = "okay";
+};
+
+
