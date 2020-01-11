@@ -616,10 +616,10 @@
 
         pinctrl_digital_gpio: hoggrp-3 {
             fsl,pins = <
-				MX6SX_PAD_LCD1_DATA00__GPIO3_IO_1        0xF000
-				MX6SX_PAD_LCD1_DATA01__GPIO3_IO_2        0xF000
-                MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3        0xF000
-                MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24       0xF000
+				MX6SX_PAD_LCD1_DATA00__GPIO3_IO_1        0x110b0
+				MX6SX_PAD_LCD1_DATA01__GPIO3_IO_2        0x110b0
+                MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3        0x110b0
+                MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24       0x110b0
            >;
         };
 
