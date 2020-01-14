@@ -1,0 +1,2 @@
+config SOC_IMX6SX_1000M_SPEED
+       bool "support 1000M ethernet"

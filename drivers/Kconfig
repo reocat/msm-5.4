@@ -143,6 +143,8 @@ source "drivers/platform/Kconfig"
 
 source "drivers/clk/Kconfig"
 
+source "drivers/clk/imx/Kconfig"
+
 source "drivers/hwspinlock/Kconfig"
 
 source "drivers/clocksource/Kconfig"
