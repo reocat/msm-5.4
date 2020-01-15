@@ -227,6 +227,7 @@ config NEED_SG_DMA_LENGTH
 
 config ARCH_ENABLE_MEMORY_HOTPLUG
 	def_bool y
+	depends on ARCH_AMBARELLA
 
 config SMP
 	def_bool y
@@ -743,7 +744,7 @@ source "mm/Kconfig"
 
 config ARCH_MEMORY_PROBE
 	def_bool y
-	depends on MEMORY_HOTPLUG
+	depends on MEMORY_HOTPLUG && ARCH_AMBARELLA
 
 config SECCOMP
 	bool "Enable seccomp to safely compute untrusted bytecode"

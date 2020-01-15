@@ -953,6 +953,8 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 	return pmd_none(*pmd);
 }
 
+
+#ifdef CONFIG_ARCH_AMBARELLA
 #ifdef CONFIG_MEMORY_HOTPLUG
 int arch_add_memory(int nid, u64 start, u64 size, bool want_memblock)
 {
@@ -972,4 +974,5 @@ int arch_add_memory(int nid, u64 start, u64 size, bool want_memblock)
 
 	return ret;
 }
+#endif
 #endif

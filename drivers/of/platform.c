@@ -31,6 +31,9 @@ const struct of_device_id of_default_bus_match_table[] = {
 	{ .compatible = "simple-bus", },
 	{ .compatible = "simple-mfd", },
 	{ .compatible = "isa", },
+#ifdef CONFIG_ARM_AMBA
+	{ .compatible = "arm,amba-bus", },
+#endif /* CONFIG_ARM_AMBA */
 	{} /* Empty terminated list */
 };
 
@@ -215,6 +218,77 @@ struct platform_device *of_platform_device_create(struct device_node *np,
 }
 EXPORT_SYMBOL(of_platform_device_create);
 
+#ifdef CONFIG_ARM_AMBA
+static struct amba_device *of_amba_device_create(struct device_node *node,
+						 const char *bus_id,
+						 void *platform_data,
+						 struct device *parent)
+{
+	struct amba_device *dev;
+	const void *prop;
+	int i, ret;
+
+	pr_debug("Creating amba device %pOF\n", node);
+
+	if (!of_device_is_available(node) ||
+	    of_node_test_and_set_flag(node, OF_POPULATED))
+		return NULL;
+
+	dev = amba_device_alloc(NULL, 0, 0);
+	if (!dev)
+		goto err_clear_flag;
+
+	/* setup generic device info */
+	dev->dev.of_node = of_node_get(node);
+	dev->dev.fwnode = &node->fwnode;
+	dev->dev.parent = parent ? : &platform_bus;
+	dev->dev.platform_data = platform_data;
+	if (bus_id)
+		dev_set_name(&dev->dev, "%s", bus_id);
+	else
+		of_device_make_bus_id(&dev->dev);
+
+	/* Allow the HW Peripheral ID to be overridden */
+	prop = of_get_property(node, "arm,primecell-periphid", NULL);
+	if (prop)
+		dev->periphid = of_read_ulong(prop, 1);
+
+	/* Decode the IRQs and address ranges */
+	for (i = 0; i < AMBA_NR_IRQS; i++)
+		dev->irq[i] = irq_of_parse_and_map(node, i);
+
+	ret = of_address_to_resource(node, 0, &dev->res);
+	if (ret) {
+		pr_err("amba: of_address_to_resource() failed (%d) for %pOF\n",
+		       ret, node);
+		goto err_free;
+	}
+
+	ret = amba_device_add(dev, &iomem_resource);
+	if (ret) {
+		pr_err("amba_device_add() failed (%d) for %pOF\n",
+		       ret, node);
+		goto err_free;
+	}
+
+	return dev;
+
+err_free:
+	amba_device_put(dev);
+err_clear_flag:
+	of_node_clear_flag(node, OF_POPULATED);
+	return NULL;
+}
+#else /* CONFIG_ARM_AMBA */
+static struct amba_device *of_amba_device_create(struct device_node *node,
+						 const char *bus_id,
+						 void *platform_data,
+						 struct device *parent)
+{
+	return NULL;
+}
+#endif /* CONFIG_ARM_AMBA */
+
 /**
  * of_devname_lookup() - Given a device node, lookup the preferred Linux name
  */
@@ -297,6 +371,15 @@ static int of_platform_bus_create(struct device_node *bus,
 	if (auxdata) {
 		bus_id = auxdata->name;
 		platform_data = auxdata->platform_data;
+	}
+
+	if (of_device_is_compatible(bus, "arm,primecell")) {
+		/*
+		 * Don't return an error here to keep compatibility with older
+		 * device tree files.
+		 */
+		of_amba_device_create(bus, bus_id, platform_data, parent);
+		return 0;
 	}
 
 	dev = of_platform_device_create_pdata(bus, bus_id, platform_data, parent);
@@ -455,6 +538,10 @@ int of_platform_device_destroy(struct device *dev, void *data)
 
 	if (dev->bus == &platform_bus_type)
 		platform_device_unregister(to_platform_device(dev));
+#ifdef CONFIG_ARM_AMBA
+	else if (dev->bus == &amba_bustype)
+		amba_device_unregister(to_amba_device(dev));
+#endif
 
 	return 0;
 }

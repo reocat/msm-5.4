@@ -292,12 +292,14 @@ int pfn_valid(unsigned long pfn)
 	if ((addr >> PAGE_SHIFT) != pfn)
 		return 0;
 
+#ifdef CONFIG_ARCH_AMBARELLA
 #ifdef CONFIG_SPARSEMEM
 	if (pfn_to_section_nr(pfn) >= NR_MEM_SECTIONS)
 		return 0;
 
 	if (!valid_section(__nr_to_section(pfn_to_section_nr(pfn))))
 		return 0;
+#endif
 #endif
 	return memblock_is_map_memory(addr);
 }

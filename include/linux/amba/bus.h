@@ -61,6 +61,8 @@ enum amba_vendor {
 	(((conf) & 0xff) << 24 | ((rev) & 0xf) << 20 | \
 	AMBA_VENDOR_LINUX << 12 | ((part) & 0xfff))
 
+extern struct bus_type amba_bustype;
+
 #define to_amba_device(d)	container_of(d, struct amba_device, dev)
 
 #define amba_get_drvdata(d)	dev_get_drvdata(&d->dev)
