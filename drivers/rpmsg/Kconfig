@@ -61,9 +61,14 @@ config IMX_RPMSG_PINGPONG
 	default m
 	depends on RPMSG && m
 
+config HAVE_RPMSG_MULTIEPT
+	tristate
+	default y
+	depends on RPMSG && y
+
 config IMX_RPMSG_TTY
 	tristate "IMX RPMSG tty driver"
-	default m
+	default n
 	depends on RPMSG
 
 endmenu
