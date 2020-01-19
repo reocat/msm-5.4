@@ -68,7 +68,7 @@ config HAVE_RPMSG_MULTIEPT
 
 config IMX_RPMSG_TTY
 	tristate "IMX RPMSG tty driver"
-	default n
+	default m
 	depends on RPMSG
 
 endmenu
