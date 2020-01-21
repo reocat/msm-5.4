@@ -239,8 +239,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 		return 0;
 
 	/* Disable tx/rx before initializing */
-	dai_tx_disable(priv_data);
-	dai_rx_disable(priv_data);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dai_tx_disable(priv_data);
+	else
+		dai_rx_disable(priv_data);
 
 	i2s_intf->sfreq = params_rate(params);
 	i2s_intf->channels = params_channels(params);
@@ -350,8 +352,10 @@ static int ambarella_i2s_hw_params(struct snd_pcm_substream *substream,
 	writel_relaxed(clock_reg, priv_data->regbase + I2S_CLOCK_OFFSET);
 	mutex_unlock(&clock_reg_mutex);
 
-	dai_rx_enable(priv_data);
-	dai_tx_enable(priv_data);
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		dai_tx_enable(priv_data);
+	else
+		dai_rx_enable(priv_data);
 
 	msleep(1);
 
