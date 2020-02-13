@@ -229,7 +229,6 @@ static int watchdog_start(struct watchdog_device *wdd)
 {
 	struct watchdog_core_data *wd_data = wdd->wd_data;
 	unsigned long started_at;
-	int err;
 
 	if (watchdog_active(wdd))
 		return 0;
@@ -237,18 +236,12 @@ static int watchdog_start(struct watchdog_device *wdd)
 	set_bit(_WDOG_KEEPALIVE, &wd_data->status);
 
 	started_at = jiffies;
-	if (watchdog_hw_running(wdd) && wdd->ops->ping)
-		err = wdd->ops->ping(wdd);
-	else
-		err = wdd->ops->start(wdd);
-	if (err == 0) {
-		set_bit(WDOG_ACTIVE, &wdd->status);
-		wd_data->last_keepalive = started_at;
-		wd_data->last_hw_keepalive = started_at;
-		watchdog_update_worker(wdd);
-	}
 
-	return err;
+	set_bit(WDOG_ACTIVE, &wdd->status);
+	wd_data->last_keepalive = started_at;
+	watchdog_update_worker(wdd);
+
+	return 0;
 }
 
 /*
