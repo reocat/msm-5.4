@@ -202,6 +202,7 @@ static inline void ambhw_dma_tx_restart(struct ambeth_info *lp, u32 entry)
 		lp->tx.desc_tx[entry].length |= ETH_TDES1_IC;
 		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	}
+	dma_wmb();
 	writel((u32)lp->tx_dma_desc + (entry * sizeof(struct ambeth_desc)),
 		lp->regbase + ETH_DMA_TX_DESC_LIST_OFFSET);
 	if (netif_msg_tx_err(lp)) {
@@ -332,11 +333,21 @@ static inline int ambhw_enable(struct ambeth_info *lp)
 	writel(0, lp->regbase + ETH_MAC_FRAME_FILTER_OFFSET);
 
 	val = ETH_DMA_OPMODE_TTC_256 | ETH_DMA_OPMODE_RTC_64 |
-		ETH_DMA_OPMODE_FUF | ETH_DMA_OPMODE_TSF | ETH_DMA_OPMODE_RSF;
+		ETH_DMA_OPMODE_FUF ;
+
+	val |= ETH_DMA_OPMODE_TSF;
+
+     /* bugged JUMBO frame: if MTU is bigger than 1500, should disable Tx COE and
+        * RSF. please refer to stmmac GMAC. */
+       if (lp->bfsize == DEFAULT_BFSIZE)
+               val |= ETH_DMA_OPMODE_RSF;
+       else
+               ; /* disable RSF */
 
 	writel(val, lp->regbase + ETH_DMA_OPMODE_OFFSET);
 
-	writel(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE, lp->regbase + ETH_MAC_CFG_OFFSET);
+	writel(ETH_MAC_CFG_TE | ETH_MAC_CFG_RE | ETH_MAC_CFG_JD,
+			lp->regbase + ETH_MAC_CFG_OFFSET);
 
 	if (lp->ndev->mtu > 1500)
 		setbitsl(ETH_MAC_CFG_2K, lp->regbase + ETH_MAC_CFG_OFFSET);
@@ -827,7 +838,7 @@ static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 	struct sk_buff *skb;
 
 	if (lp->rx.rng_rx[entry].skb == NULL) {
-		skb = netdev_alloc_skb(lp->ndev, AMBETH_PACKET_MAXFRAME);
+		skb = netdev_alloc_skb(lp->ndev, lp->bfsize);
 		if (skb == NULL) {
 			if (netif_msg_drv(lp))
 				dev_err(&lp->ndev->dev,
@@ -836,10 +847,11 @@ static inline int ambeth_rx_rngmng_check_skb(struct ambeth_info *lp, u32 entry)
 			goto ambeth_rx_rngmng_skb_exit;
 		}
 		mapping = dma_map_single(lp->ndev->dev.parent, skb->data,
-			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+			lp->bfsize, DMA_FROM_DEVICE);
 		lp->rx.rng_rx[entry].skb = skb;
 		lp->rx.rng_rx[entry].mapping = mapping;
 		lp->rx.desc_rx[entry].buffer1 = mapping;
+
 	}
 
 ambeth_rx_rngmng_skb_exit:
@@ -859,16 +871,19 @@ static inline void ambeth_rx_rngmng_init(struct ambeth_info *lp)
 		lp->rx.desc_rx[i].status = ETH_RDES0_OWN;
 		if (lp->enhance) {
 			lp->rx.desc_rx[i].length = (ETH_ENHANCED_RDES1_RCH |
-					ETH_ENHANCED_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
+					ETH_ENHANCED_RDES1_RBS1x(lp->bfsize));
 		} else {
 			lp->rx.desc_rx[i].length = (ETH_RDES1_RCH |
-					ETH_RDES1_RBS1x(AMBETH_PACKET_MAXFRAME));
+					ETH_RDES1_RBS1x(lp->bfsize));
 		}
 
 		lp->rx.desc_rx[i].buffer2 = (u32)lp->rx_dma_desc +
 			((i + 1) * sizeof(struct ambeth_desc));
 	}
+	dma_wmb();
+
 	lp->rx.desc_rx[lp->rx_count - 1].buffer2 = (u32)lp->rx_dma_desc;
+
 }
 
 static inline void ambeth_rx_rngmng_refill(struct ambeth_info *lp)
@@ -884,8 +899,10 @@ static inline void ambeth_rx_rngmng_refill(struct ambeth_info *lp)
 			break;
 
 		lp->rx.desc_rx[entry].status = ETH_RDES0_OWN;
+		dma_wmb();
 		lp->rx.dirty_rx++;
 	}
+
 }
 
 static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
@@ -902,7 +919,7 @@ static inline void ambeth_rx_rngmng_del(struct ambeth_info *lp)
 			lp->rx.rng_rx[i].mapping = 0;
 			if (mapping) {
 				dma_unmap_single(lp->ndev->dev.parent, mapping,
-						AMBETH_PACKET_MAXFRAME,
+						lp->bfsize,
 						DMA_FROM_DEVICE);
 			}
 			if (skb) {
@@ -1190,6 +1207,8 @@ static inline void ambeth_interrupt_tx(struct ambeth_info *lp, u32 irq_status)
 			if (status & ETH_TDES0_OWN) {
 				break;
 			}
+
+			dma_rmb();
 
 			if (unlikely(status & ETH_TDES0_ES)) {
 				if ((status & ETH_TDES0_ES_MASK) ==
@@ -1532,6 +1551,7 @@ static int ambeth_hard_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		lp->tx.desc_tx[entry].length = ETH_TDES1_TBS1x(skb->len) | tx_flag;
 		lp->tx.desc_tx[entry].status = ETH_TDES0_OWN;
 	}
+	dma_wmb();
 
 	lp->tx.cur_tx++;
 	ambhw_dma_tx_poll(lp);
@@ -1565,6 +1585,14 @@ static int ambeth_change_mtu(struct net_device *dev, int new_mtu)
 	}
 
 	dev->mtu = new_mtu;
+	if (new_mtu > 4096)
+		priv->bfsize = 8100;
+	else if (new_mtu > 2048)
+		priv->bfsize = 4096;
+	else if (new_mtu > DEFAULT_BFSIZE)
+		priv->bfsize = 2048;
+	else
+		priv->bfsize = DEFAULT_BFSIZE;
 
 	netdev_update_features(dev);
 
@@ -1607,16 +1635,16 @@ static void ambhw_dump_rx(struct ambeth_info *lp, u32 status, u32 entry)
 
 	pkt_len = ETH_RDES0_FL(status) - 4;
 
-	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
+	if (unlikely(pkt_len > lp->bfsize)) {
 		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
-		pkt_len = AMBETH_RX_COPYBREAK;
+		pkt_len = lp->bfsize;
 	}
 
 	skb = lp->rx.rng_rx[entry].skb;
 	mapping = lp->rx.rng_rx[entry].mapping;
 	if (likely(skb && mapping)) {
 		dma_unmap_single(lp->ndev->dev.parent, mapping,
-			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+			lp->bfsize, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		lp->rx.rng_rx[entry].skb = NULL;
 		lp->rx.rng_rx[entry].mapping = 0;
@@ -1711,10 +1739,9 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 
 	pkt_len = ETH_RDES0_FL(status) - 4;
 
-	if (unlikely(pkt_len > AMBETH_RX_COPYBREAK)) {
-		dev_warn(&lp->ndev->dev, "Bogus packet size %u.\n", pkt_len);
-		pkt_len = AMBETH_RX_COPYBREAK;
-		lp->stats.rx_length_errors++;
+	if (unlikely(pkt_len > lp->bfsize)) {
+		pkt_len = lp->bfsize;
+		lp->ndev->stats.rx_length_errors++;
 	}
 
 	skb = lp->rx.rng_rx[entry].skb;
@@ -1723,7 +1750,7 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 	mapping = lp->rx.rng_rx[entry].mapping;
 	if (likely(skb && mapping)) {
 		dma_unmap_single(lp->ndev->dev.parent, mapping,
-			AMBETH_PACKET_MAXFRAME, DMA_FROM_DEVICE);
+			lp->bfsize, DMA_FROM_DEVICE);
 		skb_put(skb, pkt_len);
 		skb->protocol = eth_type_trans(skb, lp->ndev);
 #if 0
@@ -1784,6 +1811,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 		status = lp->rx.desc_rx[entry].status;
 		if (status & ETH_RDES0_OWN)
 			break;
+
 		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
 			(ETH_RDES0_FS | ETH_RDES0_LS))) {
 			break;
@@ -1971,6 +1999,22 @@ static int ambeth_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 	return rval;
 }
 
+static netdev_features_t ambeth_fix_features(struct net_device *dev,
+					     netdev_features_t features)
+{
+	/* bugged JUMBO frame: disable Tx COE. */
+	if (dev->mtu > ETH_DATA_LEN)
+		features &= ~NETIF_F_CSUM_MASK;
+
+	return features;
+}
+
+static int ambeth_set_features(struct net_device *netdev,
+			       netdev_features_t features)
+{
+	return 0;
+}
+
 static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_open		= ambeth_open,
 	.ndo_stop		= ambeth_stop,
@@ -1980,6 +2024,8 @@ static const struct net_device_ops ambeth_netdev_ops = {
 	.ndo_validate_addr	= eth_validate_addr,
 	.ndo_do_ioctl		= ambeth_ioctl,
 	.ndo_change_mtu		= ambeth_change_mtu,
+	.ndo_fix_features	= ambeth_fix_features,
+	.ndo_set_features	= ambeth_set_features,
 	.ndo_tx_timeout		= ambeth_timeout,
 	.ndo_get_stats		= ambeth_get_stats,
 #ifdef CONFIG_NET_POLL_CONTROLLER
@@ -2415,13 +2461,14 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	spin_lock_init(&lp->lock);
 	lp->ndev = ndev;
 	lp->msg_enable = netif_msg_init(msg_level, NETIF_MSG_DRV);
+	lp->bfsize = DEFAULT_BFSIZE;
 
 	ret_val = ambeth_of_parse(np, lp);
 	if (ret_val < 0)
 		goto ambeth_drv_probe_free_netdev;
 
-	if (lp->ipc_tx)
-		ndev->features |= NETIF_F_HW_CSUM;
+	ndev->hw_features = NETIF_F_SG | NETIF_F_IP_CSUM | NETIF_F_IPV6_CSUM |
+			    NETIF_F_RXCSUM;
 
 	if(lp->mdio_gpio){
 		mdio_np = of_find_compatible_node(NULL, NULL, "virtual,mdio-gpio");
@@ -2500,10 +2547,12 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 	if (gpio_is_valid(lp->rst_gpio))
 		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
 
-        ndev->ethtool_ops = &ambeth_ethtool_ops;
+	ndev->ethtool_ops = &ambeth_ethtool_ops;
 
-	/* Refer to Stmicro MAC driver.It is HW specific max */
-	ndev->max_mtu = SKB_MAX_HEAD(NET_SKB_PAD + NET_IP_ALIGN);
+	/* In theory the MAC hardware can support frame size which can up to 9018,
+	 * however, the software will be more complex based on the previous
+	 * framwork. So MTU is set as 8000 which is not bigger than buffer size. */
+	ndev->max_mtu = 8000;
 
 	ret_val = register_netdev(ndev);
 	if (ret_val) {

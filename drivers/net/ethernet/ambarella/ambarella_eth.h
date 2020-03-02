@@ -28,16 +28,10 @@
 
 #define AMBETH_NAPI_WEIGHT		32
 #define AMBETH_TX_WATCHDOG		(2 * HZ)
-#define AMBETH_MII_RETRY_CNT		200
-#define AMBETH_FC_PAUSE_TIME		1954
+#define AMBETH_MII_RETRY_CNT	200
+#define AMBETH_FC_PAUSE_TIME	1954
 
-#if defined(CONFIG_NET_VENDOR_AMBARELLA_JUMBO_FRAME)
-#define AMBETH_PACKET_MAXFRAME		(8064)
-#define AMBETH_RX_COPYBREAK		(8064)
-#else
-#define AMBETH_PACKET_MAXFRAME		(1536)
-#define AMBETH_RX_COPYBREAK		(1518)
-#endif
+#define DEFAULT_BFSIZE			1536
 
 #define AMBETH_RX_RNG_MIN		(8)
 #define AMBETH_TX_RNG_MIN		(4)
@@ -141,6 +135,7 @@ struct ambeth_info {
 	struct regmap			*reg_rct;
 	struct regmap			*reg_scr;
 	u32				msg_enable;
+	u32				bfsize;
 
 	u32				mdio_gpio: 1,
 					enhance: 1,

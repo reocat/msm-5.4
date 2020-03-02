@@ -1,40 +1,55 @@
 Ambarella Ethernet Jumbo Support
 ================================
 
-# Hardware Limitation
+Ambarella GMAC can support Jumbo frames of size 9018 bytes (9022 bytes for VLAN
+tagged frames). However, in order to reduce the software complexity, at present,
+we only can support the Jumbo frames size which is less than the buffer size 8K.
+So we set max mtu as 8000.
 
-	`max_mtu = 3582`
+Ambarella GMAC devices have a bugged Jumbo frame support that needs to have the
+Tx COE disabled for oversized frames (due to limited buffer sizes). In this case
+we disable the TX csum insertion in the TDES and disable RSF (if TSF is disabled,
+the packets sent out will be lost when DRAM loading is high !!!).
 
-# Test
+HOW TO VERIFY THE JUMBO FRAME
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-~~~
-#!/bin/sh
-c=0
-maxmtu=3582
-mtu=1000
-server=10.0.0.120
-while true
-do
-	ifconfig eth0 down
-	if [ $mtu -gt $maxmtu ]
-	then
-		echo "## SET MTU as $maxmtu"
-		ifconfig eth0 mtu $maxmtu
-		mtu=0
-		let c++
-	else
-		echo "## SET MTU as $mtu"
-		ifconfig eth0 mtu $mtu
-	fi
-	ifconfig eth0 up
-	sleep 5
-	ping $server -c 1 -W 10
-	iperf3 -c $server
-	mtu=$(($mtu+1000))
+a. set MTU at the host side
+$ sudo ifconfig enp0s31f6 mtu 9000
+$ ifconfig 
+	enp0s31f6 Link encap:Ethernet  HWaddr 34:48:ed:08:4d:49  
+	inet addr:10.0.0.120  Bcast:10.0.0.255  Mask:255.255.255.0
+	inet6 addr: fe80::dcd1:4343:97fc:5d43/64 Scope:Link
+	UP BROADCAST RUNNING MULTICAST  MTU:9000  Metric:1
+	RX packets:164571591 errors:8519 dropped:211 overruns:0 frame:8356
+	TX packets:283806300 errors:0 dropped:0 overruns:0 carrier:0
+	collisions:0 txqueuelen:1000 
+	RX bytes:245908242073 (245.9 GB)  TX bytes:1562556357749 (1.5 TB)
+	Interrupt:16 Memory:ef400000-ef420000 
 
-	if [ $c -gt 10 ]
-	then
-		exit
-	fi
-done
-~~~
+b. set MTU at the device side
+# ifconfig eth0 down
+# ifconfig eth0 mtu 8000
+# ifconfig eth0 up
+# ifconfig 
+	eth0      Link encap:Ethernet  HWaddr 12:45:3E:21:12:56  
+	inet addr:10.0.0.2  Bcast:10.0.0.255  Mask:255.255.255.0
+	UP BROADCAST MULTICAST  MTU:8000  Metric:1
+	RX packets:1145700 errors:0 dropped:0 overruns:0 frame:0
+	TX packets:1497626 errors:0 dropped:0 overruns:0 carrier:0
+	collisions:0 txqueuelen:1000 
+	RX bytes:1914661485 (1.7 GiB)  TX bytes:5845294883 (5.4 GiB)
+	Interrupt:27 
+
+c. TEST
+
+	i. GMAC transmit JUMBO frames test
+		- HOST
+				$ iperf3 -s
+		- DEVICE
+				# iperf3 -c $HOST_IP
+	ii. GMAC receive JUMBO frames test
+		- DEVICE
+				# iperf3 -s
+		- HOST
+				$ iperf3 -c $DEVICE_IP
