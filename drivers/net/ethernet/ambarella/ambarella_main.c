@@ -1457,7 +1457,7 @@ static int ambeth_stop(struct net_device *ndev)
 		phy_disconnect(lp->phydev);
 	}
 
-	netif_stop_queue(ndev);
+	netif_tx_disable(ndev);
 	napi_disable(&lp->napi);
 	free_irq(ndev->irq, ndev);
 	ambeth_phy_stop(lp);
@@ -1579,12 +1579,6 @@ static int ambeth_change_mtu(struct net_device *dev, int new_mtu)
 {
 	struct ambeth_info *priv = netdev_priv(dev);
 
-	if (netif_running(dev)) {
-		netdev_err(priv->ndev, "must be stopped to change its MTU\n");
-		return -EBUSY;
-	}
-
-	dev->mtu = new_mtu;
 	if (new_mtu > 4096)
 		priv->bfsize = 8100;
 	else if (new_mtu > 2048)
@@ -1594,7 +1588,16 @@ static int ambeth_change_mtu(struct net_device *dev, int new_mtu)
 	else
 		priv->bfsize = DEFAULT_BFSIZE;
 
+	if (!netif_running(dev)) {
+		dev->mtu = new_mtu;
+		netdev_update_features(dev);
+		return 0;
+	}
+
+	ambeth_stop(dev);
+	dev->mtu = new_mtu;
 	netdev_update_features(dev);
+	ambeth_open(dev);
 
 	return 0;
 }
