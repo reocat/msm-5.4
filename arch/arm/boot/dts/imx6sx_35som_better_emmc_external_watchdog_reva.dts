@@ -1,5 +1,5 @@
 
-#include "imx6sx_35som_better_emmc.dtsi"
+#include "imx6sx_35som_better_emmc_reva.dtsi"
 	&wdog1 {
         compatible = "fsl,external_watchdog";
 	wdt-in = <&gpio1 3 0>;
