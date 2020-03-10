@@ -699,9 +699,9 @@ static int ambarella_sd_send_cmd(struct ambarella_mmc_host *host, struct mmc_com
 	}
 
 	/* use MMC_SWITCH cmd and arg to identify switch to and leave RPMB partition */
-	if(unlikely((cmd->opcode == MMC_SWITCH) && (cmd->arg == 0x03b30b01)))
+	if(unlikely((cmd->opcode == MMC_SWITCH) && ((cmd->arg & 0xFFFF0700) == 0x03b30300)))
 		host->visited_rpmb = 1;
-	if(unlikely(host->visited_rpmb && (cmd->opcode == MMC_SWITCH) && (cmd->arg == 0x03b30801)))
+	if(unlikely(host->visited_rpmb && (cmd->opcode == MMC_SWITCH) && ((cmd->arg & 0xFFFF0700) != 0x03b30300)))
 		host->visited_rpmb = 0;
 
 	rval = ambarella_sd_check_ready(host);
