@@ -541,11 +541,12 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx_35som_better_emmc_external_watchdog.dtb \
 	imx6sx_35som_better_emmc_internal_rtc.dtb \
 	imx6sx_35som_better_emmc_digital_gpio.dtb \
-	imx6sx_35som_better_emmc_revb.dtb \
-	imx6sx_35som_better_emmc_1g_revb.dtb \
-	imx6sx_35som_better_emmc_external_watchdog_revb.dtb \
-	imx6sx_35som_better_emmc_internal_rtc_revb.dtb \
-	imx6sx_35som_better_emmc_digital_gpio_revb.dtb \
+	imx6sx_35som_better_emmc_reva.dtb \
+	imx6sx_35som_better_emmc_1g_reva.dtb \
+	imx6sx_35som_better_emmc_external_watchdog_reva.dtb \
+	imx6sx_35som_better_emmc_internal_rtc_reva.dtb \
+	imx6sx_35som_better_emmc_digital_gpio_reva.dtb \
+	imx6sx_35som_better_emmc_fct.dtb \
 	imx6sx_55som_better_emmc.dtb \
 	imx6sx-sg-best_nand.dtb \
 	imx6sx-sg-best_sd_2Gb.dtb \
