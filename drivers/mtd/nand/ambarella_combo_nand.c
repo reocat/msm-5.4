@@ -954,8 +954,11 @@ static void ambarella_nand_cmdfunc(struct mtd_info *mtd, unsigned cmd,
 	case NAND_CMD_RESET:
 		host->dma_bufpos = 0;
 		ambarella_nand_issue_cmd(host, cmd, 0);
-		if (host->is_spinand) /* unlock all blocks */
+		if (host->is_spinand) {
+			msleep(2);
+			/* unlock all blocks */
 			ambarella_nand_issue_cmd(host, NAND_CMD_SET_FEATURES, 0xA0);
+		}
 		break;
 
 	case NAND_CMD_READOOB:
@@ -1260,11 +1263,13 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 		writel_relaxed(val, host->regbase + FIO_CTRL2_OFFSET);
 
 		val = readl_relaxed(host->regbase + SPINAND_CTRL_OFFSET);
-		if (host->sck_mode3) {
+
+		if (host->sck_mode3)
 			val |= SPINAND_CTRL_SCKMODE_3;
-			val &= ~SPINAND_CTRL_PS_SEL_MASK;
-			val |= SPINAND_CTRL_PS_SEL_6;
-		}
+
+		val &= ~SPINAND_CTRL_PS_SEL_MASK;
+		val |= SPINAND_CTRL_PS_SEL_6;
+
 		writel_relaxed(val, host->regbase + SPINAND_CTRL_OFFSET);
 	}
 
@@ -1638,10 +1643,15 @@ static int ambarella_nand_resume(struct device *dev)
 {
 	struct ambarella_nand_host *host;
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nand_chip *chip;
 
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
+	if (host->is_spinand) {
+		chip = &host->chip;
+		chip->cmdfunc(nand_to_mtd(&host->chip), NAND_CMD_RESET, -1, -1);
+	}
 
 	return 0;
 }
