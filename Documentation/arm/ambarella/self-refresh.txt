@@ -1,136 +1,302 @@
-
-Copyright (C) 2016-2019, Ambarella, Inc.
+```
+Copyright (C) 2016-2020, Ambarella, Inc.
 Author: Cao Rongrong <rrcao@ambarella.com>
+```
 
+# 0. Introduction
 
-Introduction
-============
+## 0.1 The kernel supports up to four system sleep states generically:
 
-The kernel supports up to four system sleep states generically.
-From shallowest to deepest, they are:
-1) freeze:   Suspend-To-Idle / ACPI S0
-2) standby:  Standby / Power-On Suspend / ACPI S1
-3) mem:      Suspend-To-RAM / Self-Refresh / STR / ACPI S3
-4) disk:     Suspend-To-Disk / STD / ACPI S4
+| mode    | explain                                       |
+| ------- | --------------------------------------------- |
+| freeze  | Suspend-To-Idle / ACPI S0                     |
+| standby | Standby / Power-On Suspend / ACPI S1          |
+| mem     | Suspend-To-RAM / Self-Refresh / STR / ACPI S3 |
+| disk    | Suspend-To-Disk / STD / ACPI S4               |
 
-For details, pelase see Documentation/powr/states.txt
-
+For details, pelase see **Documentation/powr/states.txt**.
 Here we just talk about "mem", i.e., Self-Refresh (abbreviated as SR).
+In short words, when system is in SR, all the HWs except for DRAM and PWC are powered off.
 
-In short words, when system is in SR, all the HWs except for DRAM and PWC are
-powered off.
-
-
-
-SR and DRAM
-============
-
-At present we can support SR with DDR3 and LPDDR3, other DRAM types are not
-tested, yet.
-
-One of the differences between DDR3 and LPDDR3 is that DDR3 has a "RESET" pin
-while LPDDR3 doesn't have. When entering into SR, the "RESET" pin must be pulled
-high. Unfortunately, when in SR state, the SoC will be powered off and pull the
-the "RESET" pin low, so we have to add a workaround with the help of HW design,
-i.e., using a GPIO to control the triode to cut off the "RESET" signal to DRAM.
-
-Different boards design may use different GPIO, and both BST and Kernel need to
-know which GPIO is used to cut off the "RESET" signal.
-1) For BST, we define the GPIO in .ini file by "DRAM_RESET_CTRL_GPIO",
-   please see "ini" section below.
-2) For Kernel, we define the GPIO in .dts file by "ambarella,dram-reset-ctrl",
-   please see "Device Tree" section below.
-
-Note:
-  Although LPDDR3 doesn't have the "RESET" pin, you also need to define the GPIO
-  in .ini file, because this GPIO definition, i.e., "DRAM_RESET_CTRL_GPIO", also
-  acts as another role, that is, tell BST to support SR.
-  In other words, if "DRAM_RESET_CTRL_GPIO" is NOT defined in .ini file, BST will
-  boot system directly, but not check if it's cold boot or resume from SR when
-  powered on.
-  For LPDDR3, you can define "DRAM_RESET_CTRL_GPIO" as any meaningful GPIO as
-  long as this GPIO does not affect system booting.
-
-[!!!IMPORTANT!!!]
-  IF SELF-REFRESH IS NOT USED, "DRAM_RESET_CTRL_GPIO" MUST BE REMOVED FROM .ini
-  FILE, OTHERWISE SYSTEM MAY NOT BOOT UP OR REBOOT SUCCESSFULLY.
-
-
-
-SR and PWC (Power Control)
-==========================
+## 0.2 SR and PWC (Power Control)
 
 SR must co-work with PWC, and there are two options to use PWC:
-1) internal PWC, but not all SoCs have internal PWC
-2) external PWC (MCU)
-PS: for those SoCs without internal PWC, you have to use external MCU.
+
+1. internal PWC, but not all SoCs have internal PWC
+2. external PWC (MCU)
+   > for those SoCs without internal PWC, you have to use external MCU.
 
 If the board design is to use external MCU for power sequence control, the SoC
 needs to communicate with the MCU through a GPIO, and the protocol is:
-1) SoC keeps the GPIO high 100ms to notify MCU to enter self-refresh. After
-100ms, SoC should keep the GPIO low.
-2) MCU notifies SoC the state after powered up:
-2.1) if cold boot, MCU keeps the GPIO high.
-2.2) if resume from SR, MCU keeps the GPIO low.
+
+1. SoC generate a rising signal to notify mcu that soc will enter into SR
+2. MCU notifies SoC the state after powered up:
+   - if cold boot, MCU keeps the GPIO high.
+   - if resume from SR, MCU keeps the GPIO low.
 
 Different boards design may use different GPIO, and both BST and Kernel need to
 know which GPIO is used to communicate with the external MCU.
-1) For BST, we define the GPIO in .ini file by "MCU_NOTIFY_GPIO",
-   please see "ini" section below.
-2) For Kernel, we define the GPIO in .dts file by "ambarella,gpio-notify-mcu",
-   please see "Device Tree" section below.
 
-Note:
-  It's allowed to either use two separate GPIOs or use one GPIO to communicate
-  between SoC and MCU, it's determined by the MCU firmware.
+- For BST, we define the GPIO in .ini file by "PARAM_SOC_NOTIFY_MCU_GPIO".
+- For Kernel, we define the GPIO in .dts file by "ambarella,gpio-notify-mcu".
 
+# 1. SelfRefresh
 
+System in the low power mode may cut down most of the power and thus cause dram lose its content in this situation.
+The technology of DRAM self-refresh can fixup this problem when system enter into the low power mode and can quickly bring up the system.
 
-Driver Configuration
-====================
+# 2. Configuration
 
-Power management options  --->
-         [*] Suspend to RAM and standby
-         [*] User space wakeup sources interface
-         (100) Maximum number of user space wakeup sources (0 = no limit)
-         -*- Device power management core functionality
+---
 
+- 2.1 ATF
 
+```bash
+make menuconfig
 
-Device Tree
-===========
+    Ambarella Firmware Configuration  --->
+        AMBoot Options  --->
+            [*] Boot with TrustZone  --->
+        Memory Options  --->
+            AMBoot memory options  --->
+                [0x100000] AMBoot boot loader starting address
+                [0x01400000] Firmware programmer starting address
+            RTOS memory options  --->
+                [0x01280000] Kernel start address
+```
 
-Please see Documentation/devicetree/bindings/arm/ambarella.txt
-               -> 2) - Informational node -> ii) /chosen
+- 2.2 Linux
 
+```bash
+make menuconfig_public_linux
 
+        Firmware Drivers  --->
+            [*] Ambarella secure monitor driver
+        Power management options  --->
+           [*] Suspend to RAM and standby
+           [*] User space wakeup sources interface
+           (100) Maximum number of user space wakeup sources (0 = no limit)
+           -*- Device power management core functionality
+```
 
-ini
-===
+- 2.3 Ini
+  `InI` file stay in your board's bsp sub dir. Take s6lm_pineapple as an example **`ambarella/boards/s6lm_pineapple/bsp/xxx.ini`**.
+  Fill the communication line between soc and mcu
 
-In .ini file, there are two fields related to SR:
+```bash
+CV22_walnut       :
+    <PARAM_SOC_NOTIFY_MCU_GPIO value="142"/>
+    <PARAM_MCU_NOTIFY_SOC_GPIO value="143"/>
 
-1) "DRAM_RESET_CTRL_GPIO", e.g., <DRAM_RESET_CTRL_GPIO value="5"/>
-   No matter DDR3 or LPDDR3, this field has to be set as long as SR is used.
-   Please see the "Note" in "SR and DRAM" section.
+CV2_V100_chestnut :
+    <PARAM_SOC_NOTIFY_MCU_GPIO value="146"/>
+    <PARAM_MCU_NOTIFY_SOC_GPIO value="147"/>
 
-2) "MCU_NOTIFY_GPIO", e.g., <MCU_NOTIFY_GPIO value="33"/>
-   This filed need to be set only when external MCU is used. If using internal
-   PWC, this filed must NOT be set.
+S6LM_pineapple:
+    <PARAM_MCU_NOTIFY_SOC_GPIO value="81"/>
+    <PARAM_SOC_NOTIFY_MCU_GPIO value="82"/>
 
+S5Lx_Tomato: <DRAM_RESET_CTRL_GPIO value="7"/>
+```
 
+- 2.4 DTS
+  `DTS` file stay in your board's bsp sub dir, Take s6lm_pineapple as an example **`ambarella/boards/s6lm_pineapple/bsp/s6lm_pineapple.dts`**
 
-Usage
-=====
+```bash
 
-1) Entering into SR
-root@/#echo mem > /sys/power/state
+CV22_walnut:
+chosen {
+    other content
+    ambarella,pm-gpio-notify-mcu = <142>;
+}
+---
 
-2) Resume from SR by power button
-Press the button directly
+CV2_V100_chestnut:
+chosen {
+    other content
+    ambarella,pm-gpio-notify-mcu = <146>;
+}
+#if 0
+    gpio_keys {
+        compatible = "gpio-keys";
+        #address-cells = <1>;
+        #size-cells = <0>;
 
-3) Resume from SR by RTC
-root@/#echo enabled > /sys/class/rtc/rtc0/device/power/wakeup
-root@/#rtcwake -s 10 -m mem
-PS: this is available only when using internal PWC.
+        demo_button {
+            label = "demo_button";
+            status = "disabled";
+            gpios = <&gpio 153 0>;
+            debounce-interval = <10>;
+            linux,code = <116>;
+            gpio-key,wakeup;
+        };
+    };
+#endif
+---
 
+S6LM_pineapple:
+chosen {
+    other content
+    ambarella,pm-gpio-notify-mcu = <82>;
+}
+---
+
+S5Lx_Tomato:
+chosen {
+    other content
+    ambarella,pm-gpio-notify-mcu = <6>;
+}
+```
+
+---
+
+# 3. Test
+
+1. Burn MCU code for CV2, CV22, S6LM
+2. For CV22_walnut
+
+```bash
+    1. make cv22_dram_self_refresh_config
+    2. make -j16            build first
+    3. configure ATF.       ref 2.1
+    4. configure Linux.     ref 2.2
+    5. configure Ini.       ref 2.3
+    6. configure dts.       ref 2.4
+    7. burn firmware and boot system
+    8. echo no > /sys/module/printk/parameters/console_suspend
+    9. echo mem > /sys/power/state [you will see console become suspend]
+    10. short-connect J65 PIN1<--->PIN6(like single click) will wakeup system
+    11. console resume and test done
+```
+
+3. For CV2_V100_chestnut
+
+```bash
+    1. make cv2_dram_self_refresh_config
+    2. make -j16              build first
+    3. configure ATF.         ref 2.1
+    4. configure Linux.       ref 2.2
+    5. configure Ini.         ref 2.3
+    6. configure dts.         ref 2.4
+    7. burn firmware and boot system
+    8. echo no > /sys/module/printk/parameters/console_suspend
+    9. echo mem > /sys/power/state [you will see console become suspend]
+    10. short-connect J65 PIN1<--->PIN6(like single click) will wakeup system
+    11. console resume and test done
+```
+
+4. For S6LM_pineapple
+
+```bash
+    1. make s6lm_dram_self_refresh_config
+    2. make -j16            build first
+    3. configure ATF.         ref 2.1
+    4. configure Linux.     ref 2.2
+    5. configure Ini.       ref 2.3
+    6. configure dts.       ref 2.4
+    7. burn firmware and boot system
+    8. echo no > /sys/module/printk/parameters/console_suspend
+    9. echo mem > /sys/power/state [you will see console become suspend]
+    10. short-connect J72 PIN1<--->PIN6(like single click) will wake up system
+    11. console resume and test done
+```
+
+5. For S5Lx_Tomato
+   AS before does
+
+```
+
+```
+
+# 4. Not Apply SelfRefesh
+
+For the system does not apply self-refresh, remove the configure In `INI and LINUX. Ref2.2 and 2.3`;
+
+# 5. Additional Information
+
+- 5.1 DRAM_RESET_CTRL_GPIO
+  This is used Only on S5Lx_Tomato board. To disconnect DRAM before enter into self-refresh mode.
+  &nbsp;
+
+* 5.2 ambarella,pm-gpio-notify-mcu
+  This signal come from soc and want to tell mcu that the system will be in low power mode soon
+  and mcu will power down soc into self-refresh mode. The DRAM power must keep during self-refresh.
+  &nbsp;
+
+* 5.3 PARAM_SOC_NOTIFY_MCU_GPIO
+  Same as `ambarella,pm-gpio-notify-mcu`, used on CV2/CV22/S6LM.
+  &nbsp;
+
+* 5.4 PARAM_MCU_NOTIFY_SOC_GPIO
+  This signal comes from mcu to tell soc next boot mode. `PARAM_MCU_NOTIFY_SOC_GPIO=1` soc will do normal boot
+  else `PARAM_MCU_NOTIFY_SOC_GPIO=0` soc will do resume boot
+
+\*5.5 ATF
+[ATF] arm-trusted-firmware https://github.com/ARM-software/arm-trusted-firmware
+
+# 6. Boot flow
+
+                        ---------
+                       |   BST   |
+                        ---------
+                            |
+                ----------------------------
+               | DRAM_RESET_CTRL_GPIO == -1 |    Y
+               | Y `normal boot`            | -----------------------------------^
+               | N `check self mode`        |                                    |
+                ----------------------------                                     |
+                            | N                                                  |
+                            |                                                    |
+                  -----------------------              --------------------      |
+                 | MCU_NOTIFY_GPIO == -1 |     Y      | PWC status[2]      |  0  |
+                 | Y `check PWC status`  |  ------>   | 1 `in self refresh`| ----+
+                 | N `check GPIO signal` |            | 0 `normal boot`    |     |
+                  -----------------------             ---------------------      |
+                            | N                                 | 1              |
+                            |                                   |                |
+                --------------------------                      |                |
+               | MCU_NOTIFY_GPIO's signal |   high              |                |
+               | high `normal boot`       | --------------------*----------------+
+               | low  `in self refresh`   |                     |                |
+                --------------------------                      |                |
+                            | low                               |                |
+                            |                                   |                |
+                ---------------------------                     |                |
+               | In self refresh mode.     |                    |                |
+               | ATF text is in the DRAM   | < -----------------                 |
+               | Jumping to ATF.           |                                     |
+                ---------------------------                                      |
+                            |                                                    |
+                            |                                                    |
+                 -------------------------------                                 |
+                | ATF                           |                 --------------------------------
+                | a. `normal boot`              | <------------- | reload the ATF & BLD from NAND |
+                | b. `resume from self refresh` |                 --------------------------------
+                 -------------------------------
+                      a //            \\ b
+                       //              \\
+                      //                \\
+                     //                  \\
+                 ---------            ---------
+                | AMBoot  | -------> | LINUX   |
+                 ---------            ---------
+
+> MCU_NOTIFY_GPIO means PARAM_MCU_NOTIFY_SOC_GPIO
+> DRAM_RESET_CTRL_GPIO only for S5Lx_Tomato
+
+---
+
+[Boot flow Additional Supplement]
+
+- soc with PROGRAMMABLE_RESET_ADDRESS=1(core0 always boot from 0xffff0000)
+  core0->bst->bl31_cold_entry--->check_normal_or_resume_boot
+  -> if normal boot then do normal boot as usual
+  -> if resume boot then must jump to bl31_warm_entry to do resume boot
+  &nbsp;
+- soc with PROGRAMMABLE_RESET_ADDRESS=0(core0 always boot from 0xffff0000)
+  core1 cor2 core3 boot from 0x0000'0000 and use mail-box to check boot status
+
+- Enter into self-refresh, core1 core2 core3 shutdown first and stay in reset mode
+  and core0 keeps working until soc power down.
+
+---
