@@ -104,18 +104,10 @@ S5Lx_Tomato: <DRAM_RESET_CTRL_GPIO value="7"/>
 
 ```bash
 
-CV22_walnut:
-chosen {
-    other content
-    ambarella,pm-gpio-notify-mcu = <142>;
-}
+CV22_walnut: no change
 ---
 
-CV2_V100_chestnut:
-chosen {
-    other content
-    ambarella,pm-gpio-notify-mcu = <146>;
-}
+CV2_V100_chestnut: comment out gpio_keys
 #if 0
     gpio_keys {
         compatible = "gpio-keys";
@@ -134,11 +126,7 @@ chosen {
 #endif
 ---
 
-S6LM_pineapple:
-chosen {
-    other content
-    ambarella,pm-gpio-notify-mcu = <82>;
-}
+S6LM_pineapple: no change
 ---
 
 S5Lx_Tomato:
