@@ -32,20 +32,5 @@ struct amb_dmic_priv {
 	u32				custom_iir_support;
 };
 
-#if (CHIP_REV == S5) || (CHIP_REV == CV25) || (CHIP_REV == S6LM)
-#define DMIC_I2S_SEL_MASK		(1 << 24)
-#elif (CHIP_REV == S5L)
-#define DMIC_I2S_SEL_MASK		(1 << 6)
-#else
-#error "Not supported!"
-#endif
-
-#if (CHIP_REV == CV25) || (CHIP_REV == S6LM)
-#define DMIC_I2S_SEL_OFFSET		(0x60)
-#elif (CHIP_REV == S5) || (CHIP_REV == S5L)
-#define DMIC_I2S_SEL_OFFSET		(0x0C)
-#else
-#error "Not supported!"
-#endif
 #endif /*AMBARELLA_DMIC_H_*/
 
