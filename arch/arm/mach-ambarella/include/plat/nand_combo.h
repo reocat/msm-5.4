@@ -37,13 +37,17 @@
 /* ==========================================================================*/
 
 #define FIO_OFFSET			0x2000
-#define FIO_4K_OFFSET			0x3000
+#if (CHIP_REV == CV2FS)
+#define FIO_FIFO_OFFSET			0x23000
+#else
+#define FIO_FIFO_OFFSET			0x3000
+#endif
 
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
-#define FIO_4K_BASE			(AHB_BASE + FIO_4K_OFFSET)
+#define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 
 #define FIO_REG(x)			(FIO_BASE + (x))
-#define FIO_4K_REG(x)			(FIO_4K_BASE + (x))
+#define FIO_FIFO_REG(x)			(FIO_FIFO_BASE + (x))
 
 /* Flash I/O Subsystem */
 #define FIO_CTRL_OFFSET			0x00
@@ -289,6 +293,7 @@
 
 /* SPINAND_ERR_PATTERN_REG */
 #define SPINAND_ERR_PATTERN		((0x2c << 16) | 0x2c)
+#define SPINAND_PRG_ERR_PATTERN		((0xc << 16) | 0xc)
 
 /*
  * Bitwise Definition for FDMA Engine

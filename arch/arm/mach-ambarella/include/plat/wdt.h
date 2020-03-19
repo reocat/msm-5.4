@@ -27,9 +27,8 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L)
-#define WDOG_OFFSET			0xC000
+#if (CHIP_REV == CV2FS)
+#define WDOG_OFFSET			0xF000
 #else
 #define WDOG_OFFSET			0x2000
 #endif

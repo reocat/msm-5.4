@@ -39,9 +39,6 @@
 #include <plat/rtc.h>
 #include <mach/io.h>
 
-#define AMBRTC_TIME		0
-#define AMBRTC_ALARM		1
-
 struct ambarella_rtc {
 	struct rtc_device *rtc;
 	void __iomem *base;

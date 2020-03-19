@@ -27,30 +27,26 @@
 #include <plat/chip.h>
 
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == CV25)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || \
+	(CHIP_REV == S6LM) || (CHIP_REV == CV25)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			2
 #endif
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == CV25)
-#define SD_SUPPORT_SDIO			1
-#else
-#define SD_SUPPORT_SDIO			0
-#endif
-
-#define SD_SUPPORT_SDXC			1
-
 /* ==========================================================================*/
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
-	(CHIP_REV == S5) || (CHIP_REV == S5L)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD0_OFFSET			0x2000
 #define SD1_OFFSET			0xC000
 #define SD2_OFFSET			0x1F000
+#elif (CHIP_REV == S3L) || (CHIP_REV == S5L)
+#define SD0_OFFSET			0x2000
+#define SD1_OFFSET			0x1F000
+#define SD2_OFFSET			0x1F000	/* invalid */
 #else
 #define SD0_OFFSET			0x4000
-#define SD1_OFFSET			0x16000
-#define SD2_OFFSET			0x5000
+#define SD1_OFFSET			0x5000
+#define SD2_OFFSET			0x16000
 #endif
 
 #define SD0_BASE			(AHB_BASE + SD0_OFFSET)
@@ -324,7 +320,7 @@
 #define SD_VER_SPEC(x)			((x) & 0xf)
 
 #define SD_ADMA_TBL_LINE_SIZE		(8)
-#define SD_ADMA_TBL_LINE_MAX_LEN	(0x40000)
+#define SD_ADMA_TBL_LINE_MAX_LEN	(0x40000) //for words
 #define SD_ADMA_TBL_ATTR_NOP		(0x0000)
 #define SD_ADMA_TBL_ATTR_RSV		(0x0010)
 #define SD_ADMA_TBL_ATTR_TRAN		(0x0020)
@@ -333,6 +329,9 @@
 #define SD_ADMA_TBL_ATTR_INT		(0x0004)
 #define SD_ADMA_TBL_ATTR_END		(0x0002)
 #define SD_ADMA_TBL_ATTR_VALID		(0x0001)
+#define SD_ADMA_DESC_LINE_SZ            (65536) //for bytes
+#define SD_ADMA_MAX_TRANS_SZ            (65535 * 512)
+#define SD_ADMA_MAX_TRANS_SECTORS       (65535)
 
 /* ==========================================================================*/
 

@@ -34,7 +34,7 @@
 #elif (CHIP_REV == S5L)
 #define SPI_AHB_INSTANCES			3
 #define SPI_AHB_SLAVE_INSTANCES			1
-#elif (CHIP_REV == CV1)
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2FS)
 #define SPI_AHB_INSTANCES			6
 #define SPI_AHB_SLAVE_INSTANCES			1
 #else
@@ -48,6 +48,14 @@
 #define SPI1_OFFSET			0x21000
 #define SPI2_OFFSET			0x22000
 #define SPI_SLAVE_OFFSET		0x26000
+#elif (CHIP_REV == CV2FS)
+#define SPI0_OFFSET			0x11000
+#define SPI1_OFFSET			0x12000
+#define SPI2_OFFSET			0x13000
+#define SPI3_OFFSET			0x14000
+#define SPI4_OFFSET			0x34000
+#define SPI5_OFFSET			0x35000
+#define SPI_SLAVE_OFFSET		0x10000
 #else
 #define SPI0_OFFSET			0x11000
 #define SPI1_OFFSET			0x12000
@@ -77,6 +85,9 @@
 #define SPI_MASTER1			0
 #define SPI_MASTER2			1
 #define SPI_MASTER3			2
+#define SPI_MASTER4			3
+#define SPI_MASTER5			4
+#define SPI_MASTER6			5
 
 /* ==========================================================================*/
 /* SPI_FIFO_SIZE */

@@ -86,6 +86,7 @@
 #define SPINOR_CFG_CHIPSEL(x)		(((~(1 << (x))) & 0xff) << 18)
 #define SPINOR_CFG_CHIPSEL_MASK		(0xff << 18)
 #define SPINOR_CFG_CLKDIV(x)		(((x) & 0xff) << 10)
+#define SPINOR_CFG_CLKDIV_MASK		(0xff << 10)
 #define SPINOR_CFG_RXSAMPDLY(x)		((x) & 0x1f)
 
 /* SPINOR_DMACTRL_REG */

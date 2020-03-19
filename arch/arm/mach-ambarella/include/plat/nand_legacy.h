@@ -28,16 +28,14 @@
 
 /* ==========================================================================*/
 
-#define FIO_FIFO_OFFSET			0x0000
 #define FIO_OFFSET			0x1000
-#define FIO_4K_OFFSET			0x30000
+#define FIO_FIFO_OFFSET			0x30000
 
-#define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
-#define FIO_4K_BASE			(AHB_BASE + FIO_4K_OFFSET)
+#define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
 
 #define FIO_REG(x)			(FIO_BASE + (x))
-#define FIO_4K_REG(x)			(FIO_4K_BASE + (x))
+#define FIO_FIFO_REG(x)			(FIO_FIFO_BASE + (x))
 
 /* ==========================================================================*/
 
@@ -280,6 +278,9 @@
 #define NAND_CC_CMD1_VAL1		0x00008000
 #define NAND_CC_CMD2_VAL0		0x00000200
 #define NAND_CC_CMD2_VAL1		0x00000400
+#define NAND_CC_CMD1(x)			((x) << 14)
+#define NAND_CC_ADDR_CYCLE(x)	((x) << 11)
+#define NAND_CC_CMD2(x)			((x) << 9)
 #define NAND_CC_RW_WE			0x00000080
 #define NAND_CC_RW_RE			0x00000100
 #define NAND_CC_WAIT_RB			0x00000020

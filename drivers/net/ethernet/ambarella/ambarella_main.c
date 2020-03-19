@@ -2190,7 +2190,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	struct device *dev = lp->ndev->dev.parent;
 	struct device_node *phy_np;
 	enum of_gpio_flags flags;
-	int ret_val, hw_intf, val = 0;
+	int ret_val, hw_intf, mask, val = 0;
 
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
@@ -2240,16 +2240,18 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	if (of_find_property(np, "amb,enable-required", NULL)) {
 		switch (lp->intf_type) {
 		case PHY_INTERFACE_MODE_RGMII:
-			val = ENET_SEL | ENET_PHY_INTF_SEL_RGMII;
+			mask = ENET_SEL | ENET_PHY_INTF_SEL_RMII;
+			val = ENET_SEL;
 			break;
 		case PHY_INTERFACE_MODE_RMII:
+			mask = ENET_SEL | ENET_PHY_INTF_SEL_RMII;
 			val = ENET_SEL | ENET_PHY_INTF_SEL_RMII;
 			break;
 		default:
 			dev_err(dev, "Invalid PHY interface: %d!\n", lp->intf_type);
 			return -EINVAL;
 		}
-		regmap_write(lp->reg_rct, RCT_ENET_CTRL_OFFSET, val);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CTRL_OFFSET, mask, val);
 	} else {
 		regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &val);
 		if (!(val & POC_ETH_IS_ENABLED)) {
@@ -2322,10 +2324,12 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	/* check if using external ref_clk, it's valid for RMII only */
 	lp->ext_ref_clk = !!of_find_property(np, "amb,ext-ref-clk", NULL);
 	if (lp->ext_ref_clk) {
-		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
+			RCT_ENET_CLK_SRC_SEL_VAL, 0x0);
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 0x00);
 	} else {
-		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
+			RCT_ENET_CLK_SRC_SEL_VAL, RCT_ENET_CLK_SRC_SEL_VAL);
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 1<<5);
 	}
 
@@ -2580,10 +2584,12 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		goto ambeth_drv_resume_exit;
 
 	if (lp->ext_ref_clk) {
-		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x0);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
+			RCT_ENET_CLK_SRC_SEL_VAL, 0x0);
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x00);
 	} else {
-		regmap_update_bits(lp->reg_rct, ENET_CLK_SRC_SEL_OFFSET, 0x1, 0x1);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
+			RCT_ENET_CLK_SRC_SEL_VAL, RCT_ENET_CLK_SRC_SEL_VAL);
 		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 0x20, 0x20);
 	}
 

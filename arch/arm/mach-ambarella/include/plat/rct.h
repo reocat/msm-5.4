@@ -36,7 +36,12 @@
 #define RCT_BASE			(DBGBUS_BASE + RCT_OFFSET)
 #define RCT_REG(x)			(RCT_BASE + (x))
 
+#if (CHIP_REV == CV2FS)
+#define RCT_INVALID_OFFSET		0x10
+#else
 #define RCT_INVALID_OFFSET		0x14
+#endif
+#define RCT_INVALID_REG			RCT_REG(RCT_INVALID_OFFSET)
 
 /* ==========================================================================*/
 #define PLL_LOCK_OFFSET			0x2C
@@ -328,7 +333,18 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S2L) || (CHIP_REV == S3)
+#define PLL_VISION_CTRL_OFFSET		0x6E4
+#define PLL_VISION_FRAC_OFFSET		0x6E8
+#define PLL_VISION_CTRL2_OFFSET		0x6EC
+#define PLL_VISION_CTRL3_OFFSET		0x6F0
+#define PLL_VISION_CTRL_REG		RCT_REG(PLL_VISION_CTRL_OFFSET)
+#define PLL_VISION_FRAC_REG		RCT_REG(PLL_VISION_FRAC_OFFSET)
+#define PLL_VISION_CTRL2_REG		RCT_REG(PLL_VISION_CTRL2_OFFSET)
+#define PLL_VISION_CTRL3_REG		RCT_REG(PLL_VISION_CTRL3_OFFSET)
+
+/* ==========================================================================*/
+
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == CV2FS)
 #define ENET_CLK_SRC_SEL_OFFSET		RCT_INVALID_OFFSET
 #elif (CHIP_REV == S3L) || (CHIP_REV == S5L)
 #define ENET_CLK_SRC_SEL_OFFSET		0x544
@@ -336,6 +352,27 @@
 #define ENET_CLK_SRC_SEL_OFFSET		0x6B8
 #endif
 #define ENET_CLK_SRC_SEL_REG		RCT_REG(ENET_CLK_SRC_SEL_OFFSET)
+
+#define ENET_SEL			(1 << 0)
+#define ENET_PHY_INTF_SEL_RMII		(1 << 1)
+#define ENET_CLK_SRC_SEL		(1 << 2)
+
+#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS)
+#define RCT_ENET_CTRL_OFFSET		0x79C
+#else /* non-exist on chips before CV25 */
+#define RCT_ENET_CTRL_OFFSET		RCT_INVALID_OFFSET
+#endif
+#define RCT_ENET_CTRL_REG		RCT_REG(RCT_ENET_CTRL_OFFSET)
+
+#if (CHIP_REV == CV2FS)
+#define RCT_ENET_CLK_SRC_SEL_VAL	ENET_CLK_SRC_SEL
+#define RCT_ENET_CLK_SRC_SEL_OFFSET	RCT_ENET_CTRL_OFFSET
+#define RCT_ENET_CLK_SRC_SEL_REG	RCT_ENET_CTRL_REG
+#else
+#define RCT_ENET_CLK_SRC_SEL_VAL	(1 << 0)
+#define RCT_ENET_CLK_SRC_SEL_OFFSET	ENET_CLK_SRC_SEL_OFFSET
+#define RCT_ENET_CLK_SRC_SEL_REG	ENET_CLK_SRC_SEL_REG
+#endif
 
 #define SCALER_GTX_POST_OFFSET		0x2A8
 #define ENET_GTXCLK_SRC_OFFSET		0x2B0
@@ -353,21 +390,10 @@
 #define PLL_ENET_CTRL3_REG		RCT_REG(PLL_ENET_CTRL3_OFFSET)
 #define SCALER_ENET_POST_REG		RCT_REG(SCALER_ENET_POST_OFFSET)
 
-#define ENET_SEL			(1 << 0)
-#define ENET_PHY_INTF_SEL_RGMII		(0 << 1)
-#define ENET_PHY_INTF_SEL_RMII		(1 << 1)
-
-#if (CHIP_REV == S6LM)
-#define RCT_ENET_CTRL_OFFSET		0x79C
-#else /* non-exist on chips before CV25 */
-#define RCT_ENET_CTRL_OFFSET		RCT_INVALID_OFFSET
-#endif
-#define RCT_ENET_CTRL_OFFSET_REG	RCT_REG(RCT_ENET_CTRL_OFFSET)
-
 /* ==========================================================================*/
 #define SCALER_SD0_OFFSET		0x00C
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || \
-	(CHIP_REV == S6LM) || (CHIP_REV == CV25)
+	(CHIP_REV == S6LM) || (CHIP_REV == CV25) || (CHIP_REV == CV2FS)
 #define SCALER_SD1_OFFSET		0x430
 #else
 #define SCALER_SD1_OFFSET		0x434
@@ -610,7 +636,7 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S6LM)
+#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS)
 #define SCALER_SYS_CNT_POST_OFFSET	0x794
 #else
 #define SCALER_SYS_CNT_POST_OFFSET	RCT_INVALID_OFFSET
@@ -655,19 +681,17 @@
 #define AHBSP_GMII_ADDR_OFFSET		0xA4
 #endif
 
+#if (CHIP_REV == CV2FS)
+#define AHB_SP0_RAM_OFFSET		0x30000
+#define AHB_SP1_RAM_OFFSET		0x31000
+#else
 #define AHB_SP0_RAM_OFFSET		0x20000
-#define AHB_SP0_RAM_BASE		(AHB_BASE + AHB_SP0_RAM_OFFSET)
-
 #define AHB_SP1_RAM_OFFSET		0x21000
+#endif
+#define AHB_SP0_RAM_BASE		(AHB_BASE + AHB_SP0_RAM_OFFSET)
 #define AHB_SP1_RAM_BASE		(AHB_BASE + AHB_SP1_RAM_OFFSET)
 
 /* ==========================================================================*/
-
-#if (CHIP_REV == S6LM)
-#define POC_OPTION_FIXUP		0x00400000 /* support SPINAND only */
-#else
-#define POC_OPTION_FIXUP		0x00000000
-#endif
 
 #define	POC_ETH_IS_ENABLED		0x00000001
 #define	POC_USB0_IS_DEVICE		0x20000000
@@ -728,6 +752,22 @@
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00020000
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
+#elif (CHIP_REV == S6LM)
+#define SYS_CONFIG_NAND_SPINAND		0xffffffff /* not used, spinand only */
+#define SYS_CONFIG_NAND_SCKMODE		0x00080000
+#define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
+#define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
+#define SYS_CONFIG_NAND_READ_CONFIRM	0xffffffff /* not used */
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
+#elif (CHIP_REV == CV2FS)
+#define SYS_CONFIG_NAND_SPINAND		0xffffffff /* not used, spinand only */
+#define SYS_CONFIG_NAND_SCKMODE		0x00040000
+#define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
+#define SYS_CONFIG_NAND_PAGE_SIZE	0x00020000
+#define SYS_CONFIG_NAND_READ_CONFIRM	0xffffffff /* not used */
+#define SYS_CONFIG_NAND_ECC_BCH_EN	0x00008000
+#define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00004000
 #else
 #define SYS_CONFIG_NAND_SPINAND		0x00400000
 #define SYS_CONFIG_NAND_SCKMODE		0x00080000
@@ -767,6 +807,12 @@
 #define SYS_CONFIG_MMC_SDXC		0x00020000
 #define SYS_CONFIG_MMC_4BIT		0x00010000
 #define SYS_CONFIG_MMC_8BIT		0x00008000
+#elif (CHIP_REV == CV2FS)
+#define SYS_CONFIG_MMC_HS		0x00002000
+#define SYS_CONFIG_MMC_DDR		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_SDXC		0x00000000 /* not supported */
+#define SYS_CONFIG_MMC_4BIT		0x00008000
+#define SYS_CONFIG_MMC_8BIT		0x00004000
 #else
 #define SYS_CONFIG_MMC_HS		0x00004000
 #define SYS_CONFIG_MMC_DDR		0x00000000 /* not supported */
@@ -784,7 +830,7 @@
 #define RCT_BOOT_EMMC_SDXC		0x00000010
 
 /* ==========================================================================*/
-#if (CHIP_REV == CV1) || (CHIP_REV == CV22) || (CHIP_REV == CV2) || (CHIP_REV == CV25) || (CHIP_REV == S6LM)
+
 #define MIPI_DSI_CTRL0_OFFSET		0x00000670
 #define MIPI_DSI_CTRL1_OFFSET		0x00000674
 #define MIPI_DSI_CTRL2_OFFSET		0x00000678
@@ -795,7 +841,6 @@
 
 #define SCALER_CLK_VO_B_DIV_POST_OFF	0x000002ec
 
-#endif
 /* ==========================================================================*/
 
 #define RCT_DLL0_OFFSET			0x90

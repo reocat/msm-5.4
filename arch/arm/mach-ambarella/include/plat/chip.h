@@ -35,6 +35,7 @@
 #define CV2		(21000)
 #define CV22		(22000)
 #define CV25		(25000)
+#define CV2FS		(0x43563241)
 
 #define CHIP_ID(x)	((x / 1000))
 #define CHIP_MAJOR(x)	((x / 100) % 10)
@@ -60,6 +61,8 @@
 #define CHIP_REV	CV22
 #elif defined(CONFIG_ARCH_AMBARELLA_CV25)
 #define CHIP_REV	CV25
+#elif defined(CONFIG_ARCH_AMBARELLA_CV2FS)
+#define CHIP_REV	CV2FS
 #else
 #error "Undefined CHIP_REV"
 #endif

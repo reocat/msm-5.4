@@ -29,6 +29,8 @@
 /* ==========================================================================*/
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || (CHIP_REV == S5)
 #define IDC_INSTANCES			3
+#elif (CHIP_REV == CV2FS)
+#define IDC_INSTANCES			6
 #else
 #define IDC_INSTANCES			4
 #endif
@@ -45,6 +47,9 @@
 #define IDC2_OFFSET			0xA000
 #define IDC3_OFFSET			0xB000
 #endif
+#define IDC4_OFFSET			0x19000
+#define IDC5_OFFSET			0x1A000
+
 #define IDC0_BASE			(APB_BASE + IDC0_OFFSET)
 #define IDC0_REG(x)			(IDC0_BASE + (x))
 
@@ -56,6 +61,12 @@
 
 #define IDC3_BASE			(APB_BASE + IDC3_OFFSET)
 #define IDC3_REG(x)			(IDC3_BASE + (x))
+
+#define IDC4_BASE			(APB_BASE + IDC4_OFFSET)
+#define IDC4_REG(x)			(IDC4_BASE + (x))
+
+#define IDC5_BASE			(APB_BASE + IDC5_OFFSET)
+#define IDC5_REG(x)			(IDC5_BASE + (x))
 
 /* ==========================================================================*/
 #define IDC_ENR_OFFSET			0x00
