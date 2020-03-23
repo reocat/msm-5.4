@@ -220,20 +220,6 @@ int rproc_elf_load_segments(struct rproc *rproc, const struct firmware *fw)
 			else
 				memcpy(ptr, elf_data + offset, filesz);
 		}
-
-		/*
-		 * Zero out remaining memory for this segment.
-		 *
-		 * This isn't strictly required since dma_alloc_coherent already
-		 * did this for us. albeit harmless, we may consider removing
-		 * this.
-		 */
-		if (memsz > filesz) {
-			if (is_iomem)
-				memset_io((void __iomem *)(ptr + filesz), 0, memsz - filesz);
-			else
-				memset(ptr + filesz, 0, memsz - filesz);
-		}
 	}
 
 	return ret;
