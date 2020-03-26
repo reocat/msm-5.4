@@ -399,6 +399,8 @@ struct rproc_ops {
 	int (*sanity_check)(struct rproc *rproc, const struct firmware *fw);
 	u64 (*get_boot_addr)(struct rproc *rproc, const struct firmware *fw);
 	unsigned long (*panic)(struct rproc *rproc);
+	void * (*memcpy)(struct rproc *rproc, void *dest,
+			 const void *src, size_t count, int flags);
 };
 
 /**
