@@ -982,7 +982,6 @@
 			amb,ipc-tx;
 			amb,ipc-rx;
 			amb,enhance;
-			amb,enable-required;
 			amb,ahb-12mhz-div = <5>;
 			clock-names = "ptp_ref";
 			clocks= <&osc>;

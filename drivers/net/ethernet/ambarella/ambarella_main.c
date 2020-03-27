@@ -2192,6 +2192,12 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	enum of_gpio_flags flags;
 	int ret_val, hw_intf, mask, val = 0;
 
+	lp->id = of_alias_get_id(np, "ethernet");
+	if (lp->id >= ETH_INSTANCES) {
+		dev_err(dev, "Invalid ethernet ID %d!\n", lp->id);
+		return -ENXIO;
+	}
+
 	for_each_child_of_node(np, phy_np) {
 		if (!phy_np->name || of_node_cmp(phy_np->name, "phy"))
 			continue;
@@ -2237,7 +2243,7 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		return -ENODEV;
 	}
 
-	if (of_find_property(np, "amb,enable-required", NULL)) {
+	if (RCT_ENET_CTRL_OFFSET != RCT_INVALID_OFFSET) {
 		switch (lp->intf_type) {
 		case PHY_INTERFACE_MODE_RGMII:
 			mask = ENET_SEL | ENET_PHY_INTF_SEL_RMII;
@@ -2251,6 +2257,9 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 			dev_err(dev, "Invalid PHY interface: %d!\n", lp->intf_type);
 			return -EINVAL;
 		}
+
+		mask <<= (lp->id * 4);
+		val <<= (lp->id * 4);
 		regmap_update_bits(lp->reg_rct, RCT_ENET_CTRL_OFFSET, mask, val);
 	} else {
 		regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &val);
@@ -2324,13 +2333,15 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 	/* check if using external ref_clk, it's valid for RMII only */
 	lp->ext_ref_clk = !!of_find_property(np, "amb,ext-ref-clk", NULL);
 	if (lp->ext_ref_clk) {
-		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
-			RCT_ENET_CLK_SRC_SEL_VAL, 0x0);
-		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 0x00);
+		mask = RCT_ENET_CLK_SRC_SEL_VAL << (lp->id * 4);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET, mask, 0x0);
+		mask = 1 << (5 + lp->id);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, mask, 0x0);
 	} else {
-		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
-			RCT_ENET_CLK_SRC_SEL_VAL, RCT_ENET_CLK_SRC_SEL_VAL);
-		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, 1<<5, 1<<5);
+		mask = RCT_ENET_CLK_SRC_SEL_VAL << (lp->id * 4);
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET, mask, mask);
+		mask = 1 << (5 + lp->id);
+		regmap_update_bits(lp->reg_rct, AHB_MISC_OFFSET, mask, mask);
 	}
 
 	/* check if using internal 125MHz clock, it's valid for RGMII only */

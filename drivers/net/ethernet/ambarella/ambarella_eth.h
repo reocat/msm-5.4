@@ -140,6 +140,7 @@ struct ambeth_info {
 	unsigned char __iomem		*regbase;
 	struct regmap			*reg_rct;
 	struct regmap			*reg_scr;
+	u32				id;
 	u32				msg_enable;
 
 	u32				mdio_gpio: 1,

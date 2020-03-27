@@ -559,7 +559,6 @@ Optional properties:
 - amb,no-cap-erase: specifies to not support ERASE
 - amb,auto-cmd12: specifies to support auto CMD12.
   PS: may not work for some SD cards if specified.
-- amb,emmc-boot: specifies if the sd controller is used for emmc boot
 - v18-gpios: specifies the GPIO to switch to the 1.8V power if existed.
 - pwr-gpios: specifies the GPIO to turn on/off the power for the SD/MMC card.
 - amb,sd-force-1_8v: specifies if the signal voltage is force setting as 1.8v
@@ -631,8 +630,6 @@ Optional properties:
 - amb,tx-clk-invert: should be specified if inverting the Tx clk,
   take effect on all modes, including RMII, RGMII and etc.
 - amb,enhance: specifies to use the enhance ethernet iff the chip supports.
-- amb,enable-required: specifies if POC option is removed, which means ethernet
-  need to be enabled manually. It's determined by SoC.
 - amb,mdio-gpio: specifies to use GPIO to emulating MDIO bus.
 
 ii) Example
