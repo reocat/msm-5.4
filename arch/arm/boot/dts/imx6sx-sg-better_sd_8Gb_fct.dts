@@ -147,7 +147,10 @@
 	reg = <0x00901000 0xf000>;
 };
 
-&rpmsg{
+&rpmsg
+{
+	vdev-nums = <1>;
+	reg = <0xbfff0000 0x10000>;
 	status = "okay";
 };
 
