@@ -499,6 +499,19 @@ static struct resource_table *imx_rproc_get_loaded_rsc_table(struct rproc *rproc
 	return (struct resource_table *)priv->rsc_table;
 }
 
+static void *imx_rproc_memcpy(struct rproc *rproc, void *dest,
+			      const void *src, size_t count, int flags)
+{
+	u32 *tmp = dest;
+	const u32 *s = src;
+
+	count = count / 4;
+	while (count--)
+		*tmp++ = *s++;
+
+	return dest;
+}
+
 static const struct rproc_ops imx_rproc_ops = {
 	.prepare	= imx_rproc_prepare,
 	.attach		= imx_rproc_attach,
@@ -512,6 +525,7 @@ static const struct rproc_ops imx_rproc_ops = {
 	.get_loaded_rsc_table = imx_rproc_get_loaded_rsc_table,
 	.sanity_check	= rproc_elf_sanity_check,
 	.get_boot_addr	= rproc_elf_get_boot_addr,
+	.memcpy		= imx_rproc_memcpy,
 };
 
 static int imx_rproc_addr_init(struct imx_rproc *priv,
