@@ -836,7 +836,7 @@ static void ambarella_adc_parse_dt(struct ambarella_adc *ambadc)
 	int ret;
 
 	if (of_property_read_u32(np, "amb,channels-used", &channels_used) < 0)
-		bitmap_fill(&ambadc->channels_mask, ADC_NUM_CHANNELS);
+		ambadc->channels_mask = (1 << ADC_NUM_CHANNELS) - 1;
 	else
 		ambadc->channels_mask = channels_used;
 
