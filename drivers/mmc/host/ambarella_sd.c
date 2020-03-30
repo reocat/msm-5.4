@@ -45,6 +45,7 @@
 #include <linux/debugfs.h>
 #include <plat/rct.h>
 #include <plat/sd.h>
+#include <linux/leds.h>
 
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
@@ -70,6 +71,7 @@ struct ambarella_mmc_host {
 	struct mmc_request		*mrq;
 	struct mmc_command		*cmd;
 	struct dentry			*debugfs;
+	struct led_classdev		led;
 
 	spinlock_t			lock;
 	struct tasklet_struct		finish_tasklet;
@@ -103,11 +105,14 @@ struct ambarella_mmc_host {
 	bool				auto_cmd12;
 	bool				force_v18;
 	bool				tuning_fixed_clk_freq;
+	bool				have_led;
 
 	int				pwr_gpio;
 	u8				pwr_gpio_active;
 	int				v18_gpio;
 	u8				v18_gpio_active;
+	int				led_gpio;
+	u8				led_gpio_active;
 
 #ifdef CONFIG_PM
 	u32				sd_nisen;
@@ -1347,6 +1352,11 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 	else
 		host->fixed_timing = true;
 
+	if (of_property_read_bool(np, "amb,have-led"))
+		host->have_led = true;
+	else
+		host->have_led = false;
+
 	host->auto_cmd12 = of_property_read_bool(np, "amb,auto-cmd12");
 	host->force_v18 = of_property_read_bool(np, "amb,sd-force-1_8v");
 
@@ -1483,6 +1493,51 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 	return 0;
 }
 
+#ifdef CONFIG_LEDS_CLASS
+static void ambarella_sd_led_set_brightness(struct led_classdev *led_cdev, enum led_brightness value)
+{
+	struct ambarella_mmc_host *host = container_of(led_cdev, struct ambarella_mmc_host, led);
+
+	if (gpio_is_valid(host->led_gpio)) {
+		if(value)
+			gpio_set_value_cansleep(host->led_gpio, !host->led_gpio_active);
+		else
+			gpio_set_value_cansleep(host->led_gpio, host->led_gpio_active);
+	}
+}
+
+static int ambarella_sd_led_init(struct ambarella_mmc_host *host)
+{
+	int gpio_init_flag;
+	int rval;
+	enum of_gpio_flags flags;
+
+	host->led_gpio = of_get_named_gpio_flags(host->dev->of_node, "led-gpios", 0, &flags);
+	host->led_gpio_active = !!(flags & OF_GPIO_ACTIVE_LOW);
+	if (gpio_is_valid(host->led_gpio)) {
+		if (host->led_gpio_active)
+			gpio_init_flag = GPIOF_OUT_INIT_LOW;
+		else
+			gpio_init_flag = GPIOF_OUT_INIT_HIGH;
+	} else {
+		return -ENODEV;
+	}
+	rval = devm_gpio_request_one(host->dev, host->led_gpio, gpio_init_flag, "sd led");
+	if (rval < 0) {
+		dev_err(host->dev, "Failed to request sd led-gpios!\n");
+		return -ENODEV;
+	}
+
+	host->led.name = mmc_hostname(host->mmc);
+	host->led.brightness = LED_OFF;
+	host->led.default_trigger = mmc_hostname(host->mmc);
+	host->led.brightness_set = ambarella_sd_led_set_brightness;
+	rval = led_classdev_register(mmc_dev(host->mmc), &host->led);
+
+	return rval;
+}
+#endif
+
 static int ambarella_sd_probe(struct platform_device *pdev)
 {
 	struct ambarella_mmc_host *host;
@@ -1553,6 +1608,10 @@ static int ambarella_sd_probe(struct platform_device *pdev)
 	pm_runtime_mark_last_busy(&pdev->dev);
 	pm_runtime_put_autosuspend(&pdev->dev);
 
+#ifdef CONFIG_LEDS_CLASS
+	if (host->have_led && ambarella_sd_led_init(host))
+		goto out3;
+#endif
 	return 0;
 
 out3:
@@ -1572,6 +1631,11 @@ out0:
 static int ambarella_sd_remove(struct platform_device *pdev)
 {
 	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
+
+#ifdef CONFIG_LEDS_CLASS
+	if(host->have_led)
+		led_classdev_unregister(&host->led);
+#endif
 
 	pm_runtime_get_sync(&pdev->dev);
 

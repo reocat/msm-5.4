@@ -573,6 +573,9 @@ Optional properties:
   phyctrl 1 (phy sel) setting, the last element is for phy sbc setting
 - amb,tuning-fixed-clk-freq: specifies the tuning option for using fixed clock, donot reduce
   clock frequecy. When visiting RPMB partition in kernel, this property must be set.
+- led-gpios: specified the GPIO to conctrol a led that indicate there is request is servicing.
+- amb,have-led: if use led-gpios property, this property must be set; Note if there is no gpio
+  control led to indicate status, please donot specify this property.
 
 iii) Example
 -----------
