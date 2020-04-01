@@ -832,13 +832,18 @@ static int ambarella_adc_channel_init(struct iio_dev *indio_dev)
 static void ambarella_adc_parse_dt(struct ambarella_adc *ambadc)
 {
 	struct device_node *np = ambadc->dev->of_node;
+	unsigned long channels_all = (1 << ADC_NUM_CHANNELS) - 1;
 	u32 channels_used, scalers_1v8, clk_rate;
 	int ret;
 
 	if (of_property_read_u32(np, "amb,channels-used", &channels_used) < 0)
-		ambadc->channels_mask = (1 << ADC_NUM_CHANNELS) - 1;
+		ambadc->channels_mask = channels_all;
 	else
 		ambadc->channels_mask = channels_used;
+
+	/* make sure the channels specified are all supported */
+	bitmap_and(&ambadc->channels_mask, &ambadc->channels_mask,
+		&channels_all, ADC_NUM_CHANNELS);
 
 	if (of_property_read_u32(np, "amb,scaler-1v8", &scalers_1v8) < 0)
 		scalers_1v8 = 0;
