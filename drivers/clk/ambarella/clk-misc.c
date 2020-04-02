@@ -102,10 +102,12 @@ static int ambarella_clock_proc_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations proc_clock_fops = {
+	.owner = THIS_MODULE,
 	.open = ambarella_clock_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_clock_proc_write,
+	.release = single_release,
 };
 
 static int __init ambarella_init_clk(void)

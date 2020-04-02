@@ -127,10 +127,12 @@ static int ambdma_proc_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations proc_ambdma_fops = {
+	.owner = THIS_MODULE,
 	.open = ambdma_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambdma_proc_write,
+	.release = single_release,
 };
 
 static struct ambdma_desc *ambdma_alloc_desc(struct dma_chan *chan, gfp_t gfp_flags)

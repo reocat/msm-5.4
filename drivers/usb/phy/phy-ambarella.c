@@ -195,10 +195,12 @@ static int ambarella_phy_proc_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations proc_phy_switcher_fops = {
+	.owner = THIS_MODULE,
 	.open = ambarella_phy_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = ambarella_phy_proc_write,
+	.release = single_release,
 };
 
 static irqreturn_t ambarella_otg_detect_irq(int irq, void *dev_id)

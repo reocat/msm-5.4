@@ -1187,10 +1187,12 @@ static int slavespi_proc_open(struct inode *inode, struct file *file)
 }
 
 static const struct file_operations slavespi_proc_ops = {
+	.owner = THIS_MODULE,
 	.open = slavespi_proc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.write = slavespi_proc_write,
+	.release = single_release,
 };
 
 static int ambarella_slavespi_probe(struct platform_device *pdev)
