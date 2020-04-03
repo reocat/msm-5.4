@@ -101,6 +101,10 @@ struct nand_flash_dev nand_flash_ids[] = {
 		{ .id = {0x2c, 0x24, 0x00, 0x00, 0x00} },
 		  SZ_2K, SZ_256, SZ_128K, 0, 2, 128},
 
+	{"MT29F2G01ABBGD SPINAND 2G 1.8V 8-bit",
+		{ .id = {0x2c, 0x25, 0x00, 0x00, 0x00} },
+		  SZ_2K, SZ_256, SZ_128K, 0, 2, 128},
+
 	{"MT29F1G01ABAFD SPINAND 2G 3.3V 8-bit",
 		{ .id = {0x2c, 0x14, 0x00, 0x00, 0x00} },
 		  SZ_2K, SZ_128, SZ_128K, 0, 2, 128},
@@ -163,6 +167,10 @@ struct nand_flash_dev nand_flash_ids[] = {
 
 	{"MT29F4G01ABAFD SPINAND 4G 3.3V 8-bit",
 		{ .id = {0x2c, 0x34, 0x00, 0x00, 0x00} },
+		  SZ_4K, SZ_512, SZ_256K, 0, 2, 256},
+
+	{"MT29F4G01ABBFD SPINAND 4G 1.8V 8-bit",
+		{ .id = {0x2c, 0x35, 0x00, 0x00, 0x00} },
 		  SZ_4K, SZ_512, SZ_256K, 0, 2, 256},
 
 	{"XT26G02B SPINAND 2Gb 3.3V 8-bit",
