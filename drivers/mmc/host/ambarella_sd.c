@@ -1025,6 +1025,7 @@ retry_dll_clk:
 	tmp = ((((best_s + best_e) / 2) >> 5) << 1) | SD_PHY_SBC_DEFAULT_VALUE;
 	vfine = ambarella_sd_set_dll(host, tmp);
 
+	tmp = ((best_s + best_e) / 2) >> 5;
 	if (tmp * 32 > best_s)
 		best_s = 0;
 	else
@@ -1483,7 +1484,7 @@ static int ambarella_sd_get_resource(struct platform_device *pdev,
 
 	field.reg = regs[4];
 	field.lsb = regs[5];
-	field.msb = regs[5] + 5;
+	field.msb = regs[5] + 4;
 	host->phy_obsv = devm_regmap_field_alloc(dev, host->reg_rct, field);
 	if (IS_ERR(host->phy_obsv)) {
 		dev_err(dev, "Can't alloc phy obsv reg field.\n");
