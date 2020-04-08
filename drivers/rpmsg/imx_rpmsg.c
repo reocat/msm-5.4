@@ -673,12 +673,10 @@ static int imx_rpmsg_probe(struct platform_device *pdev)
 	if (!strcmp(rpdev->rproc_name, "m4")) {
 		ret = set_vring_phy_buf(pdev, rpdev,
 					rpdev->vdev_nums);
-		if (ret) {
-			pr_err("No vring buffer.\n");
-			//return -ENOMEM;
-			rpdev->ivdev[0]->vring[0] = 0x9FFF0000;
-			rpdev->ivdev[0]->vring[1] = 0x9FFF8000;     
-		}
+		pr_err("No vring buffer.\n");
+		//return -ENOMEM;
+		rpdev->ivdev[0]->vring[0] = 0x9FFF0000;
+		rpdev->ivdev[0]->vring[1] = 0x9FFF8000;     
 	} else {
 		pr_err("No remote m4 processor.\n");
 		ret = -ENODEV;
