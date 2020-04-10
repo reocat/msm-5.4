@@ -937,7 +937,8 @@ retry_dll_clk:
 		else
 			sel = sel - vfine;
 
-		tmp = (sel << 16) | (sel << 8) | (sel << 0);
+		/* some field is reserved which does not have to set  */
+		tmp = (sel << 24) | (sel << 16) | (sel << 8) | (sel << 0);
 		regmap_field_write(host->phy_sel, tmp);
 
 		if (mmc_send_tuning(mmc, opcode, NULL) == 0) {
@@ -1025,16 +1026,25 @@ retry_dll_clk:
 	tmp = ((((best_s + best_e) / 2) >> 5) << 1) | SD_PHY_SBC_DEFAULT_VALUE;
 	vfine = ambarella_sd_set_dll(host, tmp);
 
-	tmp = ((best_s + best_e) / 2) >> 5;
-	if (tmp * 32 > best_s)
+	if((best_s >> 5) + 2 >= (best_e >> 5)){
+		/* start and end cross at least one full 32 length range */
 		best_s = 0;
-	else
-		best_s = best_s % 32;
-
-	if (tmp * 32 + 31 > best_e)
 		best_e = 31;
-	else
+	} else if ((best_s >> 5) + 1 == (best_e >> 5)) {
+		/* start and end cross one 32 length range, but not full */
+		if((32 - best_s % 32) > (best_e % 32 + 1)) {
+			/* compare [best_s % 32 , 31] and [0, best_e % 32] length */
+			best_s = best_s % 32;
+			best_e = 31;
+		} else {
+			best_s = 0;
+			best_e = best_e % 32;
+		}
+	} else {
+		/* start and end within one 32 length range */
+		best_s = best_s % 32;
 		best_e = best_e % 32;
+	}
 
 	sel = (best_s + best_e) / 2;
 	if (sel < vfine)
@@ -1042,7 +1052,7 @@ retry_dll_clk:
 	else
 		sel = sel - vfine;
 
-	tmp = (sel << 16) | (sel << 8) | (sel << 0);
+	tmp = (sel << 24) | (sel << 16) | (sel << 8) | (sel << 0);
 	regmap_field_write(host->phy_sel, tmp);
 
 	return 0;
