@@ -145,6 +145,18 @@ struct nand_flash_dev nand_flash_ids[] = {
 		{ .id = {0xef, 0xaa, 0x21, 0x00, 0x00} },
 		SZ_2K, SZ_128, SZ_128K, 0, 3, 64},
 
+	{"W25N02KVxIR SPINAND 2Gb 3.3V 8-bit",
+		{ .id = {0xef, 0xaa, 0x22, 0x00, 0x00} },
+		SZ_2K, SZ_256, SZ_128K, 0, 3, 128},
+
+	{"W25N04KVxIR SPINAND 4Gb 3.3V 8-bit",
+		{ .id = {0xef, 0xaa, 0x23, 0x00, 0x00} },
+		SZ_2K, SZ_512, SZ_128K, 0, 3, 128},
+
+	{"W25N02JWxxIF SPINAND 2Gb 1.8V 8-bit",
+		{ .id = {0xef, 0xbf, 0x22, 0x00, 0x00} },
+		SZ_2K, SZ_256, SZ_128K, 0, 3, 64},
+
 	{"F50L1G41LB SPINAND 1Gb 3.3V 8-bit",
 		{ .id = {0xC8, 0x01, 0x00, 0x00, 0x00} },
 		SZ_2K, SZ_128, SZ_128K, 0, 2, 64},
