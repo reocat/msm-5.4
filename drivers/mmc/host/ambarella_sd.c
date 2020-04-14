@@ -805,10 +805,13 @@ static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-	if (enable)
-		ambarella_sd_enable_irq(host, SD_NISEN_CARD);
-	else
-		ambarella_sd_disable_irq(host, SD_NISEN_CARD);
+        if (enable) {
+                pm_runtime_get_noresume(host->dev);
+                ambarella_sd_enable_irq(host, SD_NISEN_CARD);
+        } else {
+                ambarella_sd_disable_irq(host, SD_NISEN_CARD);
+                pm_runtime_put_noidle(host->dev);
+        }
 }
 
 static int ambarella_sd_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios)
