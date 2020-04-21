@@ -99,7 +99,7 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 		return -ENXIO;
 	}
 
-	priv->base = devm_ioremap_resource(&pdev->dev, res);
+	priv->base = devm_ioremap(&pdev->dev, res->start, resource_size(res));
 	if (IS_ERR(priv->base)) {
 		dev_err(&pdev->dev, "ambarella-hwrng can't map mem\n");
 		return PTR_ERR(priv->base);
