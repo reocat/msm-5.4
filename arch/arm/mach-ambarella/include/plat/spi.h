@@ -117,9 +117,10 @@
 #define SPI_TXOICR_OFFSET		0x38
 #define SPI_RXOICR_OFFSET		0x3c
 #define SPI_RXUICR_OFFSET		0x40
-#define SPI_MSTICR_OFFSET		0x44
+#define SPI_MSTICR_OFFSET		0x44	/* clear @CV2FS */
 #define SPI_ICR_OFFSET			0x48
 #define SPI_DMAC_OFFSET			0x4c
+#define SPI_FAULTINJECT_OFFSET		0x50	/* Introduced @CV2FS */
 #define SPI_IDR_OFFSET			0x58
 #define SPI_VERSION_ID_OFFSET		0x5c
 #define SPI_DR_OFFSET			0x60

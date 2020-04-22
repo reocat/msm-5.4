@@ -86,6 +86,8 @@
 #define SPI_DMA_TX_EN		(2)
 #define SPI_DMA_EN_NONE		(0)
 
+#define SPI_FAULTINJECT_MASK   (2)
+
 #define CAN_WAKEUP_BLOCK_R (0x1)
 #define CAN_WAKEUP_BLOCK_W (0x2)
 #define CAN_WAKEUP_POLL (0x4)
@@ -116,6 +118,8 @@ struct ambarella_slavespi {
 	u32	buf_size;
 	void	*w_buf;
 	void	*r_buf;
+
+	u32	fault_inject;	/* introduce @CV2FS */
 
 	u32	dma_used;
 	u32	dma_size_mask;
@@ -666,6 +670,7 @@ static void ambarella_slavespi_sfifo_deinit(struct ambarella_slavespi *priv)
 static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 {
 	int err = 0;
+	u32 inject = 0;
 	struct clk *clk = NULL;
 	struct pinctrl *pins = NULL;
 	spi_ctrl0_reg_t ctrl0_reg;
@@ -678,6 +683,10 @@ static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 	}
 
 	writel(0, priv->regbase + SPI_SSIENR_OFFSET);
+
+	if (priv->fault_inject) {	/* disable faultinject during init */
+		writel(SPI_FAULTINJECT_MASK, priv->regbase + SPI_FAULTINJECT_OFFSET);
+	}
 
 	ctrl0_reg.w = 0;
 	ctrl0_reg.s.dfs = (priv->bpw - 1);
@@ -743,6 +752,12 @@ static void ambarella_slavespi_hardware_init(struct ambarella_slavespi *priv)
 	} else {
 		writel(SPI_RXFIS_MASK, priv->regbase + SPI_IMR_OFFSET);
 		writel(SPI_DMA_EN_NONE, priv->regbase + SPI_DMAC_OFFSET);
+	}
+
+	if (priv->fault_inject) {	/* allow injectfault */
+		inject = readl(priv->regbase + SPI_FAULTINJECT_OFFSET);
+		inject &= ~SPI_FAULTINJECT_MASK;
+		writel(inject, priv->regbase + SPI_FAULTINJECT_OFFSET);
 	}
 
 	smp_wmb();
@@ -1244,6 +1259,10 @@ static int ambarella_slavespi_probe(struct platform_device *pdev)
 
 	if (of_find_property(priv->pltdev->of_node, "amb,dma-used", NULL)) {
 		priv->dma_used = 1;
+	}
+
+	if (of_find_property(priv->pltdev->of_node, "amb,fault-inject", NULL)) {
+		priv->fault_inject = 1;
 	}
 
 #if 0
