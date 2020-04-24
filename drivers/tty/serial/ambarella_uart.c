@@ -186,7 +186,6 @@ static void serial_ambarella_hw_setup(struct uart_port *port)
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
 	if (!test_and_set_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags)) {
-		clk_set_rate(amb_port->uart_pll, 24000000);
 		port->uartclk = clk_get_rate(amb_port->uart_pll);
 		/* reset the whole UART only once */
 		writel_relaxed(0x01, port->membase + UART_SRR_OFFSET);
