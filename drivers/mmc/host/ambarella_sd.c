@@ -801,17 +801,32 @@ static void ambarella_sd_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	spin_unlock_irqrestore(&host->lock, flags);
 }
 
+static void __ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
+{
+	struct ambarella_mmc_host *host = mmc_priv(mmc);
+
+	if (enable)
+		ambarella_sd_enable_irq(host, SD_NISEN_CARD);
+	else
+		ambarella_sd_disable_irq(host, SD_NISEN_CARD);
+}
+
 static void ambarella_sd_enable_sdio_irq(struct mmc_host *mmc, int enable)
 {
 	struct ambarella_mmc_host *host = mmc_priv(mmc);
 
-        if (enable) {
-                pm_runtime_get_noresume(host->dev);
-                ambarella_sd_enable_irq(host, SD_NISEN_CARD);
-        } else {
-                ambarella_sd_disable_irq(host, SD_NISEN_CARD);
-                pm_runtime_put_noidle(host->dev);
-        }
+	if (enable)
+		pm_runtime_get_noresume(host->dev);
+
+	__ambarella_sd_enable_sdio_irq(mmc, enable);
+
+	if (!enable)
+		pm_runtime_put_noidle(host->dev);
+}
+
+static void ambarella_sd_ack_sdio_irq(struct mmc_host *mmc)
+{
+	__ambarella_sd_enable_sdio_irq(mmc, 1);
 }
 
 static int ambarella_sd_switch_voltage(struct mmc_host *mmc, struct mmc_ios *ios)
@@ -1067,6 +1082,7 @@ static const struct mmc_host_ops ambarella_sd_host_ops = {
 	.get_ro = ambarella_sd_get_ro,
 	.get_cd = ambarella_sd_get_cd,
 	.enable_sdio_irq = ambarella_sd_enable_sdio_irq,
+	.ack_sdio_irq = ambarella_sd_ack_sdio_irq,
 	.start_signal_voltage_switch = ambarella_sd_switch_voltage,
 	.card_busy = ambarella_sd_card_busy,
 	.execute_tuning = ambarella_sd_execute_tuning,
@@ -1104,9 +1120,10 @@ static void ambarella_sd_handle_irq(struct ambarella_mmc_host *host)
 				cmd->data->error = -ETIMEDOUT;
 			else if (eis & SD_EIS_ADMA_ERR) {
 				/* when vistit rpmb partition, ignore ADMA error */
-				if (host->visited_rpmb)
+				if (host->visited_rpmb) {
+					mdelay(1);
 					goto finish;
-				else
+				} else
 					cmd->data->error = -EIO;
 			}
 		}
@@ -1258,8 +1275,10 @@ static irqreturn_t ambarella_sd_irq(int irq, void *devid)
 			host->irq_status, host->ac12es, host->adma_err_status);
 	}
 
-	if (host->irq_status & SD_NIS_CARD)
-		mmc_signal_sdio_irq(host->mmc);
+	if (host->irq_status & SD_NIS_CARD) {
+		__ambarella_sd_enable_sdio_irq(host->mmc, 0);
+		sdio_signal_irq(host->mmc);
+	}
 
 	if ((host->fixed_cd == -1) &&
 		(host->irq_status & (SD_NIS_REMOVAL | SD_NIS_INSERT))) {
@@ -1418,6 +1437,10 @@ static int ambarella_sd_of_parse(struct ambarella_mmc_host *host)
 			MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104;
 		mmc->caps2 |= MMC_CAP2_HS200_1_8V_SDR;
 	}
+
+	/* Process SDIO IRQs through the sdio_irq_work. */
+	if (mmc->caps & MMC_CAP_SDIO_IRQ)
+		mmc->caps2 |= MMC_CAP2_SDIO_IRQ_NOTHREAD;
 
 	return 0;
 }
