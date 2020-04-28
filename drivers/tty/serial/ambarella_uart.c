@@ -453,7 +453,7 @@ static irqreturn_t serial_ambarella_irq(int irq, void *dev_id)
 		serial_ambarella_receive_chars(port, 0);
 		break;
 	case UART_II_CHAR_TIMEOUT:
-		if (amb_port->rxdma_used)
+		if (amb_port->rxdma_used && amb_port->rx_dma_chan)
 			serial_ambarella_dma_rx_irq(amb_port);
 		else
 			serial_ambarella_receive_chars(port, 1);
@@ -545,6 +545,7 @@ static void serial_ambarella_start_next_tx(struct ambarella_uart_port *amb_port)
 	if (count < AMBA_UART_MIN_DMA) {
 		wait_for_tx(port);
 		serial_ambarella_transmit_chars(port);
+		serial_ambarella_start_next_tx(amb_port);
 	} else {
 		serial_ambarella_start_tx_dma(amb_port, count);
 	}
@@ -846,8 +847,6 @@ static int serial_ambarella_startup(struct uart_port *port)
 
 	amb_port = (struct ambarella_uart_port *)(port->private_data);
 
-	serial_ambarella_hw_setup(port);
-
 	if (amb_port->txdma_used) {
 		rval = serial_ambarella_dma_channel_allocate(amb_port, false);
 		if (rval < 0) {
@@ -870,6 +869,8 @@ static int serial_ambarella_startup(struct uart_port *port)
 		}
 		amb_port->rx_in_progress = true;
 	}
+
+	serial_ambarella_hw_setup(port);
 
 	return rval;
 }
