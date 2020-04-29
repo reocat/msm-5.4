@@ -100,8 +100,8 @@ struct ambarella_mmc_host {
 	int				bypass_tx_clk;
 	int				invert_rx_clk;
 	int				invert_dll_clk;
-	u32                             phy_timing[4];
-	bool                            fixed_timing;
+	u32				phy_timing[4];
+	bool				fixed_timing;
 	bool				auto_cmd12;
 	bool				force_v18;
 	bool				tuning_fixed_clk_freq;
@@ -1697,10 +1697,9 @@ static int ambarella_sd_remove(struct platform_device *pdev)
 }
 
 #ifdef CONFIG_PM
-static int ambarella_sd_suspend(struct platform_device *pdev,
-	pm_message_t state)
+static int ambarella_sd_suspend(struct device *dev)
 {
-	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
+	struct ambarella_mmc_host *host = dev_get_drvdata(dev);
 
 	if(host->mmc->pm_caps & MMC_PM_KEEP_POWER) {
 		ambarella_sd_disable_irq(host, SD_NISEN_CARD);
@@ -1716,9 +1715,9 @@ static int ambarella_sd_suspend(struct platform_device *pdev,
 
 }
 
-static int ambarella_sd_resume(struct platform_device *pdev)
+static int ambarella_sd_resume(struct device *dev)
 {
-	struct ambarella_mmc_host *host = platform_get_drvdata(pdev);
+	struct ambarella_mmc_host *host = dev_get_drvdata(dev);
 
 	if (gpio_is_valid(host->pwr_gpio))
 		gpio_direction_output(host->pwr_gpio, host->pwr_gpio_active);
@@ -1771,6 +1770,7 @@ static const struct of_device_id ambarella_mmc_dt_ids[] = {
 MODULE_DEVICE_TABLE(of, ambarella_mmc_dt_ids);
 
 static const struct dev_pm_ops ambarella_mmc_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ambarella_sd_suspend, ambarella_sd_resume)
 	SET_RUNTIME_PM_OPS(ambarella_sd_runtime_suspend,
 			   ambarella_sd_runtime_resume,
 			   NULL)
@@ -1779,10 +1779,6 @@ static const struct dev_pm_ops ambarella_mmc_pm_ops = {
 static struct platform_driver ambarella_sd_driver = {
 	.probe		= ambarella_sd_probe,
 	.remove		= ambarella_sd_remove,
-#ifdef CONFIG_PM
-	.suspend	= ambarella_sd_suspend,
-	.resume		= ambarella_sd_resume,
-#endif
 	.driver		= {
 		.name	= "ambarella-sd",
 		.of_match_table = ambarella_mmc_dt_ids,
