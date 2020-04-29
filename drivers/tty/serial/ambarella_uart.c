@@ -81,6 +81,9 @@ struct ambarella_uart_port {
 	int rx_bytes_requested;
 	bool tx_in_progress;
 	bool rx_in_progress;
+#ifdef CONFIG_PM
+	u32 clk_rate;
+#endif
 };
 
 static struct ambarella_uart_port ambarella_port[UART_INSTANCES];
@@ -1217,6 +1220,7 @@ static void serial_ambarella_console_resume(void)
 		return;
 
 	clk_set_parent(amb_port->uart_pll, amb_port->parent_pll);
+	clk_set_rate(amb_port->uart_pll, amb_port->clk_rate);
 
 	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
 	serial_ambarella_hw_setup(port);
@@ -1434,6 +1438,7 @@ static int serial_ambarella_suspend(struct platform_device *pdev,
 	amb_port = platform_get_drvdata(pdev);
 	rval = uart_suspend_port(&serial_ambarella_reg, &amb_port->port);
 
+	amb_port->clk_rate = clk_get_rate(amb_port->uart_pll);
 	clk_set_parent(amb_port->uart_pll, NULL);
 
 	dev_dbg(&pdev->dev, "%s exit with %d @ %d\n",
@@ -1450,6 +1455,7 @@ static int serial_ambarella_resume(struct platform_device *pdev)
 	amb_port = platform_get_drvdata(pdev);
 
 	clk_set_parent(amb_port->uart_pll, amb_port->parent_pll);
+	clk_set_rate(amb_port->uart_pll, amb_port->clk_rate);
 
 	clear_bit(AMBARELLA_UART_RESET_FLAG, &amb_port->flags);
 	serial_ambarella_hw_setup(&amb_port->port);
