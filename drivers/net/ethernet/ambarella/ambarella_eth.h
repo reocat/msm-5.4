@@ -127,6 +127,8 @@ struct ambeth_info {
 	int				rst_gpio;
 	u8				rst_gpio_active;
 	u32				intf_type;
+	u32				intf_type_val;
+	u32				intf_type_mask;
 	u32				phy_supported;
 	u32				fixed_speed;		/* only for phy-less */
 

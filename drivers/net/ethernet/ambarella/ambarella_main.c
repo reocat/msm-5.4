@@ -2261,6 +2261,8 @@ static int ambeth_of_parse(struct device_node *np, struct ambeth_info *lp)
 		mask <<= (lp->id * 4);
 		val <<= (lp->id * 4);
 		regmap_update_bits(lp->reg_rct, RCT_ENET_CTRL_OFFSET, mask, val);
+		lp->intf_type_val = val;
+		lp->intf_type_mask = mask;
 	} else {
 		regmap_read(lp->reg_rct, SYS_CONFIG_OFFSET, &val);
 		if (!(val & POC_ETH_IS_ENABLED)) {
@@ -2594,6 +2596,11 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	if (!netif_running(ndev))
 		goto ambeth_drv_resume_exit;
 
+	if (RCT_ENET_CTRL_OFFSET != RCT_INVALID_OFFSET) {
+		regmap_update_bits(lp->reg_rct, RCT_ENET_CTRL_OFFSET,
+			lp->intf_type_mask, lp->intf_type_val);
+	}
+
 	if (lp->ext_ref_clk) {
 		regmap_update_bits(lp->reg_rct, RCT_ENET_CLK_SRC_SEL_OFFSET,
 			RCT_ENET_CLK_SRC_SEL_VAL, 0x0);
@@ -2614,12 +2621,15 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 	else
 		regmap_update_bits(lp->reg_scr, AHBSP_CTL_OFFSET, 1<<31, 0<<31);
 
-	if (gpio_is_valid(lp->pwr_gpio))
-		gpio_set_value_cansleep(lp->pwr_gpio, lp->pwr_gpio_active);
-	if (gpio_is_valid(lp->rst_gpio)) {
-		gpio_set_value_cansleep(lp->rst_gpio, lp->rst_gpio_active);
+	if (gpio_is_valid(lp->pwr_gpio)) {
+		gpio_direction_output(lp->pwr_gpio, lp->pwr_gpio_active);
 		msleep(10);
-		gpio_set_value_cansleep(lp->rst_gpio, !lp->rst_gpio_active);
+	}
+	if (gpio_is_valid(lp->rst_gpio)) {
+		gpio_direction_output(lp->rst_gpio, lp->rst_gpio_active);
+		msleep(10);
+		gpio_direction_output(lp->rst_gpio, !lp->rst_gpio_active);
+		msleep(10);
 	}
 
 	spin_lock_irqsave(&lp->lock, flags);
@@ -2639,6 +2649,8 @@ static int ambeth_drv_resume(struct platform_device *pdev)
 		ambeth_set_multicast_list(ndev);
 		netif_carrier_off(ndev);
 		ret_val = ambeth_phy_start(lp);
+		if (ret_val)
+			goto ambeth_drv_resume_exit;
 		enable_irq(ndev->irq);
 		netif_device_attach(ndev);
 		napi_enable(&lp->napi);
