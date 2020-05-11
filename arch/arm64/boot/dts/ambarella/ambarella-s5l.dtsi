@@ -1280,6 +1280,7 @@
 			clock-output-names = "gclk_uart0";
 			assigned-clocks = <&gclk_uart0>;
 			assigned-clock-parents = <&pll_out_enet>;
+			assigned-clock-rates = <24000000>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
@@ -1292,6 +1293,7 @@
 			clock-output-names = "gclk_uart1";
 			assigned-clocks = <&gclk_uart1>;
 			assigned-clock-parents = <&osc>;
+			assigned-clock-rates = <24000000>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
@@ -1304,6 +1306,7 @@
 			clock-output-names = "gclk_uart2";
 			assigned-clocks = <&gclk_uart2>;
 			assigned-clock-parents = <&osc>;
+			assigned-clock-rates = <24000000>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
