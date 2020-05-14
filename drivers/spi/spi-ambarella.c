@@ -99,36 +99,19 @@ static int ambarella_spi_of_parse(struct platform_device *pdev,
 	return 0;
 }
 
-static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *spi)
+static void ambarella_spi_setup(struct ambarella_spi *bus,
+	struct spi_device *spi, struct spi_transfer *xfer)
 {
 	spi_ctrl0_reg_t cr0;
 	u32 ssi_clk, sckdv;
 
-	cr0.w		= 0;
-	cr0.s.dfs	= spi->bits_per_word - 1;
-	if (spi->mode & SPI_CPHA) {
-		cr0.s.scph	= 1;
-	} else {
-		cr0.s.scph	= 0;
-	}
-	if (spi->mode & SPI_CPOL) {
-		cr0.s.scpol	= 1;
-	} else {
-		cr0.s.scpol	= 0;
-	}
-	if (spi->mode & SPI_LOOP) {
-		cr0.s.srl = 1;
-	} else {
-		cr0.s.srl = 0;
-	}
-	if (spi->mode & SPI_LSB_FIRST) {
-		cr0.s.tx_lsb = 1;
-		cr0.s.rx_lsb = 1;
-	} else {
-		cr0.s.tx_lsb = 0;
-		cr0.s.rx_lsb = 0;
-	}
-
+	cr0.w = 0;
+	cr0.s.dfs = spi->bits_per_word - 1;
+	cr0.s.scph = (spi->mode & SPI_CPHA) ? 1 : 0;
+	cr0.s.scpol = (spi->mode & SPI_CPOL) ? 1 : 0;
+	cr0.s.srl = (spi->mode & SPI_LOOP) ? 1 : 0;
+	cr0.s.tx_lsb = (spi->mode & SPI_LSB_FIRST) ? 1 : 0;
+	cr0.s.rx_lsb = (spi->mode & SPI_LSB_FIRST) ? 1 : 0;
 	cr0.s.hold = 0;
 	cr0.s.byte_ws = 0;
 	cr0.s.fc_en = 0;
@@ -137,15 +120,10 @@ static void ambarella_spi_setup(struct ambarella_spi *bus, struct spi_device *sp
 	writel_relaxed(cr0.w, bus->virt + SPI_CTRLR0_OFFSET);
 
 	ssi_clk = bus->clk_freq;
-	if(spi->max_speed_hz > ssi_clk / 2) {
-	    spi->max_speed_hz = ssi_clk / 2;
-	}
-	sckdv = (ssi_clk / spi->max_speed_hz + 1) & 0xfffe;
+	if(xfer->speed_hz > ssi_clk / 2)
+		xfer->speed_hz = ssi_clk / 2;
+	sckdv = (ssi_clk / xfer->speed_hz + 1) & 0xfffe;
 	writel_relaxed(sckdv, bus->virt + SPI_BAUDR_OFFSET);
-
-	bus->cspol = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
-	gpio_set_value(spi->cs_gpio, bus->cspol);
-	bus->cs_active = 1;
 }
 
 static void ambarella_spi_stop(struct ambarella_spi *bus)
@@ -187,6 +165,8 @@ static void ambarella_spi_prepare_transfer(struct ambarella_spi *bus)
 		bus->rw	= SPI_WRITE_READ;
 	}
 	msg->actual_length += xfer->len;
+
+	ambarella_spi_setup(bus, spi, xfer);
 
 	cr0.w = readl_relaxed(bus->virt + SPI_CTRLR0_OFFSET);
 	cr0.s.tmod = SPI_WRITE_READ;
@@ -505,7 +485,6 @@ static int ambarella_spi_one_message(struct spi_master *master, struct spi_messa
 		bus->transfers[bus->n_xfer++] = xfer;
 	}
 
-	ambarella_spi_setup(bus, spi);
 	ambarella_spi_prepare_transfer(bus);
 	ambarella_spi_start_transfer(bus);
 
@@ -605,8 +584,10 @@ static int ambarella_spi_hw_setup(struct spi_device *spi)
 			dev_err(&spi->dev, "can't get CS: %d\n", err);
 			return -EINVAL;
 		}
-		gpio_direction_output(spi->cs_gpio, (spi->mode & SPI_CS_HIGH) ? 0 : 1);
+		bus->cspol = (spi->mode & SPI_CS_HIGH) ? 1 : 0;
 		bus->cs_pins[spi->chip_select] = spi->cs_gpio;
+		gpio_direction_output(spi->cs_gpio, bus->cspol^1);
+		bus->cs_active = 0;
 	}
 
 	return 0;
