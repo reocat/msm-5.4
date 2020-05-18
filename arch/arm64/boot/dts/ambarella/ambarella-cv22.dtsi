@@ -153,6 +153,11 @@
 		reg = <0xf2000000 0x1000>;
 	};
 
+	ddrc@dffe0000 {
+		compatible = "ambarella,ddrc";
+		reg = <0xdffe0000 0x10000>;
+	};
+
 	n_apb@e4000000 { /* Non-Secure APB, but configurable */
 		compatible = "simple-bus";
 		#address-cells = <1>;
