@@ -12,7 +12,7 @@ parts:
     plugin: kernel
     source: .
     source-type: git
-    kconfigflavour: xilinx-zynqmp
+    kconfigflavour: xilinx-versal
     kernel-image-target: Image
     kconfigs:
       - CONFIG_DEBUG_INFO=n
