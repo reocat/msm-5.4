@@ -1185,7 +1185,6 @@
 		s_scratchpad@e8001000 {
 			compatible = "ambarella,sec-scratchpad";
 			reg = <0xe8001000 0x1000>;
-			amb,secure-device;
 			amb,secure-ctrl-bit = <31>;
 		};
 	};
