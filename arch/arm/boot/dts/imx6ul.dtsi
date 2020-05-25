@@ -520,6 +520,7 @@
 					      "enet_clk_ref", "enet_out";
 				fsl,num-tx-queues = <1>;
 				fsl,num-rx-queues = <1>;
+				fsl,stop-mode = <&gpr 0x10 4>;
 				status = "disabled";
 			};
 
@@ -855,6 +856,7 @@
 					      "enet_clk_ref", "enet_out";
 				fsl,num-tx-queues = <1>;
 				fsl,num-rx-queues = <1>;
+				fsl,stop-mode = <&gpr 0x10 3>;
 				status = "disabled";
 			};
 
