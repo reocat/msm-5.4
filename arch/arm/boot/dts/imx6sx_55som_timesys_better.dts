@@ -109,7 +109,7 @@
 
 		ethphy1: ethernet-phy@0 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <0>;
+			reg = <1>;
 			micrel,led-mode = <0>;
 		};
 	};
@@ -132,7 +132,7 @@
 
 		ethphy2: ethernet-phy@0 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <0>;
+			reg = <2>;
 			micrel,led-mode = <0>;
 		};
 	};
@@ -435,6 +435,8 @@
 
 		pinctrl_enet1_1: enet1grp-1 {
 			fsl,pins = <
+				MX6SX_PAD_ENET2_COL__ENET1_MDC          0xb089
+                                MX6SX_PAD_ENET2_CRS__ENET1_MDIO         0xb089
 				MX6SX_PAD_RGMII1_RX_CTL__ENET1_RX_EN   	0xb099
 				MX6SX_PAD_RGMII1_RD0__ENET1_RX_DATA_0   0xb099
 				MX6SX_PAD_RGMII1_RD1__ENET1_RX_DATA_1   0xb099
