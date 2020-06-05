@@ -109,6 +109,8 @@ struct ath11k_hw_ops {
 	u8 (*get_hw_mac_from_pdev_id)(int pdev_id);
 	void (*wmi_init_config)(struct ath11k_base *ab,
 				struct target_resource_config *config);
+	int (*mac_id_to_pdev_id)(int mac_id);
+	int (*mac_id_to_srng_id)(int mac_id);
 };
 
 struct ath11k_hw_params {
@@ -135,6 +137,8 @@ struct ath11k_hw_params {
 	bool needs_band_to_mac;
 
 	bool rxdma1_enable;
+	int num_rxmda_per_pdev;
+	bool rx_mac_buf_ring;
 };
 
 extern const struct ath11k_hw_ops ipq8074_ops;
