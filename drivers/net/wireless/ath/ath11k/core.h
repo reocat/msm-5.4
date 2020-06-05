@@ -726,6 +726,8 @@ struct ath11k_base {
 	struct ath11k_dbring_cap *db_caps;
 	u32 num_db_cap;
 
+	const struct ath11k_hw_regs *regs;
+
 	/* must be last */
 	u8 drv_priv[0] __aligned(sizeof(void *));
 };
