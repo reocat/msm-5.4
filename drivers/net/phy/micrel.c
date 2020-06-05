@@ -288,6 +288,10 @@ static int kszphy_config_reset(struct phy_device *phydev)
 	if (priv->led_mode >= 0)
 		kszphy_setup_led(phydev, priv->type->led_mode_reg, priv->led_mode);
 
+    /*if the phy addr is equal to 0x0, the register 0x1f should be set again*/
+    if(phydev->drv->phy_id == PHY_ID_KSZ8081 && phydev->mdio.addr == 0) {
+            phy_write(phydev, MII_KSZPHY_CTRL, 0x8190);
+    }
 	return 0;
 }
 
