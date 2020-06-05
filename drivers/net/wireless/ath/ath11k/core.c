@@ -61,6 +61,27 @@ static const struct ath11k_hw_params ath11k_hw_params[] = {
 		.htt_peer_map_v2 = false,
 		.tcl_0_only = true,
 	},
+	{
+		.name = "qca6390 hw1.1",
+		.hw_rev = ATH11K_HW_QCA6390_HW11,
+		.fw = {
+			.dir = "QCA6390/hw1.1",
+			.board_size = 256 * 1024,
+			.cal_size = 256 * 1024,
+		},
+		.max_radios = 3,
+		.bdf_addr = 0x4B0C0000,
+		.hw_ops = &qca6390_ops,
+		.internal_sleep_clock = true,
+		.single_pdev_only = true,
+		.needs_band_to_mac = false,
+		.rxdma1_enable = false,
+		.num_rxmda_per_pdev = 2,
+		.rx_mac_buf_ring = true,
+		.vdev_start_delay = true,
+		.htt_peer_map_v2 = false,
+		.tcl_0_only = true,
+	},
 };
 
 static int ath11k_core_create_board_name(struct ath11k_base *ab, char *name,
@@ -771,6 +792,7 @@ int ath11k_core_pre_init(struct ath11k_base *ab)
 		ab->regs = &ipq8074_regs;
 		break;
 	case ATH11K_HW_QCA6390_HW20:
+	case ATH11K_HW_QCA6390_HW11:
 		ab->regs = &qca6390_regs;
 		break;
 	default:

@@ -723,6 +723,7 @@ int ath11k_ce_attr_attach(struct ath11k_base *ab)
 		ab->ce.ce_count = 12;
 		break;
 	case ATH11K_HW_QCA6390_HW20:
+	case ATH11K_HW_QCA6390_HW11:
 		ab->ce.host_ce_config = host_ce_config_wlan_qca6390;
 		ab->ce.ce_count = 9;
 		break;
