@@ -33,6 +33,7 @@ static const struct ath11k_hw_params ath11k_hw_params[] = {
 		.internal_sleep_clock = false,
 		.single_pdev_only = false,
 		.needs_band_to_mac = true,
+		.rxdma1_enable = true,
 	},
 	{
 		.name = "qca6390 hw2.0",
@@ -48,6 +49,7 @@ static const struct ath11k_hw_params ath11k_hw_params[] = {
 		.internal_sleep_clock = true,
 		.single_pdev_only = true,
 		.needs_band_to_mac = false,
+		.rxdma1_enable = false,
 	},
 };
 
