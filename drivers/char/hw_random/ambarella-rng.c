@@ -26,7 +26,7 @@
 #define	AMBA_RNG_CONTROL			0x00
 #define	AMBA_RNG_DATA				0x04
 
-#define AMBA_RNG_DELAY_MS			25
+#define AMBA_RNG_DELAY_MS			200
 #define AMBA_RNG_HW_MAX_SIZE                    16
 
 struct ambarella_rng_private {
@@ -35,8 +35,8 @@ struct ambarella_rng_private {
 	struct regmap *rct_reg;
 };
 
-static u32 (*amb_readl)(volatile void __iomem *base);
-static void (*amb_writel)(u32 value, volatile void __iomem *base);
+#define amb_readl	readl
+#define amb_writel	writel
 
 static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wait)
 {
@@ -57,7 +57,7 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 
 	start_time = jiffies_to_msecs(jiffies);
 
-	while (!(amb_readl(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
+	while ((amb_readl(priv->base + AMBA_RNG_CONTROL) & BIT(1)) && wait) {
 		timeout = jiffies_to_msecs(jiffies) - start_time;
 		if (timeout < AMBA_RNG_DELAY_MS) {
 			cpu_relax();
@@ -68,8 +68,6 @@ static int ambarella_rng_read(struct hwrng *rng, void *buf, size_t max, bool wai
 		}
 	}
 
-	/* need to delay before read random data,why? */
-	mdelay(100);
 	while (maxsize >= sizeof(u32)) {
 		*data++ = amb_readl(priv->base + AMBA_RNG_DATA + read);
 		read += sizeof(u32);
@@ -85,7 +83,7 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_rng_private *priv;
 	struct resource *res;
-	u32 val;
+	u32 val, rate;
 
 	dev_info(&pdev->dev, "rng probed\r\n");
 
@@ -120,11 +118,28 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, priv);
 
-	/* set sample rate */
+	/* set sample rate, if not set in dts, use 32K as default */
 	val = amb_readl(priv->base + AMBA_RNG_CONTROL);
-	val |= BIT(4);
-	val &= ~BIT(5);
-	amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+	val &= ~(0x3 << 4);
+	if (of_property_read_u32(np, "amb,sample-rate", &rate) < 0) {
+		amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+	} else {
+		if (rate == 32000) {
+			amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+		} else if (rate == 64000) {
+			val |= (0x1 << 4);
+			amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+		} else if (rate == 128000) {
+			val |= (0x2 << 4);
+			amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+		} else if (rate == 256000) {
+			val |= (0x3 << 4);
+			amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+		} else {
+			amb_writel(val, priv->base + AMBA_RNG_CONTROL);
+			pr_info("set wrong sample rate, use default 32K.\n");
+		}
+	}
 
 	/* power up rng */
 	regmap_update_bits(priv->rct_reg, RNG_CTRL_OFFSET, RNG_CTRL_PD, 0x0);

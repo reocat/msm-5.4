@@ -41,6 +41,7 @@ Table of Contents
     29) - CRYPTO node
     30) - IAV node
     31) - SOUND node
+    32) - HW RANDOM node
 
   III - Misc Node definition
     1)  - BOGUS BUS node
@@ -1319,6 +1320,14 @@ i) Reference
 ------------
 Please see Documentation/devicetree/bindings/sound/simple-card.txt
 
+32) - HW RANDOM node
+================
+Required properties:
+- compatible: should be "ambarella,hw-rng".
+
+Optional properties:
+- amb,sample-rate: random sample rate, just can be 32000, 64000, 128000
+  and 256000, if not set, the default is 32000.
 
 III - Misc Node definition
 ++++++++++++++++++++++++++
