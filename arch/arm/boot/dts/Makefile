@@ -548,6 +548,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx_35som_better_emmc_digital_gpio_reva.dtb \
 	imx6sx_35som_better_emmc_fct.dtb \
 	imx6sx_55som_better_emmc.dtb \
+	imx6sx_35som_better_emmc_carrier_board.dtb \
 	imx6sx-sg-best_nand.dtb \
 	imx6sx-sg-best_sd_2Gb.dtb \
 	imx6sx-sg-best_sd_2Gb_common_port.dtb \
