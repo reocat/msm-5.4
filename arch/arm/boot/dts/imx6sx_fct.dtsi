@@ -415,6 +415,12 @@
 				gpio-ranges = <&iomuxc 0 148 10>, <&iomuxc 10 169 2>;
 			};
 
+            snvslp: snvs@020b0000 {
+                compatible = "fsl,imx6sx-snvs";
+                reg = <0x020b0000 0x4000>;
+                interrupts = <GIC_SPI 4 IRQ_TYPE_LEVEL_HIGH>;
+            };
+
 			mqs: mqs {
 				compatible = "fsl,imx6sx-mqs";
 				gpr = <&gpr>;

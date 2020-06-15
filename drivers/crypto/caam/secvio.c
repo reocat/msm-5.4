@@ -52,11 +52,20 @@ static const u8 *snvs_ssm_state_name[] = {
 	"secure",
 };
 
+#ifdef CONFIG_TAMPER_TEST_IMX6SX
+    extern void tamper_detect_handler(void);
+#endif
+
 /* Top-level security violation interrupt */
 static irqreturn_t snvs_secvio_interrupt(int irq, void *snvsdev)
 {
 	struct device *dev = snvsdev;
 	struct snvs_secvio_drv_private *svpriv = dev_get_drvdata(dev);
+
+#ifdef CONFIG_TAMPER_TEST_IMX6SX
+    if (rd_reg32(&svpriv->svregs->hp.secvio_status) & 0x80000000)
+        tamper_detect_handler();
+#endif
 
 	clk_enable(svpriv->clk);
 	/* Check the HP secvio status register */

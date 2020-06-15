@@ -119,6 +119,9 @@
 	status = "okay";
 };
 
+&snvs_poweroff {
+    status = "disabled";
+};
 &snvs_rtc {
     status = "disabled";
 };
