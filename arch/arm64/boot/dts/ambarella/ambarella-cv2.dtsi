@@ -1546,8 +1546,6 @@
 			      <0x00000000 0>;
 			clocks = <&osc>;
 			clock-output-names = "gclk_fex";
-			assigned-clocks = <&gclk_fex>;
-			assigned-clock-rates = <504000000>;
 		};
 
 
