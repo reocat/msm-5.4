@@ -16,10 +16,18 @@ obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_RNG_API) += caamrng.o
 obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_PKC_API) += caam_pkc.o
 obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_SM) += sm_store.o
 obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_SM_TEST) += sm_test.o
-obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_SECVIO) += secvio.o
+
+ifeq ($(CONFIG_TAMPER_TEST_IMX6SX), y)
+	obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_SECVIO) += secv.o
+else	
+	obj-$(CONFIG_CRYPTO_DEV_FSL_CAAM_SECVIO) += secvio.o
+endif
 
 caam-objs := ctrl.o imx-caam.o
 caam_jr-objs := jr.o key_gen.o error.o inst_rng.o
+ifeq ($(CONFIG_TAMPER_TEST_IMX6SX), y)
+	secv-objs := secvio.o tamper.o
+endif
 caam_pkc-y := caampkc.o pkc_desc.o
 ifneq ($(CONFIG_CRYPTO_DEV_FSL_CAAM_CRYPTO_API_QI),)
 	ccflags-y += -DCONFIG_CAAM_QI
