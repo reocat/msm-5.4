@@ -1537,12 +1537,11 @@ static int ambarella_udc_ep_enable(struct usb_ep *_ep,
 	if(ep->dir == USB_DIR_IN) {
 		/* NOTE: total IN fifo size must be less than 528 * 4B */
 		tmp = max_packet / 4;
-#if 0
+
+		/* Double up the FIFO if isochronous mode */
 		if (IS_ISO_IN_EP(ep))
-			tmp *= max_packet > 1024 ? 1 : max_packet > 512 ? 2 : 3;
-		else
-#endif
 			tmp *= 2;
+
 		writel(tmp, udc->base_reg + ep->ep_reg.buf_sz_reg);
 	}
 	writel(max_packet, udc->base_reg + ep->ep_reg.max_pkt_sz_reg);
