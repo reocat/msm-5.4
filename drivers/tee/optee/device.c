@@ -72,7 +72,7 @@ static void optee_release_device(struct device *dev)
 	kfree(optee_device);
 }
 
-static int optee_register_device(const uuid_t *device_uuid, u32 device_id)
+static int optee_register_device(const uuid_t *device_uuid)
 {
 	struct tee_client_device *optee_device = NULL;
 	int rc;
@@ -83,7 +83,10 @@ static int optee_register_device(const uuid_t *device_uuid, u32 device_id)
 
 	optee_device->dev.bus = &tee_bus_type;
 	optee_device->dev.release = optee_release_device;
-	dev_set_name(&optee_device->dev, "optee-clnt%u", device_id);
+	if (dev_set_name(&optee_device->dev, "optee-ta-%pUb", device_uuid)) {
+		kfree(optee_device);
+		return -ENOMEM;
+	}
 	uuid_copy(&optee_device->id.uuid, device_uuid);
 
 	rc = device_register(&optee_device->dev);
@@ -152,7 +155,7 @@ int optee_enumerate_devices(void)
 	num_devices = shm_size / sizeof(uuid_t);
 
 	for (idx = 0; idx < num_devices; idx++) {
-		rc = optee_register_device(&device_uuid[idx], idx);
+		rc = optee_register_device(&device_uuid[idx]);
 		if (rc)
 			goto out_shm;
 	}
