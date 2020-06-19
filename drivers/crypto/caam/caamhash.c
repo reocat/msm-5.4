@@ -733,6 +733,9 @@ static void ahash_done(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	edesc = container_of(desc, struct ahash_edesc, hw_desc[0]);
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -746,6 +749,7 @@ static void ahash_done(struct device *jrdev, u32 *desc, u32 err,
 		       ctx->ctx_len, 1);
 #endif
 
+out_bklogged:
 	req->base.complete(&req->base, err);
 }
 
@@ -764,6 +768,9 @@ static void ahash_done_bi(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	edesc = container_of(desc, struct ahash_edesc, hw_desc[0]);
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -781,6 +788,7 @@ static void ahash_done_bi(struct device *jrdev, u32 *desc, u32 err,
 			       digestsize, 1);
 #endif
 
+out_bklogged:
 	req->base.complete(&req->base, err);
 }
 
@@ -799,6 +807,9 @@ static void ahash_done_ctx_src(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	edesc = container_of(desc, struct ahash_edesc, hw_desc[0]);
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -812,6 +823,7 @@ static void ahash_done_ctx_src(struct device *jrdev, u32 *desc, u32 err,
 		       ctx->ctx_len, 1);
 #endif
 
+out_bklogged:
 	req->base.complete(&req->base, err);
 }
 
@@ -830,6 +842,9 @@ static void ahash_done_ctx_dst(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	edesc = container_of(desc, struct ahash_edesc, hw_desc[0]);
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -847,6 +862,7 @@ static void ahash_done_ctx_dst(struct device *jrdev, u32 *desc, u32 err,
 			       digestsize, 1);
 #endif
 
+out_bklogged:
 	req->base.complete(&req->base, err);
 }
 
@@ -1013,8 +1029,14 @@ static int ahash_update_ctx(struct ahash_request *req)
 			       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 			       desc_bytes(desc), 1);
 #endif
-
-		ret = caam_jr_enqueue(jrdev, desc, ahash_done_bi, req);
+		if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+			ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done_bi,
+						    req);
+			if (ret == -EBUSY)
+				return ret;
+		} else {
+			ret = caam_jr_enqueue(jrdev, desc, ahash_done_bi, req);
+		}
 		if (ret)
 			goto unmap_ctx;
 
@@ -1098,8 +1120,15 @@ static int ahash_final_ctx(struct ahash_request *req)
 	print_hex_dump(KERN_ERR, "jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc, desc_bytes(desc), 1);
 #endif
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done_ctx_src,
+					    req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_src, req);
+	}
 
-	ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_src, req);
 	if (ret)
 		goto unmap_ctx;
 
@@ -1179,8 +1208,15 @@ static int ahash_finup_ctx(struct ahash_request *req)
 	print_hex_dump(KERN_ERR, "jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc, desc_bytes(desc), 1);
 #endif
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done_ctx_src,
+					    req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_src, req);
+	}
 
-	ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_src, req);
 	if (ret)
 		goto unmap_ctx;
 
@@ -1257,8 +1293,14 @@ static int ahash_digest(struct ahash_request *req)
 	print_hex_dump(KERN_ERR, "jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc, desc_bytes(desc), 1);
 #endif
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done, req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
+	}
 
-	ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1315,8 +1357,14 @@ static int ahash_final_no_ctx(struct ahash_request *req)
 	print_hex_dump(KERN_ERR, "jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc, desc_bytes(desc), 1);
 #endif
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done, req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
+	}
 
-	ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1427,8 +1475,16 @@ static int ahash_update_no_ctx(struct ahash_request *req)
 			       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 			       desc_bytes(desc), 1);
 #endif
+		if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+			ret = caam_jr_enqueue_bklog(jrdev, desc,
+						    ahash_done_ctx_dst, req);
+			if (ret == -EBUSY)
+				return ret;
+		} else {
+			ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_dst,
+					      req);
+		}
 
-		ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_dst, req);
 		if (ret)
 			goto unmap_ctx;
 
@@ -1529,8 +1585,15 @@ static int ahash_finup_no_ctx(struct ahash_request *req)
 	print_hex_dump(KERN_ERR, "jobdesc@"__stringify(__LINE__)": ",
 		       DUMP_PREFIX_ADDRESS, 16, 4, desc, desc_bytes(desc), 1);
 #endif
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, ahash_done,
+					    req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
+	}
 
-	ret = caam_jr_enqueue(jrdev, desc, ahash_done, req);
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1622,8 +1685,16 @@ static int ahash_update_first(struct ahash_request *req)
 			       DUMP_PREFIX_ADDRESS, 16, 4, desc,
 			       desc_bytes(desc), 1);
 #endif
+		if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+			ret = caam_jr_enqueue_bklog(jrdev, desc,
+						    ahash_done_ctx_dst, req);
+			if (ret == -EBUSY)
+				return ret;
+		} else {
+			ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_dst,
+					      req);
+		}
 
-		ret = caam_jr_enqueue(jrdev, desc, ahash_done_ctx_dst, req);
 		if (ret)
 			goto unmap_ctx;
 

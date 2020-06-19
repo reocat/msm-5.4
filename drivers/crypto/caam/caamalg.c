@@ -909,6 +909,9 @@ static void aead_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	edesc = container_of(desc, struct aead_edesc, hw_desc[0]);
 
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -916,6 +919,7 @@ static void aead_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	kfree(edesc);
 
+out_bklogged:
 	aead_request_complete(req, err);
 }
 
@@ -931,6 +935,9 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	edesc = container_of(desc, struct aead_edesc, hw_desc[0]);
 
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -944,6 +951,7 @@ static void aead_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	kfree(edesc);
 
+out_bklogged:
 	aead_request_complete(req, err);
 }
 
@@ -964,6 +972,8 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	edesc = container_of(desc, struct ablkcipher_edesc, hw_desc[0]);
 
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -1006,6 +1016,7 @@ static void ablkcipher_encrypt_done(struct device *jrdev, u32 *desc, u32 err,
 					 req->nbytes - bsize, ivcopy, 0);
 	}
 
+out_bklogged:
 	ablkcipher_request_complete(req, err);
 }
 
@@ -1022,6 +1033,9 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 #endif
 
 	edesc = container_of(desc, struct ablkcipher_edesc, hw_desc[0]);
+	if (err == -EINPROGRESS)
+		goto out_bklogged;
+
 	if (err)
 		caam_jr_strstatus(jrdev, err);
 
@@ -1036,7 +1050,7 @@ static void ablkcipher_decrypt_done(struct device *jrdev, u32 *desc, u32 err,
 
 	ablkcipher_unmap(jrdev, edesc, req);
 	kfree(edesc);
-
+out_bklogged:
 	ablkcipher_request_complete(req, err);
 }
 
@@ -1453,7 +1467,15 @@ static int aead_encrypt(struct aead_request *req)
 #endif
 
 	desc = edesc->hw_desc;
-	ret = caam_jr_enqueue(jrdev, desc, aead_encrypt_done, req);
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, aead_encrypt_done,
+					    req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, aead_encrypt_done, req);
+	}
+
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1536,7 +1558,14 @@ static int aead_decrypt(struct aead_request *req)
 #endif
 
 	desc = edesc->hw_desc;
-	ret = caam_jr_enqueue(jrdev, desc, aead_decrypt_done, req);
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc, aead_encrypt_done,
+					    req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, aead_encrypt_done, req);
+	}
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1700,8 +1729,15 @@ static int ablkcipher_encrypt(struct ablkcipher_request *req)
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
 	desc = edesc->hw_desc;
-	ret = caam_jr_enqueue(jrdev, desc, ablkcipher_encrypt_done, req);
-
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc,
+					    ablkcipher_encrypt_done, req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ablkcipher_encrypt_done,
+				      req);
+	}
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
@@ -1744,7 +1780,15 @@ static int ablkcipher_decrypt(struct ablkcipher_request *req)
 		       desc_bytes(edesc->hw_desc), 1);
 #endif
 
-	ret = caam_jr_enqueue(jrdev, desc, ablkcipher_decrypt_done, req);
+	if (req->base.flags & CRYPTO_TFM_REQ_MAY_BACKLOG) {
+		ret = caam_jr_enqueue_bklog(jrdev, desc,
+					    ablkcipher_decrypt_done, req);
+		if (ret == -EBUSY)
+			return ret;
+	} else {
+		ret = caam_jr_enqueue(jrdev, desc, ablkcipher_decrypt_done,
+				      req);
+	}
 	if (!ret) {
 		ret = -EINPROGRESS;
 	} else {
