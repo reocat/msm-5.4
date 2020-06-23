@@ -167,6 +167,13 @@ parts:
         source-type: deb
         organize:
             lib/firmware: firmware
+
+    skales:
+        plugin: dump
+        source: git://codeaurora.org/quic/kernel/skales
+        prime:
+            - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
