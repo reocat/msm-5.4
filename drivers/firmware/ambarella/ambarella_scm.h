@@ -21,8 +21,8 @@
 #define AMBA_SCM_SVC_FREQ			0x1
 #define AMBA_SCM_CNTFRQ_SETUP_CMD		0x1
 
-#define AMBA_SCM_SVC_PM				0x2
-#define AMBA_SCM_PM_GPIO_SETUP			0x1
+#define AMBA_SCM_SVC_PM				0x2	/* Deprecated */
+#define AMBA_SCM_PM_GPIO_SETUP			0x1	/* Deprecated */
 
 #define AMBA_SIP_ACCESS_REG			0x3
 #define AMBA_SIP_ACCESS_REG_READ		0x1

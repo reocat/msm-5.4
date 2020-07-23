@@ -80,33 +80,6 @@ int ambarella_aarch64_cntfrq_update(void)
 }
 EXPORT_SYMBOL(ambarella_aarch64_cntfrq_update);
 
-static int ambarella_pm_smc(int gpio)
-{
-	u32 fn;
-	u32 cmd;
-	struct arm_smccc_res res;
-
-	fn = SVC_SCM_FN(AMBA_SCM_SVC_PM, AMBA_SCM_PM_GPIO_SETUP);
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP, fn);
-
-	arm_smccc_smc(cmd, gpio, 0, 0, 0, 0, 0, 0, &res);
-
-	return res.a0;
-}
-
-static void ambarella_pm_sip(void)
-{
-	int gpio_notify_mcu = -1;
-
-	of_property_read_u32(of_chosen, "ambarella,pm-gpio-notify-mcu",
-			&gpio_notify_mcu);
-	if (gpio_notify_mcu > 0) {
-		pr_info("SCM: PM notification GPIO %d\n", gpio_notify_mcu);
-		ambarella_pm_smc(gpio_notify_mcu);
-	}
-}
-
 /* ---------------------------------------------------------------------------- */
 
 int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width)
@@ -220,7 +193,6 @@ int __init ambarella_scm_init(void)
 		return 0;
 
 	BUG_ON(ambarella_scm_query() != ARM_SMCCC_SMC_64);
-	ambarella_pm_sip();
 
 	return 0;
 }
