@@ -915,6 +915,7 @@
 			amb,enhance;
 			clock-names = "ptp_ref";
 			clocks= <&osc>;
+			amb,ext-ref-clk;
 			/* amb,mdio-gpio; */
 			/* amb,tx-clk-invert; */
 		};
