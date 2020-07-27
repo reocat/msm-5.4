@@ -1377,7 +1377,7 @@ Please see Documentation/devicetree/bindings/gpio/gpio_keys.txt
 
 i) Reference
 ------------
-Please see Documentation/devicetree/bindings/video/backlight/pwm-backlight.txt
+Please see Documentation/devicetree/bindings/leds/backlight/pwm-backlight.txt
 
 ii) Properties
 --------------
