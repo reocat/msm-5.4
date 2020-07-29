@@ -1231,7 +1231,8 @@ static void ambarella_nand_init_hw(struct ambarella_nand_host *host)
 
 	/* disable BCH if using soft ecc */
 	val = readl_relaxed(host->regbase + FIO_CTRL_OFFSET);
-	val |= FIO_CTRL_RDERR_STOP | FIO_CTRL_SKIP_BLANK_ECC;
+	val &= ~FIO_CTRL_RDERR_STOP;
+	val |= FIO_CTRL_SKIP_BLANK_ECC;
 	if (host->soft_ecc || !host->bch_enabled)
 		val &= ~FIO_CTRL_ECC_BCH_ENABLE;
 	else
