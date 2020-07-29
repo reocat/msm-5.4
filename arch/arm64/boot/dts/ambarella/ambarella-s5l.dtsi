@@ -239,6 +239,8 @@
 		pwm: pwm@e8008000 {
 			compatible = "ambarella,pwm";
 			reg = <0xe8008000 0x1000>;
+			clock-frequency = <2000000>;
+			clocks = <&gclk_pwm>;
 			#pwm-cells = <3>;
 		};
 

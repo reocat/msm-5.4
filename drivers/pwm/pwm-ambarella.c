@@ -34,13 +34,14 @@
 #include <linux/slab.h>
 #include <plat/pwm.h>
 
-#define PWM_DEFAULT_FREQUENCY		2200000
+#define PWM_DEFAULT_FREQUENCY		2000000
 
 struct ambarella_pwm_chip {
 	struct pwm_chip chip;
 	void __iomem *base;
 	void __iomem *base2; /* for the individual pwm controller if existed */
 	struct clk *clk;
+	u32	clk_rate;
 	enum pwm_polarity polarity[PWM_INSTANCES];
 };
 
@@ -194,8 +195,10 @@ static const struct pwm_ops ambarella_pwm_ops = {
 
 static int ambarella_pwm_probe(struct platform_device *pdev)
 {
+	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_pwm_chip *ambpwm;
 	struct resource *res;
+	u32 clk_rate;
 	int ret;
 
 	BUG_ON(ARRAY_SIZE(ambpwm_enable_offset) < PWM_INSTANCES);
@@ -222,11 +225,17 @@ static int ambarella_pwm_probe(struct platform_device *pdev)
 			return PTR_ERR(ambpwm->base);
 	}
 
-	ambpwm->clk = clk_get(NULL, "gclk_pwm");
-	if (IS_ERR(ambpwm->clk))
+	ambpwm->clk = devm_clk_get(&pdev->dev, "gclk_pwm");
+	if (IS_ERR(ambpwm->clk)) {
+		dev_err(&pdev->dev, "failed to get clock, err = %ld\n",
+			PTR_ERR(ambpwm->clk));
 		return PTR_ERR(ambpwm->clk);
+	}
 
-	clk_set_rate(ambpwm->clk, PWM_DEFAULT_FREQUENCY);
+	if (of_property_read_u32(np, "clock-frequency", &clk_rate) < 0)
+		clk_rate = PWM_DEFAULT_FREQUENCY;
+
+	clk_set_rate(ambpwm->clk, clk_rate);
 
 	ambpwm->chip.dev = &pdev->dev;
 	ambpwm->chip.ops = &ambarella_pwm_ops;
@@ -264,6 +273,9 @@ static int ambarella_pwm_remove(struct platform_device *pdev)
 static int ambarella_pwm_suspend(struct platform_device *pdev,
 				 pm_message_t state)
 {
+	struct ambarella_pwm_chip *ambpwm = platform_get_drvdata(pdev);
+
+	ambpwm->clk_rate = clk_get_rate(ambpwm->clk);
 	return 0;
 }
 
@@ -271,7 +283,7 @@ static int ambarella_pwm_resume(struct platform_device *pdev)
 {
 	struct ambarella_pwm_chip *ambpwm = platform_get_drvdata(pdev);
 
-	clk_set_rate(ambpwm->clk, PWM_DEFAULT_FREQUENCY);
+	clk_set_rate(ambpwm->clk, ambpwm->clk_rate);
 	return 0;
 }
 #endif

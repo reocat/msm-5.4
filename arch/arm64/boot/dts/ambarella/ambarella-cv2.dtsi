@@ -256,18 +256,24 @@
 		pwm0: pwm@e4004000 {
 			compatible = "ambarella,pwm";
 			reg = <0xe4004000 0x1000>;
+			clock-frequency = <2000000>;
+			clocks = <&gclk_pwm>;
 			#pwm-cells = <3>;
 		};
 
 		pwm1: pwm@e400c000 {
 			compatible = "ambarella,pwm";
 			reg = <0xe400c000 0x1000>;
+			clock-frequency = <2000000>;
+			clocks = <&gclk_pwm>;
 			#pwm-cells = <3>;
 		};
 
 		pwm2: pwm@e400d000 {
 			compatible = "ambarella,pwm";
 			reg = <0xe400d000 0x1000>;
+			clock-frequency = <2000000>;
+			clocks = <&gclk_pwm>;
 			#pwm-cells = <3>;
 		};
 	};
@@ -1644,6 +1650,8 @@
 			reg = <0xed080084 4>, <0xed0801c4 4>;
 			clocks = <&gclk_apb>, <&gclk_cortex>, <&pll_out_enet>, <&osc>;
 			clock-output-names = "gclk_pwm";
+			assigned-clocks = <&gclk_pwm>;
+			assigned-clock-parents = <&pll_out_enet>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
