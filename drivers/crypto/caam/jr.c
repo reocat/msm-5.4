@@ -4,7 +4,7 @@
  * JobR backend functionality
  *
  * Copyright 2008-2012 Freescale Semiconductor, Inc.
- * Copyright 2019 NXP
+ * Copyright 2019-2020 NXP
  */
 
 #include <linux/of_irq.h>
@@ -426,6 +426,80 @@ int caam_jr_enqueue(struct device *dev, u32 *desc,
 	return 0;
 }
 EXPORT_SYMBOL(caam_jr_enqueue);
+
+/**
+ * caam_jr_run_and_wait_for_completion() - Enqueue a job and wait for its
+ * completion. Returns 0 if OK, -ENOSPC if the queue is full,
+ * -EIO if it cannot map the caller's descriptor.
+ * @dev:  struct device of the job ring to be used
+ * @desc: points to a job descriptor that execute our request. All
+ *        descriptors (and all referenced data) must be in a DMAable
+ *        region, and all data references must be physical addresses
+ *        accessible to CAAM (i.e. within a PAMU window granted
+ *        to it).
+ * @cbk:  pointer to a callback function to be invoked upon completion
+ *        of this request. This has the form:
+ *        callback(struct device *dev, u32 *desc, u32 stat, void *arg)
+ *        where:
+ *        @dev:    contains the job ring device that processed this
+ *                 response.
+ *        @desc:   descriptor that initiated the request, same as
+ *                 "desc" being argued to caam_jr_enqueue().
+ *        @status: untranslated status received from CAAM. See the
+ *                 reference manual for a detailed description of
+ *                 error meaning, or see the JRSTA definitions in the
+ *                 register header file
+ *        @areq:   optional pointer to an argument passed with the
+ *                 original request
+ **/
+int caam_jr_run_and_wait_for_completion(struct device *dev, u32 *desc,
+					void (*cbk)(struct device *dev,
+						    u32 *desc, u32 status,
+						    void *areq))
+{
+	int ret = 0;
+	struct jr_job_result jobres = {0};
+
+	/* Initialize the completion structure */
+	init_completion(&jobres.completion);
+
+	/* Enqueue job for execution */
+	ret = caam_jr_enqueue(dev, desc, cbk, &jobres);
+	if (ret != -EINPROGRESS)
+		return ret;
+
+	/* Wait for job completion */
+	wait_for_completion(&jobres.completion);
+
+	/* Get return code processed in cbk */
+	ret = jobres.error;
+
+	return ret;
+}
+EXPORT_SYMBOL(caam_jr_run_and_wait_for_completion);
+
+static void caam_jr_init_hw(struct device *dev, dma_addr_t inpbusaddr,
+			    dma_addr_t outbusaddr)
+{
+	struct caam_drv_private_jr *jrp = dev_get_drvdata(dev);
+
+	wr_reg64(&jrp->rregs->inpring_base, inpbusaddr);
+	wr_reg64(&jrp->rregs->outring_base, outbusaddr);
+	wr_reg32(&jrp->rregs->inpring_size, JOBR_DEPTH);
+	wr_reg32(&jrp->rregs->outring_size, JOBR_DEPTH);
+
+	/* Select interrupt coalescing parameters */
+	clrsetbits_32(&jrp->rregs->rconfig_lo, 0, JOBR_INTC |
+		      (JOBR_INTC_COUNT_THLD << JRCFG_ICDCT_SHIFT) |
+		      (JOBR_INTC_TIME_THLD << JRCFG_ICTT_SHIFT));
+}
+
+static void caam_jr_reset_index(struct caam_drv_private_jr *jrp)
+{
+	jrp->out_ring_read_index = 0;
+	jrp->head = 0;
+	jrp->tail = 0;
+}
 
 /*
  * Init JobR independent of platform property detection
