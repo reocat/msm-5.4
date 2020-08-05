@@ -78,35 +78,61 @@ static int ambarella_dmic_clock(struct amb_dmic_priv *priv_data, u32 mclk, u32 r
 	return 0;
 }
 
+static void ambarella_dmic_set_df(struct amb_dmic_priv *priv_data)
+{
+	u32 i;
+	static u32 DroopFilterTable[8] = {
+		0xFF85C000, 0xFF0C9000, 0x01CAB000, 0x04A9E000,
+		0xF9A26000, 0xEF8AE000, 0x0F0B6000, 0x4381A000
+	};
+
+	for (i = 0; i < 8; i++)
+		writel_relaxed(DroopFilterTable[i], priv_data->regbase + 0x200 + 4*i);
+}
+
+static void ambarella_dmic_set_hbf(struct amb_dmic_priv *priv_data)
+{
+	u32 i;
+	static u32 HalfBandFilterTable[32] = {
+		0xFFC87000, 0xFFFD2000, 0x00601000, 0x00056000,
+		0xFF23F000, 0xFFF61000, 0x01CCF000, 0x000FC000,
+		0xFC93E000, 0xFFEA3000, 0x06462000, 0x001B2000,
+		0xF39CC000, 0xFFE14000, 0x28558000, 0x40200000,
+		0x28558000, 0xFFE14000, 0xF39CC000, 0x001B2000,
+		0x06462000, 0xFFEA3000, 0xFC93E000, 0x000FC000,
+		0x01CCF000, 0xFFF61000, 0xFF23F000, 0x00056000,
+		0x00601000, 0xFFFD2000, 0xFFC87000, 0x00000000
+	};
+
+	for (i = 0; i < 32; i++)
+		writel_relaxed(HalfBandFilterTable[i], priv_data->regbase + 0x300 + 4*i);
+}
+
+static void ambarella_dmic_set_custom_iir(struct amb_dmic_priv *priv_data)
+{
+	u32 i;
+	static u32 DcBlockTable[17] = {
+		0x40000000, 0x00000000, 0x00000000, 0xC0000000,
+		0x00000000, 0xC0107000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000, 0x00000000, 0x00000000, 0x00000000,
+		0x00000000
+	};
+
+	for (i = 0; i < 17; i++)
+		writel_relaxed(DcBlockTable[i], priv_data->regbase + 0x6d4 + 4*i);
+}
+
 static int ambarella_dmic_init(struct amb_dmic_priv *priv_data)
 {
-	/*Droop Setting*/
-	writel_relaxed(0xFF85C000, priv_data->regbase + 0x200);
-	writel_relaxed(0xFF0C9000, priv_data->regbase + 0x204);
-	writel_relaxed(0x01CAB000, priv_data->regbase + 0x208);
-	writel_relaxed(0x04A9E000, priv_data->regbase + 0x20c);
-	writel_relaxed(0xF9A26000, priv_data->regbase + 0x210);
-	writel_relaxed(0xEF8AE000, priv_data->regbase + 0x214);
-	writel_relaxed(0x0F0B6000, priv_data->regbase + 0x218);
-	writel_relaxed(0x4381A000, priv_data->regbase + 0x21c);
+	/* Droop Setting */
+	ambarella_dmic_set_df(priv_data);
 
-	/*HBF Setting*/
-	writel_relaxed(0xFFC87000, priv_data->regbase + 0x300);
-	writel_relaxed(0xFFFD2000, priv_data->regbase + 0x304);
-	writel_relaxed(0x00601000, priv_data->regbase + 0x308);
-	writel_relaxed(0x00056000, priv_data->regbase + 0x30c);
-	writel_relaxed(0xFF23F000, priv_data->regbase + 0x310);
-	writel_relaxed(0xFFF61000, priv_data->regbase + 0x314);
-	writel_relaxed(0x01CCF000, priv_data->regbase + 0x318);
-	writel_relaxed(0x000FC000, priv_data->regbase + 0x31c);
-	writel_relaxed(0xFC93E000, priv_data->regbase + 0x320);
-	writel_relaxed(0xFFEA3000, priv_data->regbase + 0x324);
-	writel_relaxed(0x06462000, priv_data->regbase + 0x328);
-	writel_relaxed(0x001B2000, priv_data->regbase + 0x32c);
-	writel_relaxed(0xF39CC000, priv_data->regbase + 0x330);
-	writel_relaxed(0xFFE14000, priv_data->regbase + 0x334);
-	writel_relaxed(0x28558000, priv_data->regbase + 0x338);
-	writel_relaxed(0x40200000, priv_data->regbase + 0x33c);
+	/* HBF Setting */
+	ambarella_dmic_set_hbf(priv_data);
+
+	if (priv_data->custom_iir_support)
+		ambarella_dmic_set_custom_iir(priv_data);
 
 	return 0;
 }
@@ -228,6 +254,8 @@ static int ambarella_dmic_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "no scr regmap!\n");
 		return -ENXIO;
 	}
+
+	priv_data->custom_iir_support = !!of_find_property(np, "amb,custom-iir", NULL);
 
 	dev_set_drvdata(&pdev->dev, priv_data);
 

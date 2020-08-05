@@ -1069,6 +1069,7 @@
 			reg = <0xe0015000 0x1000>;
 			amb,scr-regmap = <&scratchpad_syscon>;
 			#sound-dai-cells = <0>;
+			amb,custom-iir;
 		};
 
 		uart1: uart@e0017000 {

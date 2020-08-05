@@ -29,6 +29,7 @@ struct amb_dmic_priv {
 	void __iomem 		*regbase;
 	struct regmap		*reg_scr;
 	u32 			mclk;
+	u32				custom_iir_support;
 };
 
 #if (CHIP_REV == S5) || (CHIP_REV == CV25) || (CHIP_REV == S6LM)
