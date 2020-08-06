@@ -109,8 +109,8 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 		return -ENODEV;
 	}
 
-	ambarella_fixup_secure_world(of_property_read_bool(np, "amb,secure-device"),
-			&amb_readl, &amb_writel);
+//	ambarella_fixup_secure_world(of_property_read_bool(np, "amb,secure-device"),
+//			&amb_readl, &amb_writel);
 
 	priv->rng.name = dev_driver_string(&pdev->dev);
 	priv->rng.read = ambarella_rng_read;

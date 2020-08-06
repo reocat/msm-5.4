@@ -108,12 +108,6 @@ static inline struct hlist_head *dev_map_index_hash(struct bpf_dtab *dtab,
 	return &dtab->dev_index_head[idx & (dtab->n_buckets - 1)];
 }
 
-static inline struct hlist_head *dev_map_index_hash(struct bpf_dtab *dtab,
-						    int idx)
-{
-	return &dtab->dev_index_head[idx & (dtab->n_buckets - 1)];
-}
-
 static int dev_map_init_map(struct bpf_dtab *dtab, union bpf_attr *attr)
 {
 	int err, cpu;
