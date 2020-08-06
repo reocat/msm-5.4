@@ -5358,8 +5358,11 @@ void perf_buffer__free(struct perf_buffer *pb)
 	if (!pb)
 		return;
 	if (pb->cpu_bufs) {
-		for (i = 0; i < pb->cpu_cnt && pb->cpu_bufs[i]; i++) {
+		for (i = 0; i < pb->cpu_cnt; i++) {
 			struct perf_cpu_buf *cpu_buf = pb->cpu_bufs[i];
+
+			if (!cpu_buf)
+				continue;
 
 			bpf_map_delete_elem(pb->map_fd, &cpu_buf->map_key);
 			perf_buffer__free_cpu_buf(pb, cpu_buf);
@@ -5929,7 +5932,7 @@ int parse_cpu_mask_str(const char *s, bool **mask, int *mask_sz)
 		}
 		if (start < 0 || start > end) {
 			pr_warning("Invalid CPU range [%d,%d] in %s\n",
-				   start, end, s);
+				start, end, s);
 			err = -EINVAL;
 			goto cleanup;
 		}
@@ -5964,7 +5967,7 @@ int parse_cpu_mask_file(const char *fcpu, bool **mask, int *mask_sz)
 	if (fd < 0) {
 		err = -errno;
 		pr_warning("Failed to open cpu mask file %s: %d\n", fcpu, err);
-		return err;
+		return -err;
 	}
 	len = read(fd, buf, sizeof(buf));
 	close(fd);

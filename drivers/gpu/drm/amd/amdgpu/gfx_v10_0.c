@@ -82,13 +82,6 @@ MODULE_FIRMWARE("amdgpu/navi14_mec.bin");
 MODULE_FIRMWARE("amdgpu/navi14_mec2.bin");
 MODULE_FIRMWARE("amdgpu/navi14_rlc.bin");
 
-MODULE_FIRMWARE("amdgpu/navi12_ce.bin");
-MODULE_FIRMWARE("amdgpu/navi12_pfp.bin");
-MODULE_FIRMWARE("amdgpu/navi12_me.bin");
-MODULE_FIRMWARE("amdgpu/navi12_mec.bin");
-MODULE_FIRMWARE("amdgpu/navi12_mec2.bin");
-MODULE_FIRMWARE("amdgpu/navi12_rlc.bin");
-
 static const struct soc15_reg_golden golden_settings_gc_10_1[] =
 {
 	SOC15_REG_GOLDEN_VALUE(GC, 0, mmCB_HW_CONTROL_4, 0xffffffff, 0x00400014),
@@ -4683,12 +4676,17 @@ static int gfx_v10_0_ring_preempt_ib(struct amdgpu_ring *ring)
 	struct amdgpu_device *adev = ring->adev;
 	struct amdgpu_kiq *kiq = &adev->gfx.kiq;
 	struct amdgpu_ring *kiq_ring = &kiq->ring;
+	unsigned long flags;
 
 	if (!kiq->pmf || !kiq->pmf->kiq_unmap_queues)
 		return -EINVAL;
 
-	if (amdgpu_ring_alloc(kiq_ring, kiq->pmf->unmap_queues_size))
+	spin_lock_irqsave(&kiq->ring_lock, flags);
+
+	if (amdgpu_ring_alloc(kiq_ring, kiq->pmf->unmap_queues_size)) {
+		spin_unlock_irqrestore(&kiq->ring_lock, flags);
 		return -ENOMEM;
+	}
 
 	/* assert preemption condition */
 	amdgpu_ring_set_preempt_cond_exec(ring, false);
@@ -4698,6 +4696,8 @@ static int gfx_v10_0_ring_preempt_ib(struct amdgpu_ring *ring)
 				   ring->trail_fence_gpu_addr,
 				   ++ring->trail_seq);
 	amdgpu_ring_commit(kiq_ring);
+
+	spin_unlock_irqrestore(&kiq->ring_lock, flags);
 
 	/* poll the trailing fence */
 	for (i = 0; i < adev->usec_timeout; i++) {

@@ -4688,8 +4688,15 @@ static struct binder_thread *binder_get_thread(struct binder_proc *proc)
 
 static void binder_free_proc(struct binder_proc *proc)
 {
+	struct binder_device *device;
+
 	BUG_ON(!list_empty(&proc->todo));
 	BUG_ON(!list_empty(&proc->delivered_death));
+	device = container_of(proc->context, struct binder_device, context);
+	if (refcount_dec_and_test(&device->ref)) {
+		kfree(proc->context->name);
+		kfree(device);
+	}
 	binder_alloc_deferred_release(&proc->alloc);
 	put_task_struct(proc->tsk);
 	binder_stats_deleted(BINDER_STAT_PROC);
@@ -6192,9 +6199,20 @@ err_alloc_device_names_failed:
 	return ret;
 }
 
-device_initcall(binder_init);
+module_init(binder_init);
+/*
+ * binder will have no exit function since binderfs instances can be mounted
+ * multiple times and also in user namespaces finding and destroying them all
+ * is not feasible without introducing insane locking. Just ignoring existing
+ * instances on module unload also wouldn't work since we would loose track of
+ * what major numer was dynamically allocated and also what minor numbers are
+ * already given out. So this would get us into all kinds of issues with device
+ * number reuse. So simply don't allow unloading unless we are forced to do so.
+ */
+
+MODULE_AUTHOR("Google, Inc.");
+MODULE_DESCRIPTION("Driver for Android binder device");
+MODULE_LICENSE("GPL v2");
 
 #define CREATE_TRACE_POINTS
 #include "binder_trace.h"
-
-MODULE_LICENSE("GPL v2");

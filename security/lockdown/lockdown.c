@@ -100,6 +100,7 @@ static int lockdown_is_locked_down(enum lockdown_reason what)
 
 static struct security_hook_list lockdown_hooks[] __lsm_ro_after_init = {
 	LSM_HOOK_INIT(locked_down, lockdown_is_locked_down),
+	LSM_HOOK_INIT(lock_kernel_down, lock_kernel_down),
 };
 
 static int __init lockdown_lsm_init(void)
@@ -177,7 +178,7 @@ static int __init lockdown_secfs_init(void)
 {
 	struct dentry *dentry;
 
-	dentry = securityfs_create_file("lockdown", 0600, NULL, NULL,
+	dentry = securityfs_create_file("lockdown", 0644, NULL, NULL,
 					&lockdown_ops);
 	return PTR_ERR_OR_ZERO(dentry);
 }

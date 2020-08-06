@@ -1423,7 +1423,7 @@ struct ib_mr *efa_reg_mr(struct ib_pd *ibpd, u64 start, u64 length,
 		goto err_out;
 	}
 
-	mr->umem = ib_umem_get(udata, start, length, access_flags, 0);
+	mr->umem = ib_umem_get(udata, start, length, access_flags);
 	if (IS_ERR(mr->umem)) {
 		err = PTR_ERR(mr->umem);
 		ibdev_dbg(&dev->ibdev,
@@ -1612,11 +1612,13 @@ static int __efa_mmap(struct efa_dev *dev, struct efa_ucontext *ucontext,
 	switch (entry->mmap_flag) {
 	case EFA_MMAP_IO_NC:
 		err = rdma_user_mmap_io(&ucontext->ibucontext, vma, pfn, length,
-					pgprot_noncached(vma->vm_page_prot));
+					pgprot_noncached(vma->vm_page_prot),
+					NULL);
 		break;
 	case EFA_MMAP_IO_WC:
 		err = rdma_user_mmap_io(&ucontext->ibucontext, vma, pfn, length,
-					pgprot_writecombine(vma->vm_page_prot));
+					pgprot_writecombine(vma->vm_page_prot),
+					NULL);
 		break;
 	case EFA_MMAP_DMA_PAGE:
 		for (va = vma->vm_start; va < vma->vm_end;

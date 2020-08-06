@@ -49,6 +49,7 @@
 #include <linux/memory.h>
 #include <linux/compat.h>
 #include <linux/start_kernel.h>
+#include <linux/security.h>
 
 #include <asm/boot_data.h>
 #include <asm/ipl.h>
@@ -93,10 +94,6 @@ char elf_platform[ELF_PLATFORM_SIZE];
 
 unsigned long int_hwcap = 0;
 
-#ifdef CONFIG_PROTECTED_VIRTUALIZATION_GUEST
-int __bootdata_preserved(prot_virt_guest);
-#endif
-
 int __bootdata(noexec_disabled);
 int __bootdata(memory_end_set);
 unsigned long __bootdata(memory_end);
@@ -112,6 +109,8 @@ unsigned long __bootdata_preserved(__etext_dma);
 unsigned long __bootdata_preserved(__sdma);
 unsigned long __bootdata_preserved(__edma);
 unsigned long __bootdata_preserved(__kaslr_offset);
+unsigned int __bootdata_preserved(zlib_dfltcc_support);
+EXPORT_SYMBOL(zlib_dfltcc_support);
 
 unsigned long VMALLOC_START;
 EXPORT_SYMBOL(VMALLOC_START);
@@ -573,6 +572,9 @@ static void __init setup_memory_end(void)
 		else
 			vmax = _REGION1_SIZE; /* 4-level kernel page table */
 	}
+
+	if (is_prot_virt_host())
+		adjust_to_uv_max(&vmax);
 
 	/* module area is at the end of the kernel address space. */
 	MODULES_END = vmax;
@@ -1106,6 +1108,12 @@ void __init setup_arch(char **cmdline_p)
 
 	log_component_list();
 
+#ifdef CONFIG_LOCK_DOWN_IN_SECURE_BOOT
+	if (ipl_get_secureboot())
+		security_lock_kernel_down("Secure IPL",
+					  LOCKDOWN_INTEGRITY_MAX);
+#endif
+
 	/* Have one command line that is parsed and saved in /proc/cmdline */
 	/* boot_command_line has been already set up in early.c */
 	*cmdline_p = boot_command_line;
@@ -1120,6 +1128,7 @@ void __init setup_arch(char **cmdline_p)
 	if (IS_ENABLED(CONFIG_EXPOLINE_AUTO))
 		nospec_auto_detect();
 
+	jump_label_init();
 	parse_early_param();
 #ifdef CONFIG_CRASH_DUMP
 	/* Deactivate elfcorehdr= kernel parameter */
@@ -1154,6 +1163,8 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	memblock_trim_memory(1UL << (MAX_ORDER - 1 + PAGE_SHIFT));
 
+	if (is_prot_virt_host())
+		setup_uv();
 	setup_memory_end();
 	setup_memory();
 	dma_contiguous_reserve(memory_end);

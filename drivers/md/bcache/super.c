@@ -789,7 +789,9 @@ static void bcache_device_free(struct bcache_device *d)
 		bcache_device_detach(d);
 
 	if (disk) {
-		if (disk->flags & GENHD_FL_UP)
+		bool disk_added = (disk->flags & GENHD_FL_UP) != 0;
+
+		if (disk_added)
 			del_gendisk(disk);
 
 		if (disk->queue)
@@ -797,7 +799,8 @@ static void bcache_device_free(struct bcache_device *d)
 
 		ida_simple_remove(&bcache_device_idx,
 				  first_minor_to_idx(disk->first_minor));
-		put_disk(disk);
+		if (disk_added)
+			put_disk(disk);
 	}
 
 	bioset_exit(&d->bio_split);
@@ -808,7 +811,7 @@ static void bcache_device_free(struct bcache_device *d)
 }
 
 static int bcache_device_init(struct bcache_device *d, unsigned int block_size,
-			      sector_t sectors)
+			      sector_t sectors, struct block_device *cached_bdev)
 {
 	struct request_queue *q;
 	const size_t max_stripes = min_t(size_t, INT_MAX,
@@ -875,6 +878,21 @@ static int bcache_device_init(struct bcache_device *d, unsigned int block_size,
 	q->limits.io_min		= block_size;
 	q->limits.logical_block_size	= block_size;
 	q->limits.physical_block_size	= block_size;
+
+	if (q->limits.logical_block_size > PAGE_SIZE && cached_bdev) {
+		/*
+		 * This should only happen with BCACHE_SB_VERSION_BDEV.
+		 * Block/page size is checked for BCACHE_SB_VERSION_CDEV.
+		 */
+		pr_info("%s: sb/logical block size (%u) greater than page size "
+			"(%lu) falling back to device logical block size (%u)",
+			d->disk->disk_name, q->limits.logical_block_size,
+			PAGE_SIZE, bdev_logical_block_size(cached_bdev));
+
+		/* This also adjusts physical block size/min io size if needed */
+		blk_queue_logical_block_size(q, bdev_logical_block_size(cached_bdev));
+	}
+
 	blk_queue_flag_set(QUEUE_FLAG_NONROT, d->disk->queue);
 	blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, d->disk->queue);
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, d->disk->queue);
@@ -940,7 +958,7 @@ static int cached_dev_status_update(void *arg)
 }
 
 
-int bch_cached_dev_run(struct cached_dev *dc)
+void bch_cached_dev_emit_change(struct cached_dev *dc)
 {
 	struct bcache_device *d = &dc->disk;
 	char *buf = kmemdup_nul(dc->sb.label, SB_LABEL_SIZE, GFP_KERNEL);
@@ -951,19 +969,26 @@ int bch_cached_dev_run(struct cached_dev *dc)
 		NULL,
 	};
 
+	/*
+	 * won't show up in the uevent file, use udevadm monitor -e instead
+	 * only class / kset properties are persistent
+	 */
+	kobject_uevent_env(&disk_to_dev(d->disk)->kobj, KOBJ_CHANGE, env);
+	kfree(env[1]);
+	kfree(env[2]);
+	kfree(buf);
+}
+
+int bch_cached_dev_run(struct cached_dev *dc)
+{
+	struct bcache_device *d = &dc->disk;
 	if (dc->io_disable) {
 		pr_err("I/O disabled on cached dev %s",
 		       dc->backing_dev_name);
-		kfree(env[1]);
-		kfree(env[2]);
-		kfree(buf);
 		return -EIO;
 	}
 
 	if (atomic_xchg(&dc->running, 1)) {
-		kfree(env[1]);
-		kfree(env[2]);
-		kfree(buf);
 		pr_info("cached dev %s is running already",
 		       dc->backing_dev_name);
 		return -EBUSY;
@@ -982,14 +1007,9 @@ int bch_cached_dev_run(struct cached_dev *dc)
 
 	add_disk(d->disk);
 	bd_link_disk_holder(dc->bdev, dc->disk.disk);
-	/*
-	 * won't show up in the uevent file, use udevadm monitor -e instead
-	 * only class / kset properties are persistent
-	 */
-	kobject_uevent_env(&disk_to_dev(d->disk)->kobj, KOBJ_CHANGE, env);
-	kfree(env[1]);
-	kfree(env[2]);
-	kfree(buf);
+
+	/* emit change event */
+	bch_cached_dev_emit_change(dc);
 
 	if (sysfs_create_link(&d->kobj, &disk_to_dev(d->disk)->kobj, "dev") ||
 	    sysfs_create_link(&disk_to_dev(d->disk)->kobj,
@@ -1331,7 +1351,7 @@ static int cached_dev_init(struct cached_dev *dc, unsigned int block_size)
 			q->limits.raid_partial_stripes_expensive;
 
 	ret = bcache_device_init(&dc->disk, block_size,
-			 dc->bdev->bd_part->nr_sects - dc->sb.data_offset);
+			 dc->bdev->bd_part->nr_sects - dc->sb.data_offset, dc->bdev);
 	if (ret)
 		return ret;
 
@@ -1447,7 +1467,7 @@ static int flash_dev_run(struct cache_set *c, struct uuid_entry *u)
 
 	kobject_init(&d->kobj, &bch_flash_dev_ktype);
 
-	if (bcache_device_init(d, block_bytes(c), u->sectors))
+	if (bcache_device_init(d, block_bytes(c), u->sectors, NULL))
 		goto err;
 
 	bcache_device_attach(d, c, u - c->uuids);
@@ -2351,6 +2371,21 @@ static bool bch_is_open_backing(struct block_device *bdev)
 	return false;
 }
 
+static struct cached_dev *bch_find_cached_dev(struct block_device *bdev) {
+	struct cache_set *c, *tc;
+	struct cached_dev *dc, *t;
+
+	list_for_each_entry_safe(c, tc, &bch_cache_sets, list)
+		list_for_each_entry_safe(dc, t, &c->cached_devs, list)
+			if (dc->bdev == bdev)
+				return dc;
+	list_for_each_entry_safe(dc, t, &uncached_devices, list)
+		if (dc->bdev == bdev)
+			return dc;
+
+	return NULL;
+}
+
 static bool bch_is_open_cache(struct block_device *bdev)
 {
 	struct cache_set *c, *tc;
@@ -2376,6 +2411,7 @@ static ssize_t register_bcache(struct kobject *k, struct kobj_attribute *attr,
 	char *path = NULL;
 	struct cache_sb *sb;
 	struct block_device *bdev = NULL;
+	struct cached_dev *dc = NULL;
 	struct page *sb_page;
 	ssize_t ret;
 
@@ -2409,10 +2445,20 @@ static ssize_t register_bcache(struct kobject *k, struct kobj_attribute *attr,
 		if (bdev == ERR_PTR(-EBUSY)) {
 			bdev = lookup_bdev(strim(path));
 			mutex_lock(&bch_register_lock);
-			if (!IS_ERR(bdev) && bch_is_open(bdev))
+			if (!IS_ERR(bdev) && bch_is_open(bdev)) {
 				err = "device already registered";
-			else
+				/* emit CHANGE event for backing devices to export
+				 * CACHED_{UUID/LABEL} values to udev */
+				if (bch_is_open_backing(bdev)) {
+					dc = bch_find_cached_dev(bdev);
+					if (dc) {
+						bch_cached_dev_emit_change(dc);
+						err = "device already registered (emitting change event)";
+					}
+				}
+			} else {
 				err = "device busy";
+			}
 			mutex_unlock(&bch_register_lock);
 			if (!IS_ERR(bdev))
 				bdput(bdev);

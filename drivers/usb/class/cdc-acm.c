@@ -584,7 +584,7 @@ static void acm_softint(struct work_struct *work)
 	}
 
 	if (test_and_clear_bit(ACM_ERROR_DELAY, &acm->flags)) {
-		for (i = 0; i < ACM_NR; i++)
+		for (i = 0; i < acm->rx_buflimit; i++)
 			if (test_and_clear_bit(i, &acm->urbs_in_error_delay))
 					acm_submit_read_urb(acm, i, GFP_NOIO);
 	}
@@ -1689,6 +1689,8 @@ static int acm_pre_reset(struct usb_interface *intf)
 
 static const struct usb_device_id acm_ids[] = {
 	/* quirky and broken devices */
+	{ USB_DEVICE(0x0424, 0x274e), /* Microchip Technology, Inc. (formerly SMSC) */
+	  .driver_info = DISABLE_ECHO, }, /* DISABLE ECHO in termios flag */
 	{ USB_DEVICE(0x076d, 0x0006), /* Denso Cradle CU-321 */
 	.driver_info = NO_UNION_NORMAL, },/* has no union descriptor */
 	{ USB_DEVICE(0x17ef, 0x7000), /* Lenovo USB modem */
@@ -1906,6 +1908,20 @@ static const struct usb_device_id acm_ids[] = {
 	{ USB_DEVICE(0x1bc7, 0x0023), /* Telit 3G ACM + ECM composition */
 	.driver_info = SEND_ZERO_PACKET,
 	},
+
+	/* Exclude Exar USB serial ports */
+	{ USB_DEVICE(0x04e2, 0x1400), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1401), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1402), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1403), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1410), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1411), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1412), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1414), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1420), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1421), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1422), .driver_info = IGNORE_DEVICE, },
+	{ USB_DEVICE(0x04e2, 0x1424), .driver_info = IGNORE_DEVICE, },
 
 	/* control interfaces without any protocol set */
 	{ USB_INTERFACE_INFO(USB_CLASS_COMM, USB_CDC_SUBCLASS_ACM,

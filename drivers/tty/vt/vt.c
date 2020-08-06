@@ -106,6 +106,7 @@
 #include <linux/ctype.h>
 #include <linux/bsearch.h>
 #include <linux/gcd.h>
+#include <linux/screen_info.h>
 
 #define MAX_NR_CON_DRIVER 16
 
@@ -150,7 +151,7 @@ static const struct consw *con_driver_map[MAX_NR_CONSOLES];
 
 static int con_open(struct tty_struct *, struct file *);
 static void vc_init(struct vc_data *vc, unsigned int rows,
-		    unsigned int cols, int do_clear);
+		    unsigned int cols, int do_clear, int mode);
 static void gotoxy(struct vc_data *vc, int new_x, int new_y);
 static void save_cur(struct vc_data *vc);
 static void reset_terminal(struct vc_data *vc, int do_clear);
@@ -173,6 +174,9 @@ module_param(global_cursor_default, int, S_IRUGO | S_IWUSR);
 
 static int cur_default = CUR_DEFAULT;
 module_param(cur_default, int, S_IRUGO | S_IWUSR);
+
+int vt_handoff = 0;
+module_param_named(handoff, vt_handoff, int, S_IRUGO | S_IWUSR);
 
 /*
  * ignore_poke: don't unblank the screen when things are typed.  This is
@@ -1002,6 +1006,13 @@ void redraw_screen(struct vc_data *vc, int is_switch)
 		}
 		if (tty0dev)
 			sysfs_notify(&tty0dev->kobj, NULL, "active");
+		/*
+		 * If we are switching away from a transparent VT the contents
+		 * will be lost, convert it into a blank text console then
+		 * it will be repainted blank if we ever switch back.
+		 */
+		if (old_vc->vc_mode == KD_TRANSPARENT)
+			old_vc->vc_mode = KD_TEXT;
 	} else {
 		hide_cursor(vc);
 		redraw = 1;
@@ -1092,10 +1103,19 @@ static const struct tty_port_operations vc_port_ops = {
 	.destruct = vc_port_destruct,
 };
 
+/*
+ * Change # of rows and columns (0 means unchanged/the size of fg_console)
+ * [this is to be used together with some user program
+ * like resize that changes the hardware videomode]
+ */
+#define VC_MAXCOL (32767)
+#define VC_MAXROW (32767)
+
 int vc_allocate(unsigned int currcons)	/* return 0 on success */
 {
 	struct vt_notifier_param param;
 	struct vc_data *vc;
+	int err;
 
 	WARN_CONSOLE_UNLOCKED();
 
@@ -1125,6 +1145,11 @@ int vc_allocate(unsigned int currcons)	/* return 0 on success */
 	if (!*vc->vc_uni_pagedir_loc)
 		con_set_default_unimap(vc);
 
+	err = -EINVAL;
+	if (vc->vc_cols > VC_MAXCOL || vc->vc_rows > VC_MAXROW ||
+	    vc->vc_screenbuf_size > KMALLOC_MAX_SIZE || !vc->vc_screenbuf_size)
+		goto err_free;
+	err = -ENOMEM;
 	vc->vc_screenbuf = kzalloc(vc->vc_screenbuf_size, GFP_KERNEL);
 	if (!vc->vc_screenbuf)
 		goto err_free;
@@ -1134,7 +1159,7 @@ int vc_allocate(unsigned int currcons)	/* return 0 on success */
 	if (global_cursor_default == -1)
 		global_cursor_default = 1;
 
-	vc_init(vc, vc->vc_rows, vc->vc_cols, 1);
+	vc_init(vc, vc->vc_rows, vc->vc_cols, 1, KD_TEXT);
 	vcs_make_sysfs(currcons);
 	atomic_notifier_call_chain(&vt_notifier_list, VT_ALLOCATE, &param);
 
@@ -1143,7 +1168,7 @@ err_free:
 	visual_deinit(vc);
 	kfree(vc);
 	vc_cons[currcons].d = NULL;
-	return -ENOMEM;
+	return err;
 }
 
 static inline int resize_screen(struct vc_data *vc, int width, int height,
@@ -1157,14 +1182,6 @@ static inline int resize_screen(struct vc_data *vc, int width, int height,
 
 	return err;
 }
-
-/*
- * Change # of rows and columns (0 means unchanged/the size of fg_console)
- * [this is to be used together with some user program
- * like resize that changes the hardware videomode]
- */
-#define VC_RESIZE_MAXCOL (32767)
-#define VC_RESIZE_MAXROW (32767)
 
 /**
  *	vc_do_resize	-	resizing method for the tty
@@ -1201,7 +1218,7 @@ static int vc_do_resize(struct tty_struct *tty, struct vc_data *vc,
 	user = vc->vc_resize_user;
 	vc->vc_resize_user = 0;
 
-	if (cols > VC_RESIZE_MAXCOL || lines > VC_RESIZE_MAXROW)
+	if (cols > VC_MAXCOL || lines > VC_MAXROW)
 		return -EINVAL;
 
 	new_cols = (cols ? cols : vc->vc_cols);
@@ -1212,7 +1229,7 @@ static int vc_do_resize(struct tty_struct *tty, struct vc_data *vc,
 	if (new_cols == vc->vc_cols && new_rows == vc->vc_rows)
 		return 0;
 
-	if (new_screen_size > KMALLOC_MAX_SIZE)
+	if (new_screen_size > KMALLOC_MAX_SIZE || !new_screen_size)
 		return -EINVAL;
 	newscreen = kzalloc(new_screen_size, GFP_USER);
 	if (!newscreen)
@@ -3315,6 +3332,13 @@ static void con_cleanup(struct tty_struct *tty)
 	tty_port_put(&vc->port);
 }
 
+static void con_cleanup(struct tty_struct *tty)
+{
+	struct vc_data *vc = tty->driver_data;
+
+	tty_port_put(&vc->port);
+}
+
 static int default_color           = 7; /* white */
 static int default_italic_color    = 2; // green (ASCII)
 static int default_underline_color = 3; // cyan (ASCII)
@@ -3323,7 +3347,7 @@ module_param_named(italic, default_italic_color, int, S_IRUGO | S_IWUSR);
 module_param_named(underline, default_underline_color, int, S_IRUGO | S_IWUSR);
 
 static void vc_init(struct vc_data *vc, unsigned int rows,
-		    unsigned int cols, int do_clear)
+		    unsigned int cols, int do_clear, int mode)
 {
 	int j, k ;
 
@@ -3334,7 +3358,7 @@ static void vc_init(struct vc_data *vc, unsigned int rows,
 
 	set_origin(vc);
 	vc->vc_pos = vc->vc_origin;
-	reset_vc(vc);
+	reset_vc(vc, mode);
 	for (j=k=0; j<16; j++) {
 		vc->vc_palette[k++] = default_red[j] ;
 		vc->vc_palette[k++] = default_grn[j] ;
@@ -3391,16 +3415,33 @@ static int __init con_init(void)
 		mod_timer(&console_timer, jiffies + (blankinterval * HZ));
 	}
 
-	for (currcons = 0; currcons < MIN_NR_CONSOLES; currcons++) {
+	if (vt_handoff > 0 && vt_handoff <= MAX_NR_CONSOLES) {
+		currcons = vt_handoff - 1;
 		vc_cons[currcons].d = vc = kzalloc(sizeof(struct vc_data), GFP_NOWAIT);
 		INIT_WORK(&vc_cons[currcons].SAK_work, vc_SAK);
 		tty_port_init(&vc->port);
 		visual_init(vc, currcons, 1);
 		vc->vc_screenbuf = kzalloc(vc->vc_screenbuf_size, GFP_NOWAIT);
+		vc_init(vc, vc->vc_rows, vc->vc_cols, 0, KD_TRANSPARENT);
+	}
+	for (currcons = 0; currcons < MIN_NR_CONSOLES; currcons++) {
+		if (currcons == vt_handoff - 1)
+			continue;
+		vc_cons[currcons].d = vc = kzalloc(sizeof(struct vc_data), GFP_NOWAIT);
+		INIT_WORK(&vc_cons[currcons].SAK_work, vc_SAK);
+		tty_port_init(&vc->port);
+		visual_init(vc, currcons, 1);
+		/* Assuming vc->vc_{cols,rows,screenbuf_size} are sane here. */
+		vc->vc_screenbuf = kzalloc(vc->vc_screenbuf_size, GFP_NOWAIT);
 		vc_init(vc, vc->vc_rows, vc->vc_cols,
-			currcons || !vc->vc_sw->con_save_screen);
+			currcons || !vc->vc_sw->con_save_screen, KD_TEXT);
 	}
 	currcons = fg_console = 0;
+	if (vt_handoff > 0) {
+		printk(KERN_INFO "vt handoff: transparent VT on vt#%d\n",
+								vt_handoff);
+		currcons = fg_console = vt_handoff - 1;
+	}
 	master_display_fg = vc = vc_cons[currcons].d;
 	set_origin(vc);
 	save_screen(vc);
