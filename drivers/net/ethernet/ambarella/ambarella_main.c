@@ -1702,7 +1702,7 @@ static inline void ambeth_check_rdes0_status(struct ambeth_info *lp,
 	}
 }
 
-static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
+static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry, bool fragment)
 {
 	short pkt_len;
 	struct sk_buff *skb;
@@ -1743,7 +1743,9 @@ static inline void ambeth_napi_rx(struct ambeth_info *lp, u32 status, u32 entry)
 			ambhw_dump_buffer(__func__, (skb->data - 14),
 				(skb->len + 14));
 		}
-		if (unlikely(lp->dump_rx_free))
+
+		/* Fragment packet is not implemented, drop it */
+		if (unlikely(fragment) || unlikely(lp->dump_rx_free))
 			kfree_skb(skb);
 		else
 			netif_receive_skb(skb);
@@ -1770,6 +1772,7 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 	u32 status;
 	unsigned long flags;
 	unsigned int dirty_diff;
+	bool fragment = false;
 
 	lp = container_of(napi, struct ambeth_info, napi);
 	dev_vdbg(&lp->ndev->dev, "cur_rx[%u], dirty_rx[%u]\n",
@@ -1785,10 +1788,11 @@ int ambeth_napi(struct napi_struct *napi, int budget)
 			break;
 		if (unlikely((status & (ETH_RDES0_FS | ETH_RDES0_LS)) !=
 			(ETH_RDES0_FS | ETH_RDES0_LS))) {
-			break;
+			fragment = true;
 		}
+
 		if (likely((status & ETH_RDES0_ES) != ETH_RDES0_ES)) {
-			ambeth_napi_rx(lp, status, entry);
+			ambeth_napi_rx(lp, status, entry, fragment);
 		} else {
 			ambhw_dma_rx_stop(lp);
 			ambeth_check_rdes0_status(lp, status, entry);
