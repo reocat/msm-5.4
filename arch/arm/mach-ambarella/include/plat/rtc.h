@@ -30,6 +30,8 @@
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
 	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define RTC_OFFSET			0x15000
+#elif (CHIP_REV == CV2FS)
+#define RTC_OFFSET			0x2F000
 #else
 #define RTC_OFFSET			0x1000
 #endif

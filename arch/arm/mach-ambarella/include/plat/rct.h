@@ -322,10 +322,17 @@
 #define CLK_REF_VIDEO2_EXTERNAL_REG	RCT_REG(CLK_REF_VIDEO2_EXTERNAL_OFFSET)
 
 /* ==========================================================================*/
+#if (CHIP_REV == CV2FS)
+#define PLL_CORTEX_CTRL_OFFSET		0x278
+#define PLL_CORTEX_FRAC_OFFSET		0x27C
+#define PLL_CORTEX_CTRL2_OFFSET		0x280
+#define PLL_CORTEX_CTRL3_OFFSET		0x284
+#else
 #define PLL_CORTEX_CTRL_OFFSET		0x264
 #define PLL_CORTEX_FRAC_OFFSET		0x268
 #define PLL_CORTEX_CTRL2_OFFSET		0x26C
 #define PLL_CORTEX_CTRL3_OFFSET		0x270
+#endif
 #define PLL_CORTEX_CTRL_REG		RCT_REG(PLL_CORTEX_CTRL_OFFSET)
 #define PLL_CORTEX_FRAC_REG		RCT_REG(PLL_CORTEX_FRAC_OFFSET)
 #define PLL_CORTEX_CTRL2_REG		RCT_REG(PLL_CORTEX_CTRL2_OFFSET)
@@ -343,7 +350,17 @@
 #define PLL_VISION_CTRL3_REG		RCT_REG(PLL_VISION_CTRL3_OFFSET)
 
 /* ==========================================================================*/
-
+#if (CHIP_REV == CV2)
+#define PLL_FEX_CTRL_OFFSET		0x6D0
+#define PLL_FEX_FRAC_OFFSET		0x6D4
+#define PLL_FEX_CTRL2_OFFSET		0x6D8
+#define PLL_FEX_CTRL3_OFFSET		0x6DC
+#define PLL_FEX_CTRL_REG		RCT_REG(PLL_FEX_CTRL_OFFSET)
+#define PLL_FEX_FRAC_REG		RCT_REG(PLL_FEX_FRAC_OFFSET)
+#define PLL_FEX_CTRL2_REG		RCT_REG(PLL_FEX_CTRL2_OFFSET)
+#define PLL_FEX_CTRL3_REG		RCT_REG(PLL_FEX_CTRL3_OFFSET)
+#endif
+/* ==========================================================================*/
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == CV2FS)
 #define ENET_CLK_SRC_SEL_OFFSET		RCT_INVALID_OFFSET
 #elif (CHIP_REV == S3L) || (CHIP_REV == S5L)
@@ -357,7 +374,7 @@
 #define ENET_PHY_INTF_SEL_RMII		(1 << 1)
 #define ENET_CLK_SRC_SEL		(1 << 2)
 
-#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS)
+#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS) || (CHIP_REV == CV28)
 #define RCT_ENET_CTRL_OFFSET		0x79C
 #else /* non-exist on chips before CV25 */
 #define RCT_ENET_CTRL_OFFSET		RCT_INVALID_OFFSET
@@ -392,8 +409,8 @@
 
 /* ==========================================================================*/
 #define SCALER_SD0_OFFSET		0x00C
-#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || \
-	(CHIP_REV == S6LM) || (CHIP_REV == CV25) || (CHIP_REV == CV2FS)
+#if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || (CHIP_REV == S6LM) || \
+	(CHIP_REV == CV25) || (CHIP_REV == CV2FS) || (CHIP_REV == CV28)
 #define SCALER_SD1_OFFSET		0x430
 #else
 #define SCALER_SD1_OFFSET		0x434
@@ -427,6 +444,7 @@
 
 #define SD0_PHY_CTRL_0_OFFSET		0x4C0
 #define SD0_PHY_CTRL_1_OFFSET		0x4C4
+#define SD_PHY_OBSV_OFFSET		0x4f0
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L)
 #define SD0_PHY_CTRL_2_OFFSET		SD0_PHY_CTRL_0_OFFSET
 #elif (CHIP_REV == S5L)
@@ -437,6 +455,7 @@
 #define SD0_PHY_CTRL_0_REG		RCT_REG(SD0_PHY_CTRL_0_OFFSET)
 #define SD0_PHY_CTRL_1_REG		RCT_REG(SD0_PHY_CTRL_1_OFFSET)
 #define SD0_PHY_CTRL_2_REG		RCT_REG(SD0_PHY_CTRL_2_OFFSET)
+#define SD_PHY_OBSV_REG			RCT_REG(SD_PHY_OBSV_OFFSET)
 
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5)
 #define SD1_PHY_CTRL_0_OFFSET		RCT_INVALID_OFFSET
@@ -495,7 +514,7 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S6LM)
+#if (CHIP_REV == S6LM) || (CHIP_REV == CV28)
 #define PLL_NAND_CTRL_OFFSET		RCT_INVALID_OFFSET
 #define PLL_NAND_FRAC_OFFSET		RCT_INVALID_OFFSET
 #define PLL_NAND_CTRL2_OFFSET		RCT_INVALID_OFFSET
@@ -539,6 +558,10 @@
 /* ==========================================================================*/
 #define VOUT_CLK_SEL_OFFSET		0x744
 #define VOUT_CLK_SEL_REG		RCT_REG(VOUT_CLK_SEL_OFFSET)
+
+/* ==========================================================================*/
+#define VIN_CLK_SEL_OFFSET		0x748
+#define VIN_CLK_SEL_REG			RCT_REG(VIN_CLK_SEL_OFFSET)
 
 /* ==========================================================================*/
 #define IOCTRL_GPIO_OFFSET		0x1F8
@@ -636,7 +659,7 @@
 
 /* ==========================================================================*/
 
-#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS)
+#if (CHIP_REV == S6LM) || (CHIP_REV == CV2FS) || (CHIP_REV == CV28)
 #define SCALER_SYS_CNT_POST_OFFSET	0x794
 #else
 #define SCALER_SYS_CNT_POST_OFFSET	RCT_INVALID_OFFSET
@@ -743,6 +766,7 @@
 #define SYS_CONFIG_NAND_SPINAND		0x00000000 /* not used */
 #define SYS_CONFIG_NAND_SCKMODE		0x00000000 /* not used */
 #define SYS_CONFIG_NAND_4K_FIFO		0x00080000
+#define SYS_CONFIG_NAND_8K_FIFO		0x00000000 /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0x00020000
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
@@ -751,14 +775,16 @@
 #define SYS_CONFIG_NAND_SPINAND		0xffffffff /* not used, spinand only */
 #define SYS_CONFIG_NAND_SCKMODE		0x00080000
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
+#define SYS_CONFIG_NAND_8K_FIFO		0x00000000 /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0xffffffff /* not used */
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
 #define SYS_CONFIG_NAND_ECC_SPARE_2X	0x00008000
-#elif (CHIP_REV == CV2FS)
+#elif (CHIP_REV == CV2FS) || (CHIP_REV == CV28)
 #define SYS_CONFIG_NAND_SPINAND		0xffffffff /* not used, spinand only */
 #define SYS_CONFIG_NAND_SCKMODE		0x00040000
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
+#define SYS_CONFIG_NAND_8K_FIFO		0x00100000
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00020000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0xffffffff /* not used */
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00008000
@@ -767,6 +793,7 @@
 #define SYS_CONFIG_NAND_SPINAND		0x00400000
 #define SYS_CONFIG_NAND_SCKMODE		0x00080000
 #define SYS_CONFIG_NAND_4K_FIFO		0xffffffff /* not used */
+#define SYS_CONFIG_NAND_8K_FIFO		0x00000000 /* not used */
 #define SYS_CONFIG_NAND_PAGE_SIZE	0x00040000
 #define SYS_CONFIG_NAND_READ_CONFIRM	0xffffffff /* not used */
 #define SYS_CONFIG_NAND_ECC_BCH_EN	0x00010000
@@ -780,8 +807,9 @@
 #define RCT_BOOT_NAND_ECC_BCH_EN	0x00000004
 #define RCT_BOOT_NAND_ECC_SPARE_2X	0x00000008
 #define RCT_BOOT_NAND_4K_BOOT		0x00000010
-#define RCT_BOOT_NAND_SPINAND		0x00000020
-#define RCT_BOOT_NAND_SCKMODE		0x00000040
+#define RCT_BOOT_NAND_8K_BOOT		0x00000020
+#define RCT_BOOT_NAND_SPINAND		0x00000040
+#define RCT_BOOT_NAND_SCKMODE		0x00000080
 
 /* ==========================================================================*/
 #if (CHIP_REV == S2L) || (CHIP_REV == S3)
@@ -802,7 +830,7 @@
 #define SYS_CONFIG_MMC_SDXC		0x00020000
 #define SYS_CONFIG_MMC_4BIT		0x00010000
 #define SYS_CONFIG_MMC_8BIT		0x00008000
-#elif (CHIP_REV == CV2FS)
+#elif (CHIP_REV == CV2FS) || (CHIP_REV == CV28)
 #define SYS_CONFIG_MMC_HS		0x00002000
 #define SYS_CONFIG_MMC_DDR		0x00000000 /* not supported */
 #define SYS_CONFIG_MMC_SDXC		0x00000000 /* not supported */

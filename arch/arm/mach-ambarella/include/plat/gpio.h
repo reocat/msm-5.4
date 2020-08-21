@@ -60,6 +60,9 @@
 #elif (CHIP_REV == CV2FS)
 #define GPIO_INSTANCES			4
 #define GPIO_MAX_LINES			103
+#elif (CHIP_REV == CV28)
+#define GPIO_INSTANCES			3
+#define GPIO_MAX_LINES			93
 #else
 #error "Not supported!"
 #endif

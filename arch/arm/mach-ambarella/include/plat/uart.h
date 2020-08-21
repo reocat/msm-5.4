@@ -94,7 +94,7 @@
 #define UART6_REG(x)			(UART6_BASE + (x))
 #define UART_REG(n, x)			((n) == 0 ? UART0_REG(x) : \
 					 (n) == 1 ? UART1_REG(x) : \
-					 (n) == 2 ?  UART2_REG(x) : \
+					 (n) == 2 ? UART2_REG(x) : \
 					 (n) == 3 ? UART3_REG(x) : \
 					 (n) == 4 ? UART4_REG(x) : \
 					 (n) == 5 ? UART5_REG(x) : \
