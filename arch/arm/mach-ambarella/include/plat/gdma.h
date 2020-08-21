@@ -33,8 +33,11 @@
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S3L) || \
 	(CHIP_REV == S5) || (CHIP_REV == S5L)
 #define GDMA_OFFSET			0x15000
-#else
+#elif (CHIP_REV == CV1) || (CHIP_REV == CV2) || (CHIP_REV == CV22) || \
+	(CHIP_REV == CV25) || (CHIP_REV == S6LM) || (CHIP_REV == CV2FS)
 #define GDMA_OFFSET			0xC000
+#else
+#define GDMA_OFFSET			0xB000
 #endif
 #define GDMA_BASE			(AHB_BASE + GDMA_OFFSET)
 #define GDMA_REG(x)			(GDMA_BASE + (x))

@@ -28,7 +28,7 @@
 
 /* ==========================================================================*/
 #if (CHIP_REV == S2L) || (CHIP_REV == S3) || (CHIP_REV == S5) || \
-	(CHIP_REV == S6LM) || (CHIP_REV == CV25)
+	(CHIP_REV == S6LM) || (CHIP_REV == CV25) || (CHIP_REV == CV28)
 #define SD_INSTANCES			3
 #else
 #define SD_INSTANCES			2
@@ -222,6 +222,7 @@
 #define SD_EIS_CMD_TMOUT_ERR		0x0001
 
 /* SD_NISEN_REG */
+#define SD_NISEN_ERR			0x8000
 #define SD_NISEN_CARD			0x0100
 #define SD_NISEN_REMOVAL		0x0080
 #define SD_NISEN_INSERT			0x0040

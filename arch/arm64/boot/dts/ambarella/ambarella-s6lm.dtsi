@@ -417,19 +417,19 @@
 				amb,pinmux-ids = <0x203f>;
 			};
 
-			sdmmc0_pins_1bit: sdmmc0@0 {
+			sdmmc0_pins_1bit: sdmmc0_1bit@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2026 0x2027 0x202e>;
 			};
 
-			sdmmc0_pins_4bit: sdmmc0@1 {
-				reg = <1>;
+			sdmmc0_pins_4bit: sdmmc0_4bit@0 {
+				reg = <0>;
 				amb,pinmux-ids = <0x2026 0x2027 0x202e 0x202f
 						  0x2030 0x2031>;
 			};
 
-			sdmmc0_pins_8bit: sdmmc0@2 {
-				reg = <2>;
+			sdmmc0_pins_8bit: sdmmc0_8bit@0 {
+				reg = <0>;
 				amb,pinmux-ids = <0x2026 0x2027 0x202e 0x202f
 						  0x2030 0x2031 0x2032 0x2033
 						  0x2034 0x2035>;
@@ -450,13 +450,13 @@
 				amb,pinmux-ids = <0x203e>;
 			};
 
-			sdmmc1_pins_1bit: sdmmc1@0 {
+			sdmmc1_pins_1bit: sdmmc1_1bit@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x2036 0x2037 0x2038>;
 			};
 
-			sdmmc1_pins_4bit: sdmmc1@1 {
-				reg = <1>;
+			sdmmc1_pins_4bit: sdmmc1_4bit@0 {
+				reg = <0>;
 				amb,pinmux-ids = <0x2036 0x2037 0x2038 0x2039
 						  0x203a 0x203b>;
 			};
@@ -471,13 +471,13 @@
 				amb,pinmux-ids = <0x1052>;
 			};
 
-			sdmmc2_pins_1bit: sdmmc2@0 {
+			sdmmc2_pins_1bit: sdmmc2_1bit@0 {
 				reg = <0>;
 				amb,pinmux-ids = <0x104f 0x1050 0x104b>;
 			};
 
-			sdmmc2_pins_4bit: sdmmc2@1 {
-				reg = <1>;
+			sdmmc2_pins_4bit: sdmmc2_4bit@0 {
+				reg = <0>;
 				amb,pinmux-ids = <0x104f 0x1050 0x104b 0x104c
 						  0x104d 0x104e>;
 			};
@@ -510,6 +510,11 @@
 			enet_2nd_ref_clk_pins_c: enet_2nd_ref_clk@2 {
 				reg = <2>;
 				amb,pinmux-ids = <0x501f>;
+			};
+
+			enet_2nd_ref_clk_pins_d: enet_2nd_ref_clk@3 {
+				reg = <3>;
+				amb,pinmux-ids = <0x4023>;
 			};
 
 			i2c0_pins_a: i2c0@0 {
