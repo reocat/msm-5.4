@@ -42,6 +42,7 @@ Table of Contents
     30) - IAV node
     31) - SOUND node
     32) - HW RANDOM node
+    33) - DMIC node
 
   III - Misc Node definition
     1)  - BOGUS BUS node
@@ -441,6 +442,7 @@ Required properties:
 - dma-names: please see Documentation/devicetree/bindings/dma/dma.txt.
 - amb,i2s-channels: should be one of these values: 2, 4, 6.
 - amb,default-mclk: specifies the initial mclk frequency in HZ.
+- amb,ws-set: must be specified if the I2S controller has I2S_ws register
 
 ii) Example
 -----------
@@ -1328,6 +1330,16 @@ Required properties:
 Optional properties:
 - amb,sample-rate: random sample rate, just can be 32000, 64000, 128000
   and 256000, if not set, the default is 32000.
+
+33) - DMIC node
+================
+Required properties:
+- compatible: should be "ambarella,dmic".
+
+Optional properties:
+- amb,custom-iir: should be specified if hardware has custom-iir registers and
+  user want to use it for DC blocking.
+
 
 III - Misc Node definition
 ++++++++++++++++++++++++++
