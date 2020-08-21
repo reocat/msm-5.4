@@ -37,17 +37,8 @@
 /* ==========================================================================*/
 
 #define FIO_OFFSET			0x2000
-#if (CHIP_REV == CV2FS)
-#define FIO_FIFO_OFFSET			0x23000
-#else
-#define FIO_FIFO_OFFSET			0x3000
-#endif
-
 #define FIO_BASE			(AHB_BASE + FIO_OFFSET)
-#define FIO_FIFO_BASE			(AHB_BASE + FIO_FIFO_OFFSET)
-
 #define FIO_REG(x)			(FIO_BASE + (x))
-#define FIO_FIFO_REG(x)			(FIO_FIFO_BASE + (x))
 
 /* Flash I/O Subsystem */
 #define FIO_CTRL_OFFSET			0x00
