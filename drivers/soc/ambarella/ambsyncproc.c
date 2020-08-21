@@ -29,6 +29,7 @@
 #include <linux/export.h>
 #include <linux/io.h>
 #include <linux/uaccess.h>
+#include <linux/poll.h>
 #include <asm/page.h>
 #include <asm/atomic.h>
 #include <plat/ambsyncproc.h>
@@ -141,6 +142,35 @@ ambsync_proc_release_exit:
 	return retval;
 }
 EXPORT_SYMBOL(ambsync_proc_release);
+
+unsigned int ambsync_proc_poll(struct file *file, poll_table *wait)
+{
+	struct ambsync_proc_pinfo       *pinfo = file->private_data;
+	struct ambsync_proc_hinfo       *hinfo;
+	struct inode                    *inode = file->f_path.dentry->d_inode;
+
+	hinfo = (struct ambsync_proc_hinfo *)PDE_DATA(inode);
+	if (!hinfo) {
+		goto ambsync_proc_poll_exit;
+	}
+	if (!hinfo->sync_read_proc) {
+		goto ambsync_proc_poll_exit;
+	}
+
+	if (!pinfo) {
+		goto ambsync_proc_poll_exit;
+	}
+
+	poll_wait(file, &hinfo->sync_proc_head, wait);
+
+	if (atomic_read(&hinfo->sync_proc_flag) & pinfo->mask) {
+		return (POLLIN | POLLRDNORM);
+	}
+
+ambsync_proc_poll_exit:
+	return 0;
+}
+EXPORT_SYMBOL(ambsync_proc_poll);
 
 /* Note: ignore ppos*/
 ssize_t ambsync_proc_read(struct file *file, char __user *buf,

@@ -25,6 +25,7 @@
 #define __PLAT_AMBARELLA_SYNC_PROC_H
 
 #include <linux/fs.h>
+#include <linux/poll.h>
 
 /* ==========================================================================*/
 #define AMBA_SYNC_PROC_MAX_ID			(31)
@@ -60,6 +61,7 @@ extern int ambsync_proc_open(struct inode *inode, struct file *file);
 extern int ambsync_proc_release(struct inode *inode, struct file *file);
 extern ssize_t ambsync_proc_read(struct file *file, char __user *buf, size_t size, loff_t *ppos);
 extern ssize_t ambsync_proc_write(struct file *file, const char __user *buf, size_t size, loff_t *ppos);
+extern unsigned int ambsync_proc_poll(struct file *file, poll_table *wait);
 
 #endif /* __ASSEMBLER__ */
 /* ==========================================================================*/
