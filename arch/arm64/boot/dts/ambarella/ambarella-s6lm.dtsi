@@ -1244,6 +1244,7 @@
 		/* node for vout0(lcd) controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
+			output-type = "digital";
 			interrupts = <0 89 0x1>;
 			interrupt-names = "vout0";
 			rct-regmap = <&rct_syscon>;
@@ -1254,6 +1255,7 @@
 		/* node for vout1(tv) controller */
 		voutc1 {
 			compatible = "ambarella,voutc";
+			output-type = "hdmi", "cvbs";
 			interrupts = <0 88 0x1>;
 			interrupt-names = "vout1";
 			rct-regmap = <&rct_syscon>;

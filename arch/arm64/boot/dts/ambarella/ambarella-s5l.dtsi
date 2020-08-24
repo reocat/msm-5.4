@@ -946,6 +946,7 @@
 		/* node for vout0 controller */
 		voutc0 {
 			compatible = "ambarella,voutc";
+			output-type = "digital";
 			interrupts = <0 54 0x1>;
 			interrupt-names = "vout0";
 			pinctrl-names = "default";
@@ -955,6 +956,7 @@
 		/* node for vout1 controller */
 		voutc1 {
 			compatible = "ambarella,voutc";
+			output-type = "hdmi", "cvbs";
 			interrupts = <0 55 0x1>;
 			interrupt-names = "vout1";
 		};
