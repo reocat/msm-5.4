@@ -148,14 +148,11 @@
 			     <1 10 0xf08>;	/* Hyp IRQ */
 	};
 
-	s_axi@f2000000 {
-		compatible = "ambarella,axi";
-		reg = <0xf2000000 0x1000>;
-	};
-
-	ddrc@dffe0000 {
-		compatible = "ambarella,ddrc";
-		reg = <0xdffe0000 0x10000>;
+	secure-monitor {
+		compatible = "ambarella,secure-monitor";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		device = <>;
 	};
 
 	n_apb@e4000000 { /* Non-Secure APB, but configurable */
@@ -286,7 +283,7 @@
 		reg = <0xec000000 0x01000000>;
 		ranges;
 
-		watchdog: wdt@ec002000 {
+		watchdog0: wdt@ec002000 {
 			compatible = "ambarella,wdt";
 			reg = <0xec002000 0x1000>;
 			amb,rct-regmap = <&rct_syscon>;
@@ -1036,7 +1033,7 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		rtc@e8001000 {
+		rtc0:rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 			interrupts = <0 160 0x1>;
@@ -1050,7 +1047,7 @@
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		s_scratchpad@e8001000 {
+		s_scratchpad:s_scratchpad@e8001000 {
 			compatible = "ambarella,sec-scratchpad";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;
@@ -1067,6 +1064,7 @@
 		rct_syscon: rct_syscon@ed080000 {
 			compatible = "ambarella,rct", "syscon";
 			reg = <0xed080000 0x1000>;
+			amb,secure-ctrl-bit = <68>;
 		};
 
 		usbphy: usbphy@ed080050 {
