@@ -1073,6 +1073,7 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xed080050 0x4 0xe0022060 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
+			amb,ocp-polarity = <0>;
 		};
 
 		reboot {
@@ -1486,6 +1487,7 @@
 			clock-output-names = "gclk_uart1";
 			assigned-clocks = <&gclk_uart1>;
 			assigned-clock-parents = <&osc>;
+			assigned-clock-rates = <24000000>;
 			amb,div-width = <24>;
 			amb,div-shift = <0>;
 		};
