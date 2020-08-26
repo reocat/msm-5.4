@@ -95,8 +95,9 @@ which will include the DTS for specific ambarella SoC chip:
 Normally, it's NOT recommended to modify the DTS for ambarella SoC chip.
 
 
-II - Node definiton
-+++++++++++++++++++
+
+II - Ambarella Node definiton
++++++++++++++++++++++++++++++
 
 
 1) - Root node
@@ -1318,12 +1319,16 @@ iii) Example
 31) - SOUND node
 ================
 
+
 i) Reference
 ------------
 Please see Documentation/devicetree/bindings/sound/simple-card.txt
 
+
 32) - HW RANDOM node
-================
+====================
+
+
 Required properties:
 - compatible: should be "ambarella,hw-rng".
 
@@ -1331,14 +1336,18 @@ Optional properties:
 - amb,sample-rate: random sample rate, just can be 32000, 64000, 128000
   and 256000, if not set, the default is 32000.
 
+
 33) - DMIC node
-================
+===============
+
+
 Required properties:
 - compatible: should be "ambarella,dmic".
 
 Optional properties:
 - amb,custom-iir: should be specified if hardware has custom-iir registers and
   user want to use it for DC blocking.
+
 
 
 III - Misc Node definition
