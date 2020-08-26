@@ -77,11 +77,6 @@
 			     <0 7 0x4>;
 	};
 
-	dram@0xdffe0000 {
-		compatible = "ambarella,dram";
-		reg = <0xdffe0000 0x00008000>;
-	};
-
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -728,9 +723,17 @@
 		reg = <0xe0000000 0x01000000>;
 		ranges;
 
-		scratchpad_syscon: scratchpad_syscon@e0022000 {
-			compatible = "ambarella,scratchpad", "syscon";
-			reg = <0xe0022000 0x100>;
+		spinor0: spinor@e0001000 {
+			compatible = "ambarella,spinor";
+			reg = <0xe0001000 0x1000>; /* spi nor controller */
+			interrupts = <0 73 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins>;
+			clocks = <&gclk_ssi3>;
+			dmas = <&dma0 5>, <&dma0 6>;
+			dma-names = "tx", "rx";
+			max-frequency = <50000000>;
+			status = "disabled";
 		};
 
 		nand0: nand@e0002000 {
@@ -746,19 +749,6 @@
 			clocks = <&gclk_nand>;
 			nand-on-flash-bbt;
 			/* amb,soft-ecc = <1>; */
-		};
-
-		spinor0: spinor@e0001000 {
-			compatible = "ambarella,spinor";
-			reg = <0xe0001000 0x2ff>; /* spi nor controller */
-			interrupts = <0 73 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spinor0_pins>;
-			clocks = <&gclk_ssi3>;
-			dmas = <&dma0 5>, <&dma0 6>;
-			dma-names = "tx", "rx";
-			max-frequency = <50000000>;
-			status = "disabled";
 		};
 
 		sdmmc0: sdmmc0@e0004000 {
@@ -969,12 +959,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
 			clocks = <&gclk_uart1>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
 			dmas = <&dma0 9>, <&dma0 10>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart2: uart@e0018000 {
@@ -1030,6 +1020,11 @@
 			amb,hdmiphy = <0xed080010>;
 			amb,hdmi-version = <20>;
 		};
+
+		scratchpad_syscon: scratchpad_syscon@e0022000 {
+			compatible = "ambarella,scratchpad", "syscon";
+			reg = <0xe0022000 0x100>;
+		};
 	};
 
 	s_ahb@e8000000 { /* Secure AHB, but configurable */
@@ -1039,14 +1034,14 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		rtc0:rtc@e8001000 {
+		rtc0: rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 			interrupts = <0 160 0x1>;
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		rng@e8001000 {
+		rng0: rng@e8001000 {
 			compatible = "ambarella,hw-rng";
 			reg = <0xe8001000 0x14>;
 			amb,rct-regmap = <&rct_syscon>;

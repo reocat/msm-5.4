@@ -81,11 +81,6 @@
 			     <0 7 0x4>;
 	};
 
-	dram@0xdffe0000 {
-		compatible = "ambarella,dram";
-		reg = <0xdffe0000 0x00008000>;
-	};
-
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -995,12 +990,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
 			clocks = <&gclk_uart1>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
 			dmas = <&dma0 9>, <&dma0 10>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart2: uart@e0017000 {
