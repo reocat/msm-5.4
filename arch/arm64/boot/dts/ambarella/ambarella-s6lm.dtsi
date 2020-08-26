@@ -72,11 +72,6 @@
 			     <0 7 0x4>;
 	};
 
-	dram@0xdffe0000 {
-		compatible = "ambarella,dram";
-		reg = <0xdffe0000 0x00008000>;
-	};
-
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -1161,20 +1156,20 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		rtc0:rtc@e8001000 {
+		rtc0: rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		rng@e8001000 {
+		rng0: rng@e8001000 {
 			compatible = "ambarella,hw-rng";
 			reg = <0xe8001000 0x14>;
 			amb,rct-regmap = <&rct_syscon>;
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		s_scratchpad:s_scratchpad@e8001000 {
+		s_scratchpad: s_scratchpad@e8001000 {
 			compatible = "ambarella,sec-scratchpad";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;

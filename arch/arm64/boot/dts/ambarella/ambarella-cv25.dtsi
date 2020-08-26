@@ -79,11 +79,6 @@
 			     <0 7 0x4>;
 	};
 
-	dram@0xdffe0000 {
-		compatible = "ambarella,dram";
-		reg = <0xdffe0000 0x00008000>;
-	};
-
 	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -161,7 +156,6 @@
 		#size-cells = <0>;
 		device = <>;
 	};
-
 
 	n_apb@e4000000 { /* Non-Secure APB, but configurable */
 		compatible = "simple-bus";
@@ -1098,12 +1092,12 @@
 			pinctrl-names = "default";
 			pinctrl-0 = <&uart1_pins &uart1_flow_pins>;
 			clocks = <&gclk_uart1>;
-			status = "disabled";
 			amb,msr-used;	/* use Modem Status Register */
 			amb,txdma-used;
 			amb,rxdma-used;
 			dmas = <&dma0 9>, <&dma0 10>;
 			dma-names = "tx", "rx";
+			status = "disabled";
 		};
 
 		uart2: uart@e0018000 {
@@ -1173,20 +1167,20 @@
 		reg = <0xe8000000 0x01000000>;
 		ranges;
 
-		rtc0:rtc@e8001000 {
+		rtc0: rtc@e8001000 {
 			compatible = "ambarella,rtc";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		rng:rng@e8001000 {
+		rng0: rng@e8001000 {
 			compatible = "ambarella,hw-rng";
 			reg = <0xe8001000 0x14>;
 			amb,rct-regmap = <&rct_syscon>;
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		s_scratchpad:s_scratchpad@e8001000 {
+		s_scratchpad: s_scratchpad@e8001000 {
 			compatible = "ambarella,sec-scratchpad";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;
