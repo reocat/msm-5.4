@@ -79,7 +79,7 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct ambarella_rng_private *priv;
 	struct resource *res;
-	u32 val, rate;
+	u32 val, rate = 32000;
 
 	dev_info(&pdev->dev, "rng probed\r\n");
 
@@ -112,27 +112,31 @@ static int ambarella_rng_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, priv);
 
 	/* set sample rate, if not set in dts, use 32K as default */
+	if (of_property_read_u32(np, "amb,sample-rate", &rate) < 0)
+		rate = 32000;
+
 	val = readl(priv->base + AMBA_RNG_CONTROL);
 	val &= ~(0x3 << 4);
-	if (of_property_read_u32(np, "amb,sample-rate", &rate) < 0) {
-		writel(val, priv->base + AMBA_RNG_CONTROL);
-	} else {
-		if (rate == 32000) {
-			writel(val, priv->base + AMBA_RNG_CONTROL);
-		} else if (rate == 64000) {
-			val |= (0x1 << 4);
-			writel(val, priv->base + AMBA_RNG_CONTROL);
-		} else if (rate == 128000) {
-			val |= (0x2 << 4);
-			writel(val, priv->base + AMBA_RNG_CONTROL);
-		} else if (rate == 256000) {
-			val |= (0x3 << 4);
-			writel(val, priv->base + AMBA_RNG_CONTROL);
-		} else {
-			writel(val, priv->base + AMBA_RNG_CONTROL);
-			pr_info("set wrong sample rate, use default 32K.\n");
-		}
+
+	switch (rate) {
+	case 256000:
+		val |= (0x3 << 4);
+		break;
+	case 128000:
+		val |= (0x2 << 4);
+		break;
+	case 64000:
+		val |= (0x1 << 4);
+		break;
+	case 32000:
+		val |= (0x0 << 4);
+		break;
+	default:
+		pr_info("set wrong sample rate, use default 32K.\n");
+		break;
 	}
+
+	writel(val, priv->base + AMBA_RNG_CONTROL);
 
 	/* power up rng */
 	regmap_update_bits(priv->rct_reg, RNG_CTRL_OFFSET, RNG_CTRL_PD, 0x0);
