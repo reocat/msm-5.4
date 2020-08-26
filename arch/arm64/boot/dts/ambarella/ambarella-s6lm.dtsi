@@ -831,9 +831,17 @@
 		reg = <0xe0000000 0x01000000>;
 		ranges;
 
-		scratchpad_syscon: scratchpad_syscon@e0022000 {
-			compatible = "ambarella,scratchpad", "syscon";
-			reg = <0xe0022000 0x100>;
+		spinor0: spinor@e0001000 {
+			compatible = "ambarella,spinor";
+			reg = <0xe0001000 0x1000>; /* spi nor controller */
+			interrupts = <0 73 0x4>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&spinor0_pins_a>;
+			clocks = <&gclk_ssi3>;
+			dmas = <&dma0 5>, <&dma0 6>;
+			dma-names = "tx", "rx";
+			max-frequency = <50000000>;
+			status = "disabled";
 		};
 
 		nand0: nand@e0002000 {
@@ -849,19 +857,6 @@
 			nand-on-flash-bbt;
 			amb,spinand-only;
 			/* amb,soft-ecc = <6>; */
-		};
-
-		spinor0: spinor@e0001000 {
-			compatible = "ambarella,spinor";
-			reg = <0xe0001000 0x2ff>; /* spi nor controller */
-			interrupts = <0 73 0x4>;
-			pinctrl-names = "default";
-			pinctrl-0 = <&spinor0_pins_a>;
-			clocks = <&gclk_ssi3>;
-			dmas = <&dma0 5>, <&dma0 6>;
-			dma-names = "tx", "rx";
-			max-frequency = <50000000>;
-			status = "disabled";
 		};
 
 		sdmmc0: sdmmc0@e0004000 {
@@ -1150,6 +1145,11 @@
 			amb,hdmiphy = <0xed080010>;
 			amb,hdmi-version = <20>;
 		};
+
+		scratchpad_syscon: scratchpad_syscon@e0022000 {
+			compatible = "ambarella,scratchpad", "syscon";
+			reg = <0xe0022000 0x100>;
+		};
 	};
 
 	s_ahb@e8000000 { /* Secure AHB, but configurable */
@@ -1195,6 +1195,7 @@
 			compatible = "ambarella,usbphy";
 			reg = <0xed080050 0x4 0xe0022060 0x4 0xed0802c0 0x4>;
 			amb,host-phy-num = <1>;
+			amb,ocp-polarity = <0>;
 		};
 
 		reboot {
