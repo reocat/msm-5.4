@@ -221,13 +221,15 @@ static struct of_device_id ambarella_ehci_dt_ids[] = {
 	{ },
 };
 
+MODULE_DEVICE_TABLE(of, ambarella_ehci_dt_ids);
+
 static struct platform_driver ehci_hcd_ambarella_driver = {
 	.probe		= ehci_ambarella_drv_probe,
 	.remove		= ehci_ambarella_drv_remove,
 	.shutdown	= usb_hcd_platform_shutdown,
 	.driver = {
 		.name	= "ambarella-ehci",
-		.of_match_table = of_match_ptr(ambarella_ehci_dt_ids),
+		.of_match_table = ambarella_ehci_dt_ids,
 		.pm	= AMBARELLA_EHCI_PMOPS,
 	}
 };
