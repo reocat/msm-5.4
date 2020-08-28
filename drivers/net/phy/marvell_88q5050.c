@@ -217,7 +217,6 @@ static struct phy_driver marvell_88q5050_drivers[] = {
 		.phy_id_mask = MARVELL_PHY_ID_MASK,
 		.name = "Marvell 88Q5050",
 		.features = PHY_GBIT_FEATURES,
-		.flags = PHY_HAS_INTERRUPT,
 		.probe = m88q5050_probe,
 		.config_init = &m88q5050_config_init,
 		.config_aneg = &m88q5050_config_aneg,
