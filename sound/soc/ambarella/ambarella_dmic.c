@@ -149,7 +149,6 @@ static int ambarella_dmic_hw_params(struct snd_pcm_substream *substream,
 	writel_relaxed(1, priv_data->regbase + AUDIO_CODEC_DP_RESET_OFFSET);
 	writel_relaxed(0, priv_data->regbase + AUDIO_CODEC_DP_RESET_OFFSET);
 
-
 	rate = params_rate(params);
 	ambarella_dmic_clock(priv_data, priv_data->mclk, rate);
 	ambarella_dmic_init(priv_data);
@@ -212,19 +211,19 @@ static struct snd_soc_dai_driver ambarella_dmic_dai = {
 		.channels_min = 2,
 		.channels_max = 2,
 		.rates = SNDRV_PCM_RATE_8000_48000,
-		.formats = (SNDRV_PCM_FMTBIT_S16_LE | SNDRV_PCM_FMTBIT_S24_LE),
+		.formats = (SNDRV_PCM_FMTBIT_S16_LE
+			| SNDRV_PCM_FMTBIT_S24_LE
+			| SNDRV_PCM_FMTBIT_S32_LE),
 	},
 	.ops = &ambarella_dmic_dai_ops,
 	.symmetric_rates = 1,
 };
 
-static struct snd_soc_codec_driver ambarella_dmic = {
-	.component_driver = {
+static const struct snd_soc_component_driver ambarella_dmic_component = {
 		.dapm_widgets = dmic_dapm_widgets,
 		.num_dapm_widgets = ARRAY_SIZE(dmic_dapm_widgets),
 		.dapm_routes = intercon,
 		.num_dapm_routes = ARRAY_SIZE(intercon),
-	},
 };
 
 static int ambarella_dmic_probe(struct platform_device *pdev)
@@ -259,17 +258,8 @@ static int ambarella_dmic_probe(struct platform_device *pdev)
 
 	dev_set_drvdata(&pdev->dev, priv_data);
 
-	snd_soc_register_codec(&pdev->dev,
-			&ambarella_dmic, &ambarella_dmic_dai, 1);
-
-	return 0;
-}
-
-static int ambarella_dmic_remove(struct platform_device *pdev)
-{
-	snd_soc_unregister_codec(&pdev->dev);
-
-	return 0;
+	return devm_snd_soc_register_component(&pdev->dev,
+			&ambarella_dmic_component, &ambarella_dmic_dai, 1);
 }
 
 static const struct of_device_id ambarella_dmic_dt_ids[] = {
@@ -280,7 +270,6 @@ MODULE_DEVICE_TABLE(of, ambarella_dmic_dt_ids);
 
 static struct platform_driver ambarella_dmic_driver = {
 	.probe = ambarella_dmic_probe,
-	.remove = ambarella_dmic_remove,
 
 	.driver = {
 		.name = "ambarella-dmic",
