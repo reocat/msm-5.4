@@ -228,6 +228,7 @@ struct imx_port {
 	unsigned int		have_rtscts:1;
 	unsigned int		have_rtsgpio:1;
 	unsigned int		dte_mode:1;
+	unsigned int            revpol:1;
 	struct clk		*clk_ipg;
 	struct clk		*clk_per;
 	const struct imx_uart_data *devdata;
@@ -1358,6 +1359,11 @@ static int imx_startup(struct uart_port *port)
 			/* disable broken interrupts */
 			temp &= ~(UCR3_RI | UCR3_DCD);
 
+		if (sport->revpol)
+		  temp |= UCR3_INVT;
+		else
+		  temp &= ~UCR3_INVT;
+
 		writel(temp, sport->port.membase + UCR3);
 	}
 
@@ -2092,6 +2098,9 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 
 	if (of_get_property(np, "rts-gpios", NULL))
 		sport->have_rtsgpio = 1;
+
+	if (of_get_property(np, "reverse-polarity", NULL))
+		sport->revpol = 1;
 
 	return 0;
 }
