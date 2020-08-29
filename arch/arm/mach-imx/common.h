@@ -251,6 +251,10 @@ void imx_init_l2cache(void);
 static inline void imx_init_l2cache(void) {}
 #endif
 
+#ifdef CONFIG_SOC_IMX6SX
+void __init imx6sx_opp_init(void);
+#endif
+
 extern const struct smp_operations imx_smp_ops;
 extern const struct smp_operations ls1021a_smp_ops;
 
