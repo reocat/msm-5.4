@@ -1445,11 +1445,6 @@ static int sdhci_esdhc_imx_probe(struct platform_device *pdev)
 	struct pltfm_imx_data *imx_data;
 	u32 status;
 
-#define ENABLE_EXT_PORT4_SD_POWER 469
-#ifdef ENABLE_EXT_PORT4_SD_POWER
-		gpio_direction_output(ENABLE_EXT_PORT4_SD_POWER,1);
-#endif
-
 	host = sdhci_pltfm_init(pdev, &sdhci_esdhc_imx_pdata,
 				sizeof(*imx_data));
 	if (IS_ERR(host))
