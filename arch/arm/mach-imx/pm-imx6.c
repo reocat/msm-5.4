@@ -1311,8 +1311,10 @@ void __init imx6_pm_ccm_init(const char *ccm_compat)
 	val &= ~BM_CLPCR_LPM;
 	writel_relaxed(val, ccm_base + CLPCR);
 
+#ifdef CONFIG_SUSPEND /* Need this to avoid link error */
 	if (of_property_read_bool(np, "fsl,pmic-stby-poweroff"))
 		imx6_pm_stby_poweroff_probe();
+#endif
 }
 
 void __init imx6q_pm_init(void)
