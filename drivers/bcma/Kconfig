@@ -2,7 +2,7 @@
 config BCMA_POSSIBLE
 	bool
 	depends on HAS_IOMEM && HAS_DMA
-	default y
+	default n
 
 menuconfig BCMA
 	tristate "Broadcom specific AMBA"
