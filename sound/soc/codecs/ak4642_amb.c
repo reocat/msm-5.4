@@ -75,11 +75,11 @@ static const struct reg_default ak4642_reg[] = {
 static int ak4642_get_mic_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_SIG1);
-	val2 = snd_soc_read(codec, AK4642_SIG2);
+	val1 = snd_soc_component_read32(component, AK4642_SIG1);
+	val2 = snd_soc_component_read32(component, AK4642_SIG2);
 	val = (val2 & 0x20) >> 4 | (val1 & 0x01);
 
 	ucontrol->value.integer.value[0] = val;
@@ -89,11 +89,11 @@ static int ak4642_get_mic_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_SIG1);
-	val2 = snd_soc_read(codec, AK4642_SIG2);
+	val1 = snd_soc_component_read32(component, AK4642_SIG1);
+	val2 = snd_soc_component_read32(component, AK4642_SIG2);
 	val = (val2 & 0x20) >> 4 | (val1 & 0x01);
 
 	if (val == ucontrol->value.integer.value[0])
@@ -102,10 +102,10 @@ static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
 	val = ucontrol->value.integer.value[0];
 	val1 &= 0xfe;
 	val1 |= (val & 0x01);
-	snd_soc_write(codec, AK4642_SIG1, val1);
+	snd_soc_component_write(component, AK4642_SIG1, val1);
 	val2 &= 0xdf;
 	val2 |= ((val & 0x02) << 4);
-	snd_soc_write(codec, AK4642_SIG2, val2);
+	snd_soc_component_write(component, AK4642_SIG2, val2);
 
 	return 1;
 }
@@ -113,11 +113,11 @@ static int ak4642_set_mic_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_get_alc_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_ALC1);
-	val2 = snd_soc_read(codec, AK4642_ALC3);
+	val1 = snd_soc_component_read32(component, AK4642_ALC1);
+	val2 = snd_soc_component_read32(component, AK4642_ALC3);
 	val = (val2 & 0x80) >> 6 | (val1 & 0x02) >> 1;
 
 	ucontrol->value.integer.value[0] = val;
@@ -127,11 +127,11 @@ static int ak4642_get_alc_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_ALC1);
-	val2 = snd_soc_read(codec, AK4642_ALC3);
+	val1 = snd_soc_component_read32(component, AK4642_ALC1);
+	val2 = snd_soc_component_read32(component, AK4642_ALC3);
 	val = (val2 & 0x80) >> 6 | (val1 & 0x02) >> 1;
 
 	if (val == ucontrol->value.integer.value[0])
@@ -140,10 +140,10 @@ static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
 	val = ucontrol->value.integer.value[0];
 	val1 &= 0xfd;
 	val1 |= ((val & 0x01) << 1);
-	snd_soc_write(codec, AK4642_ALC1, val1);
+	snd_soc_component_write(component, AK4642_ALC1, val1);
 	val2 &= 0x7f;
 	val2 |= ((val & 0x02) << 6);
-	snd_soc_write(codec, AK4642_ALC3, val2);
+	snd_soc_component_write(component, AK4642_ALC3, val2);
 
 	return 1;
 }
@@ -151,11 +151,11 @@ static int ak4642_set_alc_gain(struct snd_kcontrol *kcontrol,
 static int ak4642_get_input_mux(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_PM3);
-	val2 = snd_soc_read(codec, AK4642_SIG1);
+	val1 = snd_soc_component_read32(component, AK4642_PM3);
+	val2 = snd_soc_component_read32(component, AK4642_SIG1);
 
 	if(((val1 & 0x1e) == 0x06) && ((val2 & 0x04) == 0x00))
 		val = AK4642_LINE_IN_ON;
@@ -171,11 +171,11 @@ static int ak4642_get_input_mux(struct snd_kcontrol *kcontrol,
 static int ak4642_set_input_mux(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
 	unsigned short val, val1, val2;
 
-	val1 = snd_soc_read(codec, AK4642_PM3);
-	val2 = snd_soc_read(codec, AK4642_SIG1);
+	val1 = snd_soc_component_read32(component, AK4642_PM3);
+	val2 = snd_soc_component_read32(component, AK4642_SIG1);
 
 	if(((val1 & 0x1e) == 0x06) && ((val2 & 0x04) == 0x00))
 		val = AK4642_LINE_IN_ON;
@@ -191,14 +191,14 @@ static int ak4642_set_input_mux(struct snd_kcontrol *kcontrol,
 
 	switch(val){
 	case AK4642_LINE_IN_ON:
-		snd_soc_update_bits(codec, AK4642_PM3, 0x18, 0x06);
-		snd_soc_update_bits(codec, AK4642_SIG1, 0x05, 0);
-		snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0);
+		snd_soc_component_update_bits(component, AK4642_PM3, 0x18, 0x06);
+		snd_soc_component_update_bits(component, AK4642_SIG1, 0x05, 0);
+		snd_soc_component_update_bits(component, AK4642_SIG2, 0x20, 0);
 		break;
 	case AK4642_BOTH_MIC_ON:
-		snd_soc_update_bits(codec, AK4642_PM3, 0x18, 0x18);
-		snd_soc_update_bits(codec, AK4642_SIG1, 0x05, 0x05);
-		snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0x20);
+		snd_soc_component_update_bits(component, AK4642_PM3, 0x18, 0x18);
+		snd_soc_component_update_bits(component, AK4642_SIG1, 0x05, 0x05);
+		snd_soc_component_update_bits(component, AK4642_SIG2, 0x20, 0x20);
 		break;
 	case AK4642_INPUT_UNKNOWN:
 		return 0;
@@ -409,8 +409,8 @@ static const struct snd_soc_dapm_route ak4642_dapm_routes[] = {
 static int ak4642_set_dai_sysclk(struct snd_soc_dai *codec_dai,
 	int clk_id, unsigned int freq, int dir)
 {
-	struct snd_soc_codec *codec = codec_dai->codec;
-	struct ak4642_priv *ak4642 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = codec_dai->component;
+	struct ak4642_priv *ak4642 = snd_soc_component_get_drvdata(component);
 
 	ak4642->sysclk = freq;
 	return 0;
@@ -420,11 +420,10 @@ static int ak4642_hw_params(struct snd_pcm_substream *substream,
 			    struct snd_pcm_hw_params *params,
 			    struct snd_soc_dai *dai)
 {
-	struct snd_soc_pcm_runtime *rtd = substream->private_data;
-	struct snd_soc_codec *codec = rtd->codec;
-	struct ak4642_priv *ak4642 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct ak4642_priv *ak4642 = snd_soc_component_get_drvdata(component);
 	int rate = params_rate(params), fs = 256;
-	u8 mode = snd_soc_read(codec, AK4642_MODE2) & 0xc0;
+	u8 mode = snd_soc_component_read32(component, AK4642_MODE2) & 0xc0;
 
 	if (rate)
 		fs = ak4642->sysclk / rate;
@@ -443,27 +442,26 @@ static int ak4642_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set rate */
-	snd_soc_write(codec, AK4642_MODE2, mode);
+	snd_soc_component_write(component, AK4642_MODE2, mode);
 	return 0;
 }
 
-static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
-		unsigned int fmt)
+static int ak4642_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
-	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_component *component = dai->component;
 	u8 mode1 = 0, mode2 = 0;
 
 	/* set master/slave audio interface */
 	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
 	case SND_SOC_DAIFMT_CBS_CFS:
-		snd_soc_update_bits(codec, AK4642_PM2, 0x08, 0);
+		snd_soc_component_update_bits(component, AK4642_PM2, 0x08, 0);
 		break;
 	default:
 		return -EINVAL;
 	}
 
-	mode1 = snd_soc_read(codec, AK4642_MODE1);
-	mode2 = snd_soc_read(codec, AK4642_MODE2);
+	mode1 = snd_soc_component_read32(component, AK4642_MODE1);
+	mode2 = snd_soc_component_read32(component, AK4642_MODE2);
 
 	/* interface format */
 	switch (fmt & SND_SOC_DAIFMT_FORMAT_MASK) {
@@ -486,28 +484,28 @@ static int ak4642_set_dai_fmt(struct snd_soc_dai *codec_dai,
 		return -EINVAL;
 	}
 
-	snd_soc_write(codec, AK4642_MODE1, mode1);
-	snd_soc_write(codec, AK4642_MODE2, mode2);
+	snd_soc_component_write(component, AK4642_MODE1, mode1);
+	snd_soc_component_write(component, AK4642_MODE2, mode2);
 	return 0;
 }
 
 static int ak4642_mute(struct snd_soc_dai *dai, int mute)
 {
-	struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_component *component = dai->component;
 
 	if (mute){
-		snd_soc_update_bits(codec, AK4642_MODE3, 0x20, 0x20);
-		snd_soc_update_bits(codec, AK4642_PM2, 0x40, 0);
+		snd_soc_component_update_bits(component, AK4642_MODE3, 0x20, 0x20);
+		snd_soc_component_update_bits(component, AK4642_PM2, 0x40, 0);
 	}
 	else{
-		snd_soc_update_bits(codec, AK4642_MODE3, 0x20, 0);
-		snd_soc_update_bits(codec, AK4642_PM2, 0x40, 0x40);
+		snd_soc_component_update_bits(component, AK4642_MODE3, 0x20, 0);
+		snd_soc_component_update_bits(component, AK4642_PM2, 0x40, 0x40);
 	}
 
 	return 0;
 }
 
-static int ak4642_set_bias_level(struct snd_soc_codec *codec,
+static int ak4642_set_bias_level(struct snd_soc_component *component,
 	enum snd_soc_bias_level level)
 {
 	switch (level) {
@@ -517,11 +515,11 @@ static int ak4642_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_PREPARE:
 		break;
 	case SND_SOC_BIAS_STANDBY:
-		snd_soc_update_bits(codec, AK4642_PM1, 0x40, 0x40);
+		snd_soc_component_update_bits(component, AK4642_PM1, 0x40, 0x40);
 		break;
 	case SND_SOC_BIAS_OFF:
 		/* Everything is OFF */
-		snd_soc_update_bits(codec, AK4642_PM1, 0x40, 0);
+		snd_soc_component_update_bits(component, AK4642_PM1, 0x40, 0);
 		break;
 	}
 
@@ -556,32 +554,30 @@ static struct snd_soc_dai_driver ak4642_dai = {
 	.ops = &ak4642_dai_ops,
 };
 
-static int ak4642_suspend(struct snd_soc_codec *codec)
+static int ak4642_suspend(struct snd_soc_component *component)
 {
-	ak4642_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	ak4642_set_bias_level(component, SND_SOC_BIAS_OFF);
 	return 0;
 }
 
-static int ak4642_resume(struct snd_soc_codec *codec)
+static int ak4642_resume(struct snd_soc_component *component)
 {
-	snd_soc_cache_sync(codec);
-	ak4642_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	snd_soc_component_cache_sync(component);
+	ak4642_set_bias_level(component, SND_SOC_BIAS_STANDBY);
 
 	return 0;
 }
 
-static int ak4642_probe(struct snd_soc_codec *codec)
+static int ak4642_probe(struct snd_soc_component *component)
 {
-	struct ak4642_priv *ak4642;
+	struct ak4642_priv *ak4642 = snd_soc_component_get_drvdata(component);
 	int ret;
 
-	dev_info(codec->dev, "AK4642 Audio Codec %s", AK4642_VERSION);
+	dev_info(component->dev, "AK4642 Audio Codec %s", AK4642_VERSION);
 
-	ak4642 = snd_soc_codec_get_drvdata(codec);
-
-	ret = devm_gpio_request(codec->dev, ak4642->rst_pin, "ak4642 reset");
+	ret = devm_gpio_request(component->dev, ak4642->rst_pin, "ak4642 reset");
 	if (ret < 0){
-		dev_err(codec->dev, "Failed to request rst_pin: %d\n", ret);
+		dev_err(component->dev, "Failed to request rst_pin: %d\n", ret);
 		return ret;
 	}
 
@@ -591,47 +587,48 @@ static int ak4642_probe(struct snd_soc_codec *codec)
 	gpio_direction_output(ak4642->rst_pin, !ak4642->rst_active);
 
 	/* power on device */
-	ak4642_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	ak4642_set_bias_level(component, SND_SOC_BIAS_STANDBY);
 
 	/* Initial some register */
 	/* Select Input to ADC */
-	snd_soc_update_bits(codec, AK4642_PM3, 0x06, 0x06);
+	snd_soc_component_update_bits(component, AK4642_PM3, 0x06, 0x06);
 	/* Open DAC to Line-Out */
-	snd_soc_update_bits(codec, AK4642_SIG1, 0x10, 0x10);
+	snd_soc_component_update_bits(component, AK4642_SIG1, 0x10, 0x10);
 	/* Open DAC to Headphone */
-	snd_soc_update_bits(codec, AK4642_MODE4, 0x01, 0x01);
+	snd_soc_component_update_bits(component, AK4642_MODE4, 0x01, 0x01);
 	/* Open Line-Out Switch */
-	snd_soc_update_bits(codec, AK4642_PM1, 0x08, 0x08);
-	snd_soc_write(codec, AK4642_LIVOL, 0x91);	/* Input 0db */
-	snd_soc_write(codec, AK4642_RIVOL, 0x91);	/* Input 0db */
+	snd_soc_component_update_bits(component, AK4642_PM1, 0x08, 0x08);
+	snd_soc_component_write(component, AK4642_LIVOL, 0x91);	/* Input 0db */
+	snd_soc_component_write(component, AK4642_RIVOL, 0x91);	/* Input 0db */
 	/* Mic-Amp 0db */
-	snd_soc_update_bits(codec, AK4642_SIG1, 0x01, 0x01);
+	snd_soc_component_update_bits(component, AK4642_SIG1, 0x01, 0x01);
 	/* Mic-Amp 0db */
-	snd_soc_update_bits(codec, AK4642_SIG2, 0x20, 0x20);
+	snd_soc_component_update_bits(component, AK4642_SIG2, 0x20, 0x20);
 
 	return 0;
 }
 
-static int ak4642_remove(struct snd_soc_codec *codec)
+static void ak4642_remove(struct snd_soc_component *component)
 {
-	ak4642_set_bias_level(codec, SND_SOC_BIAS_OFF);
-	return 0;
+	ak4642_set_bias_level(component, SND_SOC_BIAS_OFF);
+	return;
 }
 
-static struct snd_soc_codec_driver soc_codec_dev_ak4642 = {
+static const struct snd_soc_component_driver soc_component_dev_ak4642 = {
 	.probe			= ak4642_probe,
 	.remove			= ak4642_remove,
 	.suspend		= ak4642_suspend,
 	.resume			= ak4642_resume,
 	.set_bias_level		= ak4642_set_bias_level,
-	.component_driver = {
-		.controls		= ak4642_snd_controls,
-		.num_controls		= ARRAY_SIZE(ak4642_snd_controls),
-		.dapm_widgets		= ak4642_dapm_widgets,
-		.num_dapm_widgets	= ARRAY_SIZE(ak4642_dapm_widgets),
-		.dapm_routes		= ak4642_dapm_routes,
-		.num_dapm_routes	= ARRAY_SIZE(ak4642_dapm_routes),
-	}
+	.controls		= ak4642_snd_controls,
+	.num_controls		= ARRAY_SIZE(ak4642_snd_controls),
+	.dapm_widgets		= ak4642_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(ak4642_dapm_widgets),
+	.dapm_routes		= ak4642_dapm_routes,
+	.num_dapm_routes	= ARRAY_SIZE(ak4642_dapm_routes),
+	.idle_bias_on		= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 static const struct regmap_config ak4642_regmap = {
@@ -672,15 +669,10 @@ static int ak4642_i2c_probe(struct i2c_client *i2c,
 		return PTR_ERR(regmap);
 	}
 
-	return snd_soc_register_codec(&i2c->dev,
-			&soc_codec_dev_ak4642, &ak4642_dai, 1);
+	return  devm_snd_soc_register_component(&i2c->dev,
+				&soc_component_dev_ak4642, &ak4642_dai, 1);
 }
 
-static int ak4642_i2c_remove(struct i2c_client *i2c)
-{
-	snd_soc_unregister_codec(&i2c->dev);
-	return 0;
-}
 
 static struct of_device_id ak4642_of_match[] = {
 	{ .compatible = "ambarella,ak4642",},
@@ -697,11 +689,9 @@ MODULE_DEVICE_TABLE(i2c, ak4642_i2c_id);
 static struct i2c_driver ak4642_i2c_driver = {
 	.driver = {
 		.name = "ak4642-codec",
-		.owner = THIS_MODULE,
 		.of_match_table = ak4642_of_match,
 	},
 	.probe		=	ak4642_i2c_probe,
-	.remove		=	ak4642_i2c_remove,
 	.id_table	=	ak4642_i2c_id,
 };
 

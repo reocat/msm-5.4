@@ -314,8 +314,8 @@ static int get_micstatus(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
     ucontrol->value.enumerated.item[0] = ak4954->mic;
 
@@ -327,15 +327,15 @@ static int set_micstatus(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
 	ak4954->mic = ucontrol->value.enumerated.item[0];
 
 	if ( ak4954->mic ) {
-		snd_soc_update_bits(codec,AK4954_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
+		snd_soc_component_update_bits(component,AK4954_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
 	}else {
-		snd_soc_update_bits(codec,AK4954_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
+		snd_soc_component_update_bits(component,AK4954_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
 	}
     return 0;
 }
@@ -352,13 +352,13 @@ static const struct soc_enum ak4954_stereo_enum[] = {
     SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(stereo_on_select), stereo_on_select),
 };
 
-static int ak4954_writeMask(struct snd_soc_codec *, u16, u16, u16);
+static int ak4954_writeMask(struct snd_soc_component *, u16, u16, u16);
 static int get_ondrc(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+    struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
     ucontrol->value.enumerated.item[0] = ak4954->onDrc;
 
@@ -370,18 +370,18 @@ static int set_ondrc(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+    struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
 	ak4954->onDrc = ucontrol->value.enumerated.item[0];
 
 	if ( ak4954->onDrc ) {
-		ak4954_writeMask(codec, AK4954_50_DRC_MODE_CONTROL, 0x3, 0x3);
-		ak4954_writeMask(codec, AK4954_60_DVLC_FILTER_SELECT, 0, 0x55);
+		ak4954_writeMask(component, AK4954_50_DRC_MODE_CONTROL, 0x3, 0x3);
+		ak4954_writeMask(component, AK4954_60_DVLC_FILTER_SELECT, 0, 0x55);
 	}
 	else {
-		ak4954_writeMask(codec, AK4954_50_DRC_MODE_CONTROL, 0x3, 0x0);
-		ak4954_writeMask(codec, AK4954_60_DVLC_FILTER_SELECT, 0, 0x0);
+		ak4954_writeMask(component, AK4954_50_DRC_MODE_CONTROL, 0x3, 0x0);
+		ak4954_writeMask(component, AK4954_60_DVLC_FILTER_SELECT, 0, 0x0);
 	}
 
     return 0;
@@ -391,8 +391,8 @@ static int get_onstereo(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
     ucontrol->value.enumerated.item[0] = ak4954->onStereo;
 
@@ -404,16 +404,16 @@ static int set_onstereo(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+    struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 
 	ak4954->onStereo = ucontrol->value.enumerated.item[0];
 
 	if ( ak4954->onStereo ) {
-		ak4954_writeMask(codec, AK4954_1C_DIGITAL_FILTER_SELECT2, 0x30, 0x30);
+		ak4954_writeMask(component, AK4954_1C_DIGITAL_FILTER_SELECT2, 0x30, 0x30);
 	}
 	else {
-		ak4954_writeMask(codec, AK4954_1C_DIGITAL_FILTER_SELECT2, 0x30, 0x00);
+		ak4954_writeMask(component, AK4954_1C_DIGITAL_FILTER_SELECT2, 0x30, 0x00);
 	}
 
     return 0;
@@ -450,7 +450,7 @@ static int set_test_reg(
 struct snd_kcontrol       *kcontrol,
 struct snd_ctl_elem_value  *ucontrol)
 {
-    struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+    struct snd_soc_component *component = snd_soc_kcontrol_component(kcontrol);
     u32    currMode = ucontrol->value.enumerated.item[0];
 	int    i, value;
 	int	   regs, rege;
@@ -473,7 +473,7 @@ struct snd_ctl_elem_value  *ucontrol)
 	}
 
 	for ( i = regs ; i <= rege ; i++ ){
-		value = snd_soc_read(codec, i);
+		value = snd_soc_component_read32(component, i);
 		printk("***AK4954 Addr,Reg=(%x, %x)\n", i, value);
 	}
 
@@ -623,12 +623,12 @@ static const struct snd_kcontrol_new ak4954_dacsl_mixer_controls[] = {
 static int ak4954_spklo_event(struct snd_soc_dapm_widget *w,
 		struct snd_kcontrol *kcontrol, int event) //CONFIG_LINF
 {
-	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
+	struct snd_soc_component *component = snd_soc_dapm_to_component(w->dapm);
 	u32 reg, nLOSEL;
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
-	reg = snd_soc_read(codec, AK4954_01_POWER_MANAGEMENT2);
+	reg = snd_soc_component_read32(component, AK4954_01_POWER_MANAGEMENT2);
 	nLOSEL = (0x1 & reg);
 
 	switch (event) {
@@ -643,10 +643,10 @@ static int ak4954_spklo_event(struct snd_soc_dapm_widget *w,
 				akdbgprt("\t[AK4954] %s wait=1msec\n",__FUNCTION__);
 				mdelay(1);
 			}
-			snd_soc_update_bits(codec, AK4954_02_SIGNAL_SELECT1, 0x80,0x80);
+			snd_soc_component_update_bits(component, AK4954_02_SIGNAL_SELECT1, 0x80,0x80);
 			break;
 		case SND_SOC_DAPM_PRE_PMD:	/* before widget power down */
-			snd_soc_update_bits(codec, AK4954_02_SIGNAL_SELECT1, 0x80,0x00);
+			snd_soc_component_update_bits(component, AK4954_02_SIGNAL_SELECT1, 0x80,0x00);
 			mdelay(1);
 			break;
 		case SND_SOC_DAPM_POST_PMD:	/* after widget power down */
@@ -808,9 +808,9 @@ static int ak4954_hw_params(struct snd_pcm_substream *substream,
 		struct snd_pcm_hw_params *params,
 		struct snd_soc_dai *dai)
 {
-	struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_component *component = dai->component;
 	int rate = params_rate(params);
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 	int oversample = 0;
 	u8 	fs = 0;
 
@@ -878,7 +878,7 @@ static int ak4954_hw_params(struct snd_pcm_substream *substream,
 		return -EINVAL;
 	}
 
-	snd_soc_write(codec, AK4954_06_MODE_CONTROL2, fs);
+	snd_soc_component_write(component, AK4954_06_MODE_CONTROL2, fs);
 
 	return 0;
 }
@@ -917,15 +917,15 @@ static int ak4954_set_pll(u8 *pll, int clk_id,int freq)
 static int ak4954_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 		unsigned int freq, int dir)
 {
-	struct snd_soc_codec *codec = dai->codec;
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct snd_soc_component *component = dai->component;
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 	u8 pllpwr = 0, pll = 0;
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
-	pll= snd_soc_read(codec, AK4954_05_MODE_CONTROL1);
+	pll= snd_soc_component_read32(component, AK4954_05_MODE_CONTROL1);
 	pll &=(~0x70);
-	pllpwr = snd_soc_read(codec,AK4954_01_POWER_MANAGEMENT2);
+	pllpwr = snd_soc_component_read32(component,AK4954_01_POWER_MANAGEMENT2);
 	pllpwr &=(~0x0c);
 
 	if (clk_id == AK4954_MCLK_IN) {
@@ -940,8 +940,8 @@ static int ak4954_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 		pllpwr |= AK4954_M_S;
 		ak4954_set_pll(&pll, clk_id, freq);
 	}
-	snd_soc_write(codec, AK4954_05_MODE_CONTROL1, pll);
-	snd_soc_write(codec, AK4954_01_POWER_MANAGEMENT2, pllpwr);
+	snd_soc_component_write(component, AK4954_05_MODE_CONTROL1, pll);
+	snd_soc_component_write(component, AK4954_01_POWER_MANAGEMENT2, pllpwr);
 
 	ak4954->sysclk = freq;
 	ak4954->clkid = clk_id;
@@ -951,15 +951,15 @@ static int ak4954_set_dai_sysclk(struct snd_soc_dai *dai, int clk_id,
 static int ak4954_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 {
 
-	struct snd_soc_codec *codec = dai->codec;
+	struct snd_soc_component *component = dai->component;
 	u8 mode;
 	u8 format;
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
 	/* set master/slave audio interface */
-	mode = snd_soc_read(codec, AK4954_01_POWER_MANAGEMENT2);
-	format = snd_soc_read(codec, AK4954_05_MODE_CONTROL1);
+	mode = snd_soc_component_read32(component, AK4954_01_POWER_MANAGEMENT2);
+	format = snd_soc_component_read32(component, AK4954_05_MODE_CONTROL1);
 	format &= ~AK4954_DIF;
 
     switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
@@ -976,7 +976,7 @@ static int ak4954_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
         case SND_SOC_DAIFMT_CBS_CFM:
         case SND_SOC_DAIFMT_CBM_CFS:
         default:
-            dev_err(codec->dev, "Clock mode unsupported");
+            dev_err(component->dev, "Clock mode unsupported");
            return -EINVAL;
 	}
 
@@ -993,8 +993,8 @@ static int ak4954_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
 
 	/* set mode and format */
 
-	snd_soc_write(codec, AK4954_01_POWER_MANAGEMENT2, mode);
-	snd_soc_write(codec, AK4954_05_MODE_CONTROL1, format);
+	snd_soc_component_write(component, AK4954_01_POWER_MANAGEMENT2, mode);
+	snd_soc_component_write(component, AK4954_05_MODE_CONTROL1, format);
 
 	return 0;
 }
@@ -1003,7 +1003,7 @@ static int ak4954_set_dai_fmt(struct snd_soc_dai *dai, unsigned int fmt)
  * Write with Mask to  AK4954 register space
  */
 static int ak4954_writeMask(
-struct snd_soc_codec *codec,
+struct snd_soc_component *component,
 u16 reg,
 u16 mask,
 u16 value)
@@ -1015,11 +1015,11 @@ u16 value)
 		newdata = value;
 	}
 	else {
-		olddata = snd_soc_read(codec, reg);
+		olddata = snd_soc_component_read32(component, reg);
 	    newdata = (olddata & ~(mask)) | value;
 	}
 
-	snd_soc_write(codec, (unsigned int)reg, (unsigned int)newdata);
+	snd_soc_component_write(component, (unsigned int)reg, (unsigned int)newdata);
 
 	return(0);
 }
@@ -1036,7 +1036,7 @@ static int ak4954_trigger(struct snd_pcm_substream *substream, int cmd, struct s
 }
 
 
-static int ak4954_set_bias_level(struct snd_soc_codec *codec,
+static int ak4954_set_bias_level(struct snd_soc_component *component,
 		enum snd_soc_bias_level level)
 {
 	u8 reg;
@@ -1047,12 +1047,12 @@ static int ak4954_set_bias_level(struct snd_soc_codec *codec,
 	case SND_SOC_BIAS_ON:
 	case SND_SOC_BIAS_PREPARE:
 	case SND_SOC_BIAS_STANDBY:
-		reg = snd_soc_read(codec, AK4954_00_POWER_MANAGEMENT1);	// * for AK4954
-		snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1,			// * for AK4954
+		reg = snd_soc_component_read32(component, AK4954_00_POWER_MANAGEMENT1);	// * for AK4954
+		snd_soc_component_write(component, AK4954_00_POWER_MANAGEMENT1,			// * for AK4954
 				reg | AK4954_PMVCM);
 		break;
 	case SND_SOC_BIAS_OFF:
-		snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1, 0x00);	// * for AK4954
+		snd_soc_component_write(component, AK4954_00_POWER_MANAGEMENT1, 0x00);	// * for AK4954
 		break;
 	}
 
@@ -1096,84 +1096,84 @@ struct snd_soc_dai_driver ak4954_dai[] = {
 	},
 };
 
-static int ak4954_probe(struct snd_soc_codec *codec)
+static int ak4954_probe(struct snd_soc_component *component)
 {
-	struct ak4954_priv *ak4954 = snd_soc_codec_get_drvdata(codec);
+	struct ak4954_priv *ak4954 = snd_soc_component_get_drvdata(component);
 	int ret = 0;
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
-	snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1, 0x00);
-	snd_soc_write(codec, AK4954_00_POWER_MANAGEMENT1, 0x00);
+	snd_soc_component_write(component, AK4954_00_POWER_MANAGEMENT1, 0x00);
+	snd_soc_component_write(component, AK4954_00_POWER_MANAGEMENT1, 0x00);
 
-	ak4954_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	ak4954_set_bias_level(component, SND_SOC_BIAS_STANDBY);
 //	ak4954_set_reg_digital_effect(codec);
 
 	ak4954->onDrc = 0;
 	ak4954->onStereo = 0;
 	ak4954->mic = 1;
 	/*Enable Line out */
-	snd_soc_update_bits(codec,AK4954_01_POWER_MANAGEMENT2,0x02,0x02);
-	snd_soc_update_bits(codec,AK4954_02_SIGNAL_SELECT1, 0xa0,0xa0);
+	snd_soc_component_update_bits(component,AK4954_01_POWER_MANAGEMENT2,0x02,0x02);
+	snd_soc_component_update_bits(component,AK4954_02_SIGNAL_SELECT1, 0xa0,0xa0);
 
 	/*Enable LIN2*/
-	snd_soc_update_bits(codec,AK4954_02_SIGNAL_SELECT1,0x18,0x08);//MPWR1
-	snd_soc_update_bits(codec,AK4954_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
-	snd_soc_update_bits(codec,AK4954_08_DIGITL_MIC,0x01,0x00);//AMIC
-	snd_soc_update_bits(codec,AK4954_1D_DIGITAL_FILTER_MODE,0x02,0x02);//ADC output
-	snd_soc_update_bits(codec,AK4954_1D_DIGITAL_FILTER_MODE,0x01,0x01);//ALC output
-	snd_soc_update_bits(codec,AK4954_02_SIGNAL_SELECT1,0x07,0x3);//Mic Gain
-	snd_soc_update_bits(codec,AK4954_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
-	snd_soc_update_bits(codec,AK4954_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
+	snd_soc_component_update_bits(component,AK4954_02_SIGNAL_SELECT1,0x18,0x08);//MPWR1
+	snd_soc_component_update_bits(component,AK4954_03_SIGNAL_SELECT2,0x0f,0x05);// LIN2 RIN2
+	snd_soc_component_update_bits(component,AK4954_08_DIGITL_MIC,0x01,0x00);//AMIC
+	snd_soc_component_update_bits(component,AK4954_1D_DIGITAL_FILTER_MODE,0x02,0x02);//ADC output
+	snd_soc_component_update_bits(component,AK4954_1D_DIGITAL_FILTER_MODE,0x01,0x01);//ALC output
+	snd_soc_component_update_bits(component,AK4954_02_SIGNAL_SELECT1,0x07,0x3);//Mic Gain
+	snd_soc_component_update_bits(component,AK4954_0D_LCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
+	snd_soc_component_update_bits(component,AK4954_0E_RCH_INPUT_VOLUME_CONTROL,0xff,0xb0);//Lch gain
 
 	/*Enable LIN3*/
-	//snd_soc_update_bits(codec,AK4954_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
+	//snd_soc_component_update_bits(component,AK4954_03_SIGNAL_SELECT2,0x0f,0x0a);// LIN3 RIN3
 
     return ret;
 
 }
 
-static int ak4954_remove(struct snd_soc_codec *codec)
+static void ak4954_remove(struct snd_soc_component *component)
 {
 
 	akdbgprt("\t[AK4954] %s(%d)\n",__FUNCTION__,__LINE__);
 
-	ak4954_set_bias_level(codec, SND_SOC_BIAS_OFF);
-
-
-	return 0;
+	ak4954_set_bias_level(component, SND_SOC_BIAS_OFF);
 }
 
-static int ak4954_suspend(struct snd_soc_codec *codec)
+static int ak4954_suspend(struct snd_soc_component *component)
 {
-	ak4954_set_bias_level(codec, SND_SOC_BIAS_OFF);
+	ak4954_set_bias_level(component, SND_SOC_BIAS_OFF);
 
 	return 0;
 }
 
-static int ak4954_resume(struct snd_soc_codec *codec)
+static int ak4954_resume(struct snd_soc_component *component)
 {
 
-	ak4954_set_bias_level(codec, SND_SOC_BIAS_STANDBY);
+	ak4954_set_bias_level(component, SND_SOC_BIAS_STANDBY);
 
 	return 0;
 }
 
 
-struct snd_soc_codec_driver soc_codec_dev_ak4954 = {
+struct snd_soc_component_driver soc_component_dev_ak4954 = {
 	.probe			= ak4954_probe,
 	.remove			= ak4954_remove,
 	.suspend		= ak4954_suspend,
 	.resume			= ak4954_resume,
 	.set_bias_level		= ak4954_set_bias_level,
-	.component_driver = {
-		.controls		= ak4954_snd_controls,
-		.num_controls		= ARRAY_SIZE(ak4954_snd_controls),
-		.dapm_widgets		= ak4954_dapm_widgets,
-		.num_dapm_widgets	= ARRAY_SIZE(ak4954_dapm_widgets),
-		.dapm_routes		= ak4954_intercon,
-		.num_dapm_routes	= ARRAY_SIZE(ak4954_intercon),
-	},
+	.controls		= ak4954_snd_controls,
+	.num_controls		= ARRAY_SIZE(ak4954_snd_controls),
+	.dapm_widgets		= ak4954_dapm_widgets,
+	.num_dapm_widgets	= ARRAY_SIZE(ak4954_dapm_widgets),
+	.dapm_routes		= ak4954_intercon,
+	.num_dapm_routes	= ARRAY_SIZE(ak4954_intercon),
+
+	.idle_bias_on		= 1,
+	.use_pmdown_time	= 1,
+	.endianness		= 1,
+	.non_legacy_dai_naming	= 1,
 };
 
 static struct regmap_config ak4954_regmap = {
@@ -1185,7 +1185,7 @@ static struct regmap_config ak4954_regmap = {
 	.cache_type		= REGCACHE_RBTREE,
 };
 
-EXPORT_SYMBOL_GPL(soc_codec_dev_ak4954);
+EXPORT_SYMBOL_GPL(soc_component_dev_ak4954);
 
 static int ak4954_i2c_probe(struct i2c_client *i2c,
                             const struct i2c_device_id *id)
@@ -1217,20 +1217,13 @@ static int ak4954_i2c_probe(struct i2c_client *i2c,
 		return ret;
 	}
 
-	ret = snd_soc_register_codec(&i2c->dev,
-			&soc_codec_dev_ak4954, &ak4954_dai[0], ARRAY_SIZE(ak4954_dai));
+	ret = snd_soc_register_component(&i2c->dev,
+			&soc_component_dev_ak4954, &ak4954_dai[0], ARRAY_SIZE(ak4954_dai));
 	if (ret < 0){
 		kfree(ak4954);
 		akdbgprt("\t[AK4954 Error!] %s(%d)\n",__FUNCTION__,__LINE__);
 	}
 	return ret;
-}
-
-static int ak4954_i2c_remove(struct i2c_client *client)
-{
-	snd_soc_unregister_codec(&client->dev);
-	kfree(i2c_get_clientdata(client));
-	return 0;
 }
 
 static struct of_device_id ak4954_of_match[] = {
@@ -1252,7 +1245,6 @@ static struct i2c_driver ak4954_i2c_driver = {
 		.of_match_table = ak4954_of_match,
 	},
 	.probe		=	ak4954_i2c_probe,
-	.remove		=	ak4954_i2c_remove,
 	.id_table	=	ak4954_i2c_id,
 };
 
