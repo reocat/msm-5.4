@@ -1380,11 +1380,9 @@ static int ambarella_nand_init_chipecc(struct ambarella_nand_host *host)
 	int rval = 0;
 
 	/* sanity check */
-#if 0
 	BUG_ON(mtd->writesize != 2048 && mtd->writesize != 4096);
 	BUG_ON(host->ecc_bits != 6 && host->ecc_bits != 8);
 	BUG_ON(host->ecc_bits == 8 && mtd->oobsize < 128);
-#endif
 
 	chip->ecc.mode = NAND_ECC_HW;
 	chip->ecc.strength = host->ecc_bits;
@@ -1485,6 +1483,34 @@ static int ambarella_nand_get_resource(
 	return 0;
 }
 
+static int ambarella_attach_chip(struct nand_chip *chip)
+{
+	struct ambarella_nand_host *host = nand_get_controller_data(chip);
+	struct nand_memory_organization *memorg = nanddev_get_memorg(&chip->base);
+	int rval = 0;
+
+	if (chip->bbt_options & NAND_BBT_USE_FLASH)
+		chip->bbt_options |= NAND_BBT_NO_OOB;
+
+	rval = ambarella_nand_init_chipecc(host);
+	if (rval)
+		return rval;
+
+	/* it must be SLC nand, because the spinand id parsing could */
+	/* be considered as MLC nand, we set it as SLC mandatory */
+	if (host->is_spinand) {
+		memorg->bits_per_cell = 1;
+	}
+
+	rval = ambarella_nand_config_flash(host);
+
+	return rval;
+}
+
+static const struct nand_controller_ops ambarella_controller_ops = {
+	.attach_chip = ambarella_attach_chip,
+};
+
 static int ambarella_nand_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1533,29 +1559,14 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	chip = &host->chip;
 	nand_set_controller_data(chip, host);
 	mtd = nand_to_mtd(chip);
+	mtd->name = "amba_nand";
 
-	if (chip->bbt_options & NAND_BBT_USE_FLASH)
-		chip->bbt_options |= NAND_BBT_NO_OOB;
-
-	rval = ambarella_nand_init_chipecc(host);
-	if (rval)
-		goto err_exit2;
+	chip->controller->ops = &ambarella_controller_ops;
 
 	rval = nand_scan(chip, 1);
 	if (rval)
 		goto err_exit2;
 
-	/* it must be SLC nand, because the spinand id parsing could */
-	/* be considered as MLC nand, we set it as SLC mandatory */
-	if (host->is_spinand) {
-		mtd->type = MTD_NANDFLASH;
-	}
-
-	rval = ambarella_nand_config_flash(host);
-	if (rval)
-		goto err_exit2;
-
-	mtd->name = "amba_nand";
 	rval = mtd_device_register(mtd, NULL, 0);
 	if (rval < 0)
 		goto err_exit2;
