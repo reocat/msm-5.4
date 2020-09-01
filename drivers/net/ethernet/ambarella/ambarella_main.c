@@ -2609,13 +2609,13 @@ static int ambeth_drv_suspend(struct platform_device *pdev, pm_message_t state)
 	int ret_val = 0;
 	unsigned long flags;
 
+	if (!netif_running(ndev))
+		goto ambeth_drv_suspend_exit;
+
 	if (lp->phydev) {
 		phy_stop(lp->phydev);
 		phy_disconnect(lp->phydev);
 	}
-
-	if (!netif_running(ndev))
-		goto ambeth_drv_suspend_exit;
 
 	napi_disable(&lp->napi);
 	netif_device_detach(ndev);
