@@ -93,6 +93,7 @@ struct amb_clk_pll {
 	u32 ctrl2_val;
 	u32 ctrl3_val;
 	u32 fix_divider;
+	u32 max_vco;
 };
 
 #define to_amb_clk_pll(_hw) container_of(_hw, struct amb_clk_pll, hw)
@@ -271,7 +272,7 @@ static int ambarella_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	 * is changed, there is no negative frac any more.
 	 */
 	rate_tmp = rate;
-	max_numerator = MAX_VCO_FREQ / REF_CLK_FREQ;
+	max_numerator = clk_pll->max_vco / REF_CLK_FREQ;
 	max_denominator = 16;
 	rational_best_approximation(rate_tmp, parent_rate, max_numerator, max_denominator,
 				&intp, &sout);
@@ -456,6 +457,9 @@ static void __init ambarella_pll_clocks_init(struct device_node *np)
 
 	if (of_property_read_u32(np, "amb,fix-divider", &clk_pll->fix_divider))
 		clk_pll->fix_divider = 1;
+
+	if (of_property_read_u32(np, "amb,max-vco", &clk_pll->max_vco))
+		clk_pll->max_vco = MAX_VCO_FREQ;
 
 	init.name = name;
 	init.ops = &pll_ops;

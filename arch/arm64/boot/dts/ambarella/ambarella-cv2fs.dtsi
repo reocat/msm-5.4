@@ -1266,6 +1266,7 @@
 			interrupts = <0 88 0x1>;
 			interrupt-names = "vout0";
 			rct-regmap = <&rct_syscon>;
+			clocks = <&pll_out_vo2>;
 		};
 
 		/* node for vout1(tv) controller */
@@ -1274,6 +1275,7 @@
 			interrupts = <0 87 0x1>;
 			interrupt-names = "vout1";
 			rct-regmap = <&rct_syscon>;
+			clocks = <&pll_out_hdmi>;
 		};
 
 	};

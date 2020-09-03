@@ -1124,6 +1124,7 @@
 			rct-regmap = <&rct_syscon>;
 			pinctrl-names = "default";
 			pinctrl-0 = <&vout0_pins>;
+			clocks = <&pll_out_vo2>;
 		};
 
 		/* node for vout1(tv) controller */
@@ -1133,6 +1134,7 @@
 			interrupts = <0 88 0x1>;
 			interrupt-names = "vout1";
 			rct-regmap = <&rct_syscon>;
+			clocks = <&pll_out_hdmi>;
 		};
 
 	};
@@ -1350,6 +1352,7 @@
 			assigned-clock-rates = <24000000>;
 			amb,extra-pre-scaler;
 			amb,frac-mode;
+			amb,max-vco = <1800000000>;
 		};
 
 		gclk_audio_aux: gclk-audio-aux {
