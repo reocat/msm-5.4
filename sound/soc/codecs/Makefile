@@ -288,6 +288,7 @@ snd-soc-max9877-objs := max9877.o
 snd-soc-max98504-objs := max98504.o
 snd-soc-simple-amplifier-objs := simple-amplifier.o
 snd-soc-tpa6130a2-objs := tpa6130a2.o
+snd-soc-tas2505-objs := tas2505.o
 snd-soc-tas2552-objs := tas2552.o
 snd-soc-zl38063-amb-objs := zl38063_amb.o
 
@@ -489,6 +490,7 @@ obj-$(CONFIG_SND_SOC_STA350)   += snd-soc-sta350.o
 obj-$(CONFIG_SND_SOC_STA529)   += snd-soc-sta529.o
 obj-$(CONFIG_SND_SOC_STAC9766)	+= snd-soc-stac9766.o
 obj-$(CONFIG_SND_SOC_STI_SAS)	+= snd-soc-sti-sas.o
+obj-$(CONFIG_SND_SOC_TAS2505)	+= snd-soc-tas2505.o
 obj-$(CONFIG_SND_SOC_TAS2552)	+= snd-soc-tas2552.o
 obj-$(CONFIG_SND_SOC_TAS5086)	+= snd-soc-tas5086.o
 obj-$(CONFIG_SND_SOC_TAS571X)	+= snd-soc-tas571x.o
