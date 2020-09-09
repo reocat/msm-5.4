@@ -17,32 +17,33 @@ Table of Contents
     5)  - APB/AHB/AXI/RCT node
     6)  - TIMER node
     7)  - INTERRUPT node
-    8)  - DMA node
-    9)  - NAND node
-    10) - SPINOR node
-    11) - I2S node
-    12) - UDC node
-    13) - EHCI/OHCI node
-    14) - SD/MMC node
-    15) - ETHERNET node
-    16) - SPI node
-    17) - SLAVE SPI node
-    18) - USBPHY node
-    19) - PINCTRL node
-    20) - GPIO node
-    21) - UART node
-    22) - I2C node
-    23) - I2CMUX node
-    24) - PWM node
-    25) - ADC node
-    26) - IR node
-    27) - WDT node
-    28) - RTC node
-    29) - CRYPTO node
-    30) - IAV node
-    31) - SOUND node
-    32) - HW RANDOM node
-    33) - DMIC node
+    8)  - Secure Monitor node
+    9)  - DMA node
+    10) - NAND node
+    11) - SPINOR node
+    12) - I2S node
+    13) - UDC node
+    14) - EHCI/OHCI node
+    15) - SD/MMC node
+    16) - ETHERNET node
+    17) - SPI node
+    18) - SLAVE SPI node
+    19) - USBPHY node
+    20) - PINCTRL node
+    21) - GPIO node
+    22) - UART node
+    23) - I2C node
+    24) - I2CMUX node
+    25) - PWM node
+    26) - ADC node
+    27) - IR node
+    28) - WDT node
+    29) - RTC node
+    30) - CRYPTO node
+    31) - IAV node
+    32) - SOUND node
+    33) - HW RANDOM node
+    34) - DMIC node
 
   III - Misc Node definition
     1)  - BOGUS BUS node
@@ -296,7 +297,78 @@ b) GIC:
 	};
 
 
-8) - DMA node
+8) - Secure Monitor node
+========================
+
+
+i) Description
+--------------
+The security state of each devices is programmable in secure boot, it means each
+devices can be in secure or non-secure world which is determined by this node.
+
+PS: The SoCs before CV2(included) does not support this function, that is, all the
+    devices are in non-secure world.
+
+ii) Properties
+--------------
+Required properties:
+- compatible: should be "ambarella,secure-monitor".
+- #address-cells: should be 1.
+- #size-cells: should be 0.
+- device: phandle of devices need to be put in secure world.
+
+iii) Properties in device node
+------------------------------
+Required properties:
+- amb,secure-ctrl-bit: specify the control bit position for each devices.
+  Please see AXI section of PRM.
+
+Optional properties:
+- amb,secure-reg-ro: specify the registers which are read-only in non-secure world.
+- amb,secure-reg-na: specify the registers which are non-accessable in non-secure world.
+
+PS:
+  a) If neither "amb,secure-reg-ro" nor "amb,secure-reg-na" are specified, all the
+     registers belong to this device are non-accessable.
+  b) If either "amb,secure-reg-ro" or "amb,secure-reg-na" is specified, the registers
+     not specified by these two properties but belong to this device are accessable
+     in non-secure world.
+
+iv) Example
+-----------
+	secure-monitor {
+		compatible = "ambarella,secure-monitor";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		device = <&watchdog0 &s_scratchpad>;
+	};
+
+	watchdog0: wdt@ec002000 {
+		compatible = "ambarella,wdt";
+		reg = <0xec002000 0x1000>;
+		amb,rct-regmap = <&rct_syscon>;
+		/* interrupts = <0 42 0x4>; */
+		timeout-sec = <15>;
+		amb,secure-ctrl-bit = <49>;
+	};
+
+	s_scratchpad: s_scratchpad@e8001000 {
+		compatible = "ambarella,sec-scratchpad";
+		reg = <0xe8001000 0x1000>;
+		amb,secure-ctrl-bit = <31>;
+		amb,secure-reg-ro = <0xe80010a0 0x00c>;
+	};
+
+In this example, both s_scratchpad and watchdog0 are in secure world. And, all the
+registers belong to watchdog0, i.e., <0xec002000 0x1000> are non-accessable in
+non-secure world, however, because "amb,secure-reg-ro" is specified in s_scratchpad
+node, the register belong to s_scratchpad has different behavior:
+a) <0xe80010a0 0x00c> are read-only in non-secure world.
+b) the registers belong to s_scratchpad but not located in <0xe80010a0 0x00c> are all
+   accessable in non-secure world.
+
+
+9) - DMA node
 =============
 
 
@@ -354,8 +426,8 @@ iv) Example
 	};
 
 
-9) - NAND node
-==============
+10) - NAND node
+===============
 
 
 i) Reference
@@ -408,7 +480,7 @@ iv) Example
 	};
 
 
-10) - SPINOR node
+11) - SPINOR node
 =================
 
 
@@ -427,7 +499,7 @@ ii) Example
 	};
 
 
-11) - I2S node
+12) - I2S node
 ==============
 
 
@@ -457,7 +529,7 @@ ii) Example
 	};
 
 
-12) - UDC node
+13) - UDC node
 ==============
 
 
@@ -484,7 +556,7 @@ ii) Example
 	};
 
 
-13) - EHCI/OHCI node
+14) - EHCI/OHCI node
 ====================
 
 
@@ -517,7 +589,7 @@ ii) Example
 	};
 
 
-14) - SD/MMC node
+15) - SD/MMC node
 =================
 
 
@@ -572,14 +644,17 @@ Optional properties:
   correctly in 400KHz.
 - amb,pwr-up-dly: specify the delay when power up and down. If it is not declared,
   the default value is 300ms. It's helpful for speeding up the system boot time.
-- amb,phy-timing: specify the fixed phy timing, including four u32 element, 1st element is
-  for SD_read_latency_control register setting, 2nd and 3rd element is for sd phyctrl 0 and
-  phyctrl 1 (phy sel) setting, the last element is for phy sbc setting
-- amb,tuning-fixed-clk-freq: specifies the tuning option for using fixed clock, donot reduce
-  clock frequecy. When visiting RPMB partition in kernel, this property must be set.
-- led-gpios: specified the GPIO to conctrol a led that indicate there is request is servicing.
-- amb,have-led: if use led-gpios property, this property must be set; Note if there is no gpio
-  control led to indicate status, please donot specify this property.
+- amb,phy-timing: specify the fixed phy timing, including four u32 element, 1st
+  element is for SD_read_latency_control register setting, 2nd and 3rd element is
+  for sd phyctrl 0 and phyctrl 1 (phy sel) setting, the last element is for phy sbc
+  setting.
+- amb,tuning-fixed-clk-freq: specifies the tuning option for using fixed clock, don't
+  reduce clock frequecy. When visiting RPMB partition in kernel, this property must
+  be set.
+- led-gpios: specified the GPIO to conctrol a led that indicate there is request is
+  servicing.
+- amb,have-led: if use led-gpios property, this property must be set; Note if there
+  is no gpio control led to indicate status, please donot specify this property.
 
 iii) Example
 -----------
@@ -600,7 +675,7 @@ iii) Example
 	};
 
 
-15) - ETHERNET node
+16) - ETHERNET node
 ===================
 
 
@@ -658,7 +733,7 @@ ii) Example
 	};
 
 
-16) - SPI node
+17) - SPI node
 ===============
 
 
@@ -724,7 +799,7 @@ iv) Example
 	};
 
 
-17) - SLAVE SPI node
+18) - SLAVE SPI node
 ====================
 
 
@@ -746,7 +821,7 @@ ii) Example
 	};
 
 
-18) - USBPHY node
+19) - USBPHY node
 =================
 
 
@@ -774,7 +849,7 @@ ii) Example
 	};
 
 
-19) - PINCTRL node
+20) - PINCTRL node
 ==================
 
 
@@ -878,7 +953,7 @@ drive strength to 12mA, pin59 clear pull up/down and configure drive strength
 to 8mA, pin60 leave pull up/down and drive strength as default value.
 
 
-20) - GPIO node
+21) - GPIO node
 ===============
 
 
@@ -943,7 +1018,7 @@ v) GPIO user nodes example
   Please see Reference for detailed.
 
 
-21) - UART node
+22) - UART node
 ===============
 
 
@@ -981,7 +1056,7 @@ ii) Example
 	};
 
 
-22) - I2C node
+23) - I2C node
 ==============
 
 
@@ -1000,9 +1075,10 @@ Required properties:
   a) 0x81: normal I2C controller
   b) 0x08: I2C controller dedicated to HDMI
 - amb,turbo-mode: use turbo(FIFO) write mode, batched data will be write into
-FIFO directly, but there're 2 restriction for this mode:
+  FIFO directly, but there're 2 restriction for this mode:
   1) FIFO mode will ignore device ACK.
-  2) FIFO mode can only write less than or equal to 61 data(FIFO depth) into FIFO at a time.
+  2) FIFO mode can only write less than or equal to 61 data(FIFO depth) into FIFO
+     at a time.
 - amb,duty-cycle: the duty cycle of clock, and the value can be:
     0 = duty cycle 1:1, this is the default setting.
     1 = duty cycle 2:3.
@@ -1012,8 +1088,8 @@ FIFO directly, but there're 2 restriction for this mode:
 - amb,hs-mode: high-speed mode, to achieve a bit transfer of up to 3.4Mbps.
 - hs-clock-frequency: desired I2C bus clock frequency in Hz for high speed mode,
     [1000, 3400000]. The default value is 1MHz if this option is not specified..
-- hs-master-code: the 8-bit master code(0000 1XXX) for high-speed mode. The default value
-    is 0x0E if this option is not specified.
+- hs-master-code: the 8-bit master code(0000 1XXX) for high-speed mode. The default
+  value is 0x0E if this option is not specified.
 
 ii) Subnode
 -----------
@@ -1054,7 +1130,7 @@ iii) Example
 	};
 
 
-23) - I2CMUX node
+24) - I2CMUX node
 =================
 
 
@@ -1067,7 +1143,7 @@ ii) Description
 This node is only available for SoC chip that supports I2C Mux, i.e., A5S.
 
 
-24) - PWM node
+25) - PWM node
 ==============
 
 
@@ -1107,7 +1183,7 @@ iv) PWM user nodes example
   Please see Reference for detailed.
 
 
-25) - ADC node
+26) - ADC node
 ==============
 
 
@@ -1173,7 +1249,8 @@ iii) Note
 For coding easily purpose, we re-order the channel number for A5S.
 Please see the ADC address definition in PRM for details.
 
-26) - IR node
+
+27) - IR node
 =============
 
 
@@ -1202,7 +1279,7 @@ ii) Example
 	};
 
 
-27) - WDT node
+28) - WDT node
 ==============
 
 
@@ -1234,7 +1311,7 @@ ii) Example
 	};
 
 
-28) - RTC node
+29) - RTC node
 ==============
 
 
@@ -1255,7 +1332,7 @@ ii) Example
 	};
 
 
-29) - CRYPTO node
+30) - CRYPTO node
 =================
 
 
@@ -1286,7 +1363,7 @@ ii) Example
 	};
 
 
-30) - IAV node
+31) - IAV node
 ==============
 
 
@@ -1316,7 +1393,7 @@ iii) Example
 	};
 
 
-31) - SOUND node
+32) - SOUND node
 ================
 
 
@@ -1325,7 +1402,7 @@ i) Reference
 Please see Documentation/devicetree/bindings/sound/simple-card.txt
 
 
-32) - HW RANDOM node
+33) - HW RANDOM node
 ====================
 
 
@@ -1337,7 +1414,7 @@ Optional properties:
   and 256000, if not set, the default is 32000.
 
 
-33) - DMIC node
+34) - DMIC node
 ===============
 
 
@@ -1354,17 +1431,18 @@ III - Misc Node definition
 ++++++++++++++++++++++++++
 
 
-1)  - BOGUS BUS node
-====================
+1) - BOGUS BUS node
+===================
+
 
 i) Purpose
 ----------
 No real meaning, just make the name of devices under bogus bus more reasonable.
 
 
+2) - GPIO KEY node
+==================
 
-2)  - GPIO KEY node
-===================
 
 i) Reference
 ------------
@@ -1372,8 +1450,9 @@ Please see Documentation/devicetree/bindings/gpio/gpio_keys.txt
 
 
 
-3)  - PWM BACKLIGHT node
-========================
+3) - PWM BACKLIGHT node
+=======================
+
 
 i) Reference
 ------------
