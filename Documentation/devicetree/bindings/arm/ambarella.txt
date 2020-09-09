@@ -325,13 +325,13 @@ Required properties:
 
 Optional properties:
 - amb,secure-reg-ro: specify the registers which are read-only in non-secure world.
-- amb,secure-reg-na: specify the registers which are non-accessable in non-secure world.
+- amb,secure-reg-na: specify the registers which are non-accessible in non-secure world.
 
 PS:
   a) If neither "amb,secure-reg-ro" nor "amb,secure-reg-na" are specified, all the
-     registers belong to this device are non-accessable.
+     registers belong to this device are non-accessible.
   b) If either "amb,secure-reg-ro" or "amb,secure-reg-na" is specified, the registers
-     not specified by these two properties but belong to this device are accessable
+     not specified by these two properties but belong to this device are accessible
      in non-secure world.
 
 iv) Example
@@ -360,12 +360,12 @@ iv) Example
 	};
 
 In this example, both s_scratchpad and watchdog0 are in secure world. And, all the
-registers belong to watchdog0, i.e., <0xec002000 0x1000> are non-accessable in
+registers belong to watchdog0, i.e., <0xec002000 0x1000> are non-accessible in
 non-secure world, however, because "amb,secure-reg-ro" is specified in s_scratchpad
 node, the register belong to s_scratchpad has different behavior:
 a) <0xe80010a0 0x00c> are read-only in non-secure world.
 b) the registers belong to s_scratchpad but not located in <0xe80010a0 0x00c> are all
-   accessable in non-secure world.
+   accessible in non-secure world.
 
 
 9) - DMA node
