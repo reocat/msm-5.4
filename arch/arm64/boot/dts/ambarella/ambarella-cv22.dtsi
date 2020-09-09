@@ -1048,10 +1048,11 @@
 			amb,secure-ctrl-bit = <31>;
 		};
 
-		s_scratchpad:s_scratchpad@e8001000 {
+		s_scratchpad: s_scratchpad@e8001000 {
 			compatible = "ambarella,sec-scratchpad";
 			reg = <0xe8001000 0x1000>;
 			amb,secure-ctrl-bit = <31>;
+			amb,secure-reg-ro = <0xe80010a0 0x00c>, <0xe80010b4 0x004>;
 		};
 	};
 
@@ -1066,6 +1067,14 @@
 			compatible = "ambarella,rct", "syscon";
 			reg = <0xed080000 0x1000>;
 			amb,secure-ctrl-bit = <68>;
+			amb,secure-reg-ro = <0xed080000 0x008>, <0xed080034 0x004>,
+					    <0xed08008c 0x004>, <0xed0800dc 0x010>,
+					    <0xed080100 0x01c>, <0xed080148 0x004>,
+					    <0xed080174 0x00c>, <0xed0801f4 0x004>,
+					    <0xed080220 0x00c>, <0xed080264 0x014>,
+					    <0xed0802dc 0x010>, <0xed0803f8 0x008>,
+					    <0xed0804f8 0x004>, <0xed0806e4 0x014>,
+					    <0xed08070c 0x008>;
 		};
 
 		usbphy: usbphy@ed080050 {
