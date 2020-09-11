@@ -154,7 +154,7 @@
 		compatible = "ambarella,secure-monitor";
 		#address-cells = <1>;
 		#size-cells = <0>;
-		device = <>;
+		device = <&s_scratchpad &rct_syscon>;
 	};
 
 	n_apb@e4000000 { /* Non-Secure APB, but configurable */
