@@ -2541,6 +2541,13 @@ bool get_signal(struct ksignal *ksig)
 
 relock:
 	spin_lock_irq(&sighand->siglock);
+	current->jobctl &= ~JOBCTL_TASK_WORK;
+	if (unlikely(current->task_works)) {
+		spin_unlock_irq(&sighand->siglock);
+		task_work_run();
+		goto relock;
+	}
+
 	/*
 	 * Make sure we can safely read ->jobctl() in task_work add. As Oleg
 	 * states:

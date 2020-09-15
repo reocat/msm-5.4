@@ -15,12 +15,14 @@
 #include "tx.h"
 #include "debug.h"
 #include "bf.h"
+#include "sar.h"
 
 unsigned int rtw_fw_lps_deep_mode;
 EXPORT_SYMBOL(rtw_fw_lps_deep_mode);
 bool rtw_bf_support = true;
 unsigned int rtw_debug_mask;
 EXPORT_SYMBOL(rtw_debug_mask);
+bool rtw_edcca_enabled = true;
 
 module_param_named(lps_deep_mode, rtw_fw_lps_deep_mode, uint, 0644);
 module_param_named(support_bf, rtw_bf_support, bool, 0644);
@@ -137,7 +139,6 @@ struct rtw_watch_dog_iter_data {
 static void rtw_dynamic_csi_rate(struct rtw_dev *rtwdev, struct rtw_vif *rtwvif)
 {
 	struct rtw_bf_info *bf_info = &rtwdev->bf_info;
-	struct rtw_chip_info *chip = rtwdev->chip;
 	u8 fix_rate_enable = 0;
 	u8 new_csi_rate_idx;
 
@@ -145,9 +146,9 @@ static void rtw_dynamic_csi_rate(struct rtw_dev *rtwdev, struct rtw_vif *rtwvif)
 	    rtwvif->bfee.role != RTW_BFEE_MU)
 		return;
 
-	chip->ops->cfg_csi_rate(rtwdev, rtwdev->dm_info.min_rssi,
-				bf_info->cur_csi_rpt_rate,
-				fix_rate_enable, &new_csi_rate_idx);
+	rtw_chip_cfg_csi_rate(rtwdev, rtwdev->dm_info.min_rssi,
+			      bf_info->cur_csi_rpt_rate,
+			      fix_rate_enable, &new_csi_rate_idx);
 
 	if (new_csi_rate_idx != bf_info->cur_csi_rpt_rate)
 		bf_info->cur_csi_rpt_rate = new_csi_rate_idx;
@@ -409,6 +410,22 @@ void rtw_set_channel(struct rtw_dev *rtwdev)
 	}
 
 	rtw_phy_set_tx_power_level(rtwdev, center_chan);
+
+	/* If set channel isn't for scanning, we'll do RF calibration once in
+	 * this channel while mgd_prepare_tx.
+	 */
+	if (!test_bit(RTW_FLAG_SCANNING, rtwdev->flags))
+		rtwdev->need_rfk = true;
+}
+
+void rtw_chip_prepare_tx(struct rtw_dev *rtwdev)
+{
+	struct rtw_chip_info *chip = rtwdev->chip;
+
+	if (rtwdev->need_rfk) {
+		rtwdev->need_rfk = false;
+		chip->ops->phy_calibration(rtwdev);
+	}
 }
 
 static void rtw_vif_write_addr(struct rtw_dev *rtwdev, u32 start, u8 *addr)
@@ -473,6 +490,7 @@ static u8 hw_bw_cap_to_bitamp(u8 bw_cap)
 static void rtw_hw_config_rf_ant_num(struct rtw_dev *rtwdev, u8 hw_ant_num)
 {
 	struct rtw_hal *hal = &rtwdev->hal;
+	struct rtw_chip_info *chip = rtwdev->chip;
 
 	if (hw_ant_num == EFUSE_HW_CAP_IGNORE ||
 	    hw_ant_num >= hal->rf_path_num)
@@ -482,6 +500,8 @@ static void rtw_hw_config_rf_ant_num(struct rtw_dev *rtwdev, u8 hw_ant_num)
 	case 1:
 		hal->rf_type = RF_1T1R;
 		hal->rf_path_num = 1;
+		if (!chip->fix_rf_phy_num)
+			hal->rf_phy_num = hal->rf_path_num;
 		hal->antenna_tx = BB_PATH_A;
 		hal->antenna_rx = BB_PATH_A;
 		break;
@@ -891,6 +911,8 @@ int rtw_core_start(struct rtw_dev *rtwdev)
 
 	ieee80211_queue_delayed_work(rtwdev->hw, &rtwdev->watch_dog_work,
 				     RTW_WATCH_DOG_DELAY_TIME);
+	ieee80211_queue_delayed_work(rtwdev->hw, &rtwdev->sar.work,
+				     RTW_SAR_DELAY_TIME);
 
 	set_bit(RTW_FLAG_RUNNING, rtwdev->flags);
 
@@ -914,6 +936,7 @@ void rtw_core_stop(struct rtw_dev *rtwdev)
 
 	cancel_work_sync(&rtwdev->c2h_work);
 	cancel_delayed_work_sync(&rtwdev->watch_dog_work);
+	cancel_delayed_work_sync(&rtwdev->sar.work);
 	cancel_delayed_work_sync(&coex->bt_relink_work);
 	cancel_delayed_work_sync(&coex->bt_reenable_work);
 	cancel_delayed_work_sync(&coex->defreeze_work);
@@ -932,7 +955,7 @@ static void rtw_init_ht_cap(struct rtw_dev *rtwdev,
 	ht_cap->cap = 0;
 	ht_cap->cap |= IEEE80211_HT_CAP_SGI_20 |
 			IEEE80211_HT_CAP_MAX_AMSDU |
-			IEEE80211_HT_CAP_LDPC_CODING |
+			(rtw_chip_wcpu_11ac(rtwdev) ? IEEE80211_HT_CAP_LDPC_CODING : 0) |
 			(1 << IEEE80211_HT_CAP_RX_STBC_SHIFT);
 	if (efuse->hw_cap.bw & BIT(RTW_CHANNEL_WIDTH_40))
 		ht_cap->cap |= IEEE80211_HT_CAP_SUP_WIDTH_20_40 |
@@ -1041,11 +1064,43 @@ static void rtw_unset_supported_band(struct ieee80211_hw *hw,
 	kfree(hw->wiphy->bands[NL80211_BAND_5GHZ]);
 }
 
+static void __update_firmware_info(struct rtw_dev *rtwdev,
+				   struct rtw_fw_state *fw)
+{
+	const struct rtw_fw_hdr *fw_hdr =
+				(const struct rtw_fw_hdr *)fw->firmware->data;
+
+	fw->h2c_version = le16_to_cpu(fw_hdr->h2c_fmt_ver);
+	fw->version = le16_to_cpu(fw_hdr->version);
+	fw->sub_version = fw_hdr->subversion;
+	fw->sub_index = fw_hdr->subindex;
+}
+
+static void __update_firmware_info_legacy(struct rtw_dev *rtwdev,
+					  struct rtw_fw_state *fw)
+{
+	struct rtw_fw_hdr_legacy *legacy =
+				(struct rtw_fw_hdr_legacy *)fw->firmware->data;
+
+	fw->h2c_version = 0;
+	fw->version = le16_to_cpu(legacy->version);
+	fw->sub_version = legacy->subversion1;
+	fw->sub_index = legacy->subversion2;
+}
+
+static void update_firmware_info(struct rtw_dev *rtwdev,
+				 struct rtw_fw_state *fw)
+{
+	if (rtw_chip_wcpu_11n(rtwdev))
+		__update_firmware_info_legacy(rtwdev, fw);
+	else
+		__update_firmware_info(rtwdev, fw);
+}
+
 static void rtw_load_firmware_cb(const struct firmware *firmware, void *context)
 {
 	struct rtw_fw_state *fw = context;
 	struct rtw_dev *rtwdev = fw->rtwdev;
-	const struct rtw_fw_hdr *fw_hdr;
 
 	if (!firmware || !firmware->data) {
 		rtw_err(rtwdev, "failed to request firmware\n");
@@ -1053,13 +1108,8 @@ static void rtw_load_firmware_cb(const struct firmware *firmware, void *context)
 		return;
 	}
 
-	fw_hdr = (const struct rtw_fw_hdr *)firmware->data;
-	fw->h2c_version = le16_to_cpu(fw_hdr->h2c_fmt_ver);
-	fw->version = le16_to_cpu(fw_hdr->version);
-	fw->sub_version = fw_hdr->subversion;
-	fw->sub_index = fw_hdr->subindex;
-
 	fw->firmware = firmware;
+	update_firmware_info(rtwdev, fw);
 	complete_all(&fw->completion);
 
 	rtw_info(rtwdev, "Firmware version %u.%u.%u, H2C version %u\n",
@@ -1132,6 +1182,8 @@ static int rtw_chip_parameter_setup(struct rtw_dev *rtwdev)
 		hal->antenna_tx = BB_PATH_A;
 		hal->antenna_rx = BB_PATH_A;
 	}
+	hal->rf_phy_num = chip->fix_rf_phy_num ? chip->fix_rf_phy_num :
+			  hal->rf_path_num;
 
 	efuse->physical_size = chip->phy_efuse_size;
 	efuse->logical_size = chip->log_efuse_size;
@@ -1304,6 +1356,7 @@ static int rtw_chip_board_info_setup(struct rtw_dev *rtwdev)
 	rtw_load_table(rtwdev, rfe_def->txpwr_lmt_tbl);
 	rtw_phy_tx_power_by_rate_config(hal);
 	rtw_phy_tx_power_limit_config(hal);
+	rtw_sar_load_table(rtwdev);
 
 	return 0;
 }
@@ -1367,6 +1420,7 @@ int rtw_core_init(struct rtw_dev *rtwdev)
 		     (unsigned long)rtwdev);
 
 	INIT_DELAYED_WORK(&rtwdev->watch_dog_work, rtw_watch_dog_work);
+	INIT_DELAYED_WORK(&rtwdev->sar.work, rtw_sar_work);
 	INIT_DELAYED_WORK(&coex->bt_relink_work, rtw_coex_bt_relink_work);
 	INIT_DELAYED_WORK(&coex->bt_reenable_work, rtw_coex_bt_reenable_work);
 	INIT_DELAYED_WORK(&coex->defreeze_work, rtw_coex_defreeze_work);
@@ -1443,6 +1497,8 @@ void rtw_core_deinit(struct rtw_dev *rtwdev)
 		kfree(rsvd_pkt);
 	}
 
+	rtw_sar_release_table(rtwdev);
+
 	mutex_destroy(&rtwdev->mutex);
 	mutex_destroy(&rtwdev->coex.mutex);
 	mutex_destroy(&rtwdev->hal.tx_power_mutex);
@@ -1502,8 +1558,10 @@ int rtw_register_hw(struct rtw_dev *rtwdev, struct ieee80211_hw *hw)
 		return ret;
 	}
 
-	if (regulatory_hint(hw->wiphy, rtwdev->regd.alpha2))
-		rtw_err(rtwdev, "regulatory_hint fail\n");
+	if (!rtwdev->efuse.country_worldwide) {
+		if (regulatory_hint(hw->wiphy, rtwdev->efuse.country_code))
+			rtw_err(rtwdev, "regulatory_hint fail\n");
+	}
 
 	rtw_debugfs_init(rtwdev);
 

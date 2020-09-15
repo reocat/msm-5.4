@@ -23,7 +23,7 @@ static void rtw_fw_c2h_cmd_handle_ext(struct rtw_dev *rtwdev,
 
 	switch (sub_cmd_id) {
 	case C2H_CCX_RPT:
-		rtw_tx_report_handle(rtwdev, skb);
+		rtw_tx_report_handle(rtwdev, skb, C2H_CCX_RPT);
 		break;
 	default:
 		break;
@@ -140,6 +140,9 @@ void rtw_fw_c2h_cmd_handle(struct rtw_dev *rtwdev, struct sk_buff *skb)
 		goto unlock;
 
 	switch (c2h->id) {
+	case C2H_CCX_TX_RPT:
+		rtw_tx_report_handle(rtwdev, skb, C2H_CCX_TX_RPT);
+		break;
 	case C2H_BT_INFO:
 		rtw_coex_bt_info_notify(rtwdev, c2h->payload, len);
 		break;
@@ -153,6 +156,7 @@ void rtw_fw_c2h_cmd_handle(struct rtw_dev *rtwdev, struct sk_buff *skb)
 		rtw_fw_ra_report_handle(rtwdev, c2h->payload, len);
 		break;
 	default:
+		rtw_dbg(rtwdev, RTW_DBG_FW, "C2H 0x%x isn't handled\n", c2h->id);
 		break;
 	}
 
@@ -270,6 +274,9 @@ rtw_fw_send_general_info(struct rtw_dev *rtwdev)
 	u8 h2c_pkt[H2C_PKT_SIZE] = {0};
 	u16 total_size = H2C_PKT_HDR_SIZE + 4;
 
+	if (rtw_chip_wcpu_11n(rtwdev))
+		return;
+
 	rtw_h2c_pkt_set_header(h2c_pkt, H2C_PKT_GENERAL_INFO);
 
 	SET_PKT_H2C_TOTAL_LEN(h2c_pkt, total_size);
@@ -289,6 +296,9 @@ rtw_fw_send_phydm_info(struct rtw_dev *rtwdev)
 	u8 h2c_pkt[H2C_PKT_SIZE] = {0};
 	u16 total_size = H2C_PKT_HDR_SIZE + 8;
 	u8 fw_rf_type = 0;
+
+	if (rtw_chip_wcpu_11n(rtwdev))
+		return;
 
 	if (hal->rf_type == RF_1T1R)
 		fw_rf_type = FW_RF_1T1R;
@@ -318,6 +328,17 @@ void rtw_fw_do_iqk(struct rtw_dev *rtwdev, struct rtw_iqk_para *para)
 	IQK_SET_SEGMENT_IQK(h2c_pkt, para->segment_iqk);
 
 	rtw_fw_send_h2c_packet(rtwdev, h2c_pkt);
+}
+
+void rtw_fw_set_default_port(struct rtw_dev *rtwdev, u8 port)
+{
+	u8 h2c_pkt[H2C_PKT_SIZE] = {0};
+
+	SET_H2C_CMD_ID_CLASS(h2c_pkt, H2C_CMD_DEFAULT_PORT);
+
+	SET_DEFAULT_PORT_PORTID(h2c_pkt, port);
+
+	rtw_fw_send_h2c_command(rtwdev, h2c_pkt);
 }
 
 void rtw_fw_query_bt_info(struct rtw_dev *rtwdev)
@@ -474,6 +495,8 @@ void rtw_fw_set_pwr_mode(struct rtw_dev *rtwdev)
 {
 	struct rtw_lps_conf *conf = &rtwdev->lps_conf;
 	u8 h2c_pkt[H2C_PKT_SIZE] = {0};
+
+	rtw_fw_set_default_port(rtwdev, conf->port_id);
 
 	SET_H2C_CMD_ID_CLASS(h2c_pkt, H2C_CMD_SET_PWR_MODE);
 
@@ -903,14 +926,14 @@ static struct sk_buff *rtw_get_rsvd_page_skb(struct ieee80211_hw *hw,
 	return skb_new;
 }
 
-static void rtw_fill_rsvd_page_desc(struct rtw_dev *rtwdev, struct sk_buff *skb)
+static void rtw_fill_rsvd_page_desc(struct rtw_dev *rtwdev, struct sk_buff *skb,
+				    enum rtw_rsvd_packet_type type)
 {
-	struct rtw_tx_pkt_info pkt_info;
+	struct rtw_tx_pkt_info pkt_info = {0};
 	struct rtw_chip_info *chip = rtwdev->chip;
 	u8 *pkt_desc;
 
-	memset(&pkt_info, 0, sizeof(pkt_info));
-	rtw_rsvd_page_pkt_info_update(rtwdev, &pkt_info, skb);
+	rtw_tx_rsvd_page_pkt_info_update(rtwdev, &pkt_info, skb, type);
 	pkt_desc = skb_push(skb, chip->tx_pkt_desc_sz);
 	memset(pkt_desc, 0, chip->tx_pkt_desc_sz);
 	rtw_tx_fill_tx_desc(&pkt_info, skb);
@@ -1078,6 +1101,8 @@ int rtw_fw_write_data_rsvd_page(struct rtw_dev *rtwdev, u16 pg_addr,
 	u8 bckp[2];
 	u8 val;
 	u16 rsvd_pg_head;
+	u32 bcn_valid_addr;
+	u32 bcn_valid_mask;
 	int ret;
 
 	lockdep_assert_held(&rtwdev->mutex);
@@ -1085,8 +1110,13 @@ int rtw_fw_write_data_rsvd_page(struct rtw_dev *rtwdev, u16 pg_addr,
 	if (!size)
 		return -EINVAL;
 
-	pg_addr &= BIT_MASK_BCN_HEAD_1_V1;
-	rtw_write16(rtwdev, REG_FIFOPAGE_CTRL_2, pg_addr | BIT_BCN_VALID_V1);
+	if (rtw_chip_wcpu_11n(rtwdev)) {
+		rtw_write32_set(rtwdev, REG_DWBCN0_CTRL, BIT_BCN_VALID);
+	} else {
+		pg_addr &= BIT_MASK_BCN_HEAD_1_V1;
+		pg_addr |= BIT_BCN_VALID_V1;
+		rtw_write16(rtwdev, REG_FIFOPAGE_CTRL_2, pg_addr);
+	}
 
 	val = rtw_read8(rtwdev, REG_CR + 1);
 	bckp[0] = val;
@@ -1104,7 +1134,15 @@ int rtw_fw_write_data_rsvd_page(struct rtw_dev *rtwdev, u16 pg_addr,
 		goto restore;
 	}
 
-	if (!check_hw_ready(rtwdev, REG_FIFOPAGE_CTRL_2, BIT_BCN_VALID_V1, 1)) {
+	if (rtw_chip_wcpu_11n(rtwdev)) {
+		bcn_valid_addr = REG_DWBCN0_CTRL;
+		bcn_valid_mask = BIT_BCN_VALID;
+	} else {
+		bcn_valid_addr = REG_FIFOPAGE_CTRL_2;
+		bcn_valid_mask = BIT_BCN_VALID_V1;
+	}
+
+	if (!check_hw_ready(rtwdev, bcn_valid_addr, bcn_valid_mask, 1)) {
 		rtw_err(rtwdev, "error beacon valid\n");
 		ret = -EBUSY;
 	}
@@ -1234,7 +1272,7 @@ static u8 *rtw_build_rsvd_page(struct rtw_dev *rtwdev, u32 *size)
 		 * And iter->len will be added with size of tx_desc_sz.
 		 */
 		if (rsvd_pkt->add_txdesc)
-			rtw_fill_rsvd_page_desc(rtwdev, iter);
+			rtw_fill_rsvd_page_desc(rtwdev, iter, rsvd_pkt->type);
 
 		rsvd_pkt->skb = iter;
 		rsvd_pkt->page = total_page;

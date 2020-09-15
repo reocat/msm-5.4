@@ -341,13 +341,11 @@ static void rtw_ops_bss_info_changed(struct ieee80211_hw *hw,
 	rtw_leave_lps_deep(rtwdev);
 
 	if (changed & BSS_CHANGED_ASSOC) {
-		struct rtw_chip_info *chip = rtwdev->chip;
 		enum rtw_net_type net_type;
 
 		if (conf->assoc) {
 			rtw_coex_connect_notify(rtwdev, COEX_ASSOCIATE_FINISH);
 			net_type = RTW_NET_MGD_LINKED;
-			chip->ops->phy_calibration(rtwdev);
 
 			rtwvif->aid = conf->aid;
 			rtw_fw_download_rsvd_page(rtwdev);
@@ -375,11 +373,8 @@ static void rtw_ops_bss_info_changed(struct ieee80211_hw *hw,
 	if (changed & BSS_CHANGED_BEACON)
 		rtw_fw_download_rsvd_page(rtwdev);
 
-	if (changed & BSS_CHANGED_MU_GROUPS) {
-		struct rtw_chip_info *chip = rtwdev->chip;
-
-		chip->ops->set_gid_table(rtwdev, vif, conf);
-	}
+	if (changed & BSS_CHANGED_MU_GROUPS)
+		rtw_chip_set_gid_table(rtwdev, vif, conf);
 
 	if (changed & BSS_CHANGED_ERP_SLOT)
 		rtw_conf_tx(rtwdev, rtwvif);
@@ -666,6 +661,7 @@ static void rtw_ops_mgd_prepare_tx(struct ieee80211_hw *hw,
 	mutex_lock(&rtwdev->mutex);
 	rtw_leave_lps_deep(rtwdev);
 	rtw_coex_connect_notify(rtwdev, COEX_ASSOCIATE_START);
+	rtw_chip_prepare_tx(rtwdev);
 	mutex_unlock(&rtwdev->mutex);
 }
 

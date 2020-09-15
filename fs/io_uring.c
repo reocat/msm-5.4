@@ -4252,186 +4252,6 @@ static bool io_poll_rewait(struct io_kiocb *req, struct io_poll_iocb *poll)
 	return false;
 }
 
-static struct io_poll_iocb *io_poll_get_double(struct io_kiocb *req)
-{
-	/* pure poll stashes this in ->io, poll driven retry elsewhere */
-	if (req->opcode == IORING_OP_POLL_ADD)
-		return (struct io_poll_iocb *) req->io;
-	return req->apoll->double_poll;
-}
-
-static struct io_poll_iocb *io_poll_get_single(struct io_kiocb *req)
-{
-	if (req->opcode == IORING_OP_POLL_ADD)
-		return &req->poll;
-	return &req->apoll->poll;
-}
-
-static void io_poll_remove_double(struct io_kiocb *req)
-{
-	struct io_poll_iocb *poll = io_poll_get_double(req);
-
-	lockdep_assert_held(&req->ctx->completion_lock);
-
-	if (poll && poll->head) {
-		struct wait_queue_head *head = poll->head;
-
-		spin_lock(&head->lock);
-		list_del_init(&poll->wait.entry);
-		if (poll->wait.private)
-			refcount_dec(&req->refs);
-		poll->head = NULL;
-		spin_unlock(&head->lock);
-	}
-}
-
-static void io_poll_complete(struct io_kiocb *req, __poll_t mask, int error)
-{
-	struct io_ring_ctx *ctx = req->ctx;
-
-	io_poll_remove_double(req);
-	req->poll.done = true;
-	io_cqring_fill_event(req, error ? error : mangle_poll(mask));
-	io_commit_cqring(ctx);
-}
-
-static void io_poll_task_handler(struct io_kiocb *req, struct io_kiocb **nxt)
-{
-	struct io_ring_ctx *ctx = req->ctx;
-
-	if (io_poll_rewait(req, &req->poll)) {
-		spin_unlock_irq(&ctx->completion_lock);
-		return;
-	}
-
-	hash_del(&req->hash_node);
-	io_poll_complete(req, req->result, 0);
-	spin_unlock_irq(&ctx->completion_lock);
-
-	io_put_req_find_next(req, nxt);
-	io_cqring_ev_posted(ctx);
-}
-
-static void io_poll_task_func(struct callback_head *cb)
-{
-	struct io_kiocb *req = container_of(cb, struct io_kiocb, task_work);
-	struct io_ring_ctx *ctx = req->ctx;
-	struct io_kiocb *nxt = NULL;
-
-	io_poll_task_handler(req, &nxt);
-	if (nxt) {
-		struct io_ring_ctx *ctx = nxt->ctx;
-
-		mutex_lock(&ctx->uring_lock);
-		__io_queue_sqe(nxt, NULL);
-		mutex_unlock(&ctx->uring_lock);
-	}
-	percpu_ref_put(&ctx->refs);
-}
-
-static int io_poll_double_wake(struct wait_queue_entry *wait, unsigned mode,
-			       int sync, void *key)
-{
-	struct io_kiocb *req = wait->private;
-	struct io_poll_iocb *poll = io_poll_get_single(req);
-	__poll_t mask = key_to_poll(key);
-
-	/* for instances that support it check for an event match first: */
-	if (mask && !(mask & poll->events))
-		return 0;
-
-	if (poll && poll->head) {
-		bool done;
-
-		spin_lock(&poll->head->lock);
-		done = list_empty(&poll->wait.entry);
-		if (!done)
-			list_del_init(&poll->wait.entry);
-		/* make sure double remove sees this as being gone */
-		wait->private = NULL;
-		spin_unlock(&poll->head->lock);
-		if (!done)
-			__io_async_wake(req, poll, mask, io_poll_task_func);
-	}
-	refcount_dec(&req->refs);
-	return 1;
-}
-
-static void io_init_poll_iocb(struct io_poll_iocb *poll, __poll_t events,
-			      wait_queue_func_t wake_func)
-{
-	poll->head = NULL;
-	poll->done = false;
-	poll->canceled = false;
-	poll->events = events;
-	INIT_LIST_HEAD(&poll->wait.entry);
-	init_waitqueue_func_entry(&poll->wait, wake_func);
-}
-
-static void __io_queue_proc(struct io_poll_iocb *poll, struct io_poll_table *pt,
-			    struct wait_queue_head *head,
-			    struct io_poll_iocb **poll_ptr)
-{
-	struct io_kiocb *req = pt->req;
-
-	/*
-	 * If poll->head is already set, it's because the file being polled
-	 * uses multiple waitqueues for poll handling (eg one for read, one
-	 * for write). Setup a separate io_poll_iocb if this happens.
-	 */
-	if (unlikely(poll->head)) {
-		/* already have a 2nd entry, fail a third attempt */
-		if (*poll_ptr) {
-			pt->error = -EINVAL;
-			return;
-		}
-		poll = kmalloc(sizeof(*poll), GFP_ATOMIC);
-		if (!poll) {
-			pt->error = -ENOMEM;
-			return;
-		}
-		io_init_poll_iocb(poll, req->poll.events, io_poll_double_wake);
-		refcount_inc(&req->refs);
-		poll->wait.private = req;
-		*poll_ptr = poll;
-	}
-
-	pt->error = 0;
-	poll->head = head;
-	add_wait_queue(head, &poll->wait);
-}
-
-static void io_async_queue_proc(struct file *file, struct wait_queue_head *head,
-			       struct poll_table_struct *p)
-{
-	struct io_poll_table *pt = container_of(p, struct io_poll_table, pt);
-	struct async_poll *apoll = pt->req->apoll;
-
-	__io_queue_proc(&apoll->poll, pt, head, &apoll->double_poll);
-}
-
-static void io_sq_thread_drop_mm(struct io_ring_ctx *ctx)
-{
-	struct mm_struct *mm = current->mm;
-
-	if (mm) {
-		unuse_mm(mm);
-		mmput(mm);
-	}
-}
-
-static int io_sq_thread_acquire_mm(struct io_ring_ctx *ctx,
-				   struct io_kiocb *req)
-{
-	if (io_op_defs[req->opcode].needs_mm && !current->mm) {
-		if (unlikely(!mmget_not_zero(ctx->sqo_mm)))
-			return -EFAULT;
-		use_mm(ctx->sqo_mm);
-	}
-
-	return 0;
-}
-
 static void io_async_task_func(struct callback_head *cb)
 {
 	struct io_kiocb *req = container_of(cb, struct io_kiocb, task_work);
@@ -4471,6 +4291,7 @@ end_req:
 		return;
 	}
 
+	if (io_sq_thread_acquire_mm(ctx, req)) {
 	if (io_sq_thread_acquire_mm(ctx, req)) {
 		io_cqring_add_event(req, -EFAULT);
 		goto end_req;
@@ -4552,6 +4373,7 @@ static bool io_arm_poll_handler(struct io_kiocb *req)
 	struct async_poll *apoll;
 	struct io_poll_table ipt;
 	__poll_t mask, ret;
+	bool had_io;
 
 	if (!req->file || !file_can_poll(req->file))
 		return false;
@@ -4567,6 +4389,7 @@ static bool io_arm_poll_handler(struct io_kiocb *req)
 
 	req->flags |= REQ_F_POLLED;
 	memcpy(&apoll->work, &req->work, sizeof(req->work));
+	had_io = req->io != NULL;
 
 	get_task_struct(current);
 	req->task = current;
