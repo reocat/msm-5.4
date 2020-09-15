@@ -1626,8 +1626,9 @@ static int ambarella_nand_restore(struct device *dev)
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
+	nand_reset_op(&host->chip);
 
-	return nand_scan_with_ids(&host->chip, 1, NULL);
+	return 0;
 }
 
 static int ambarella_nand_resume(struct device *dev)
@@ -1638,10 +1639,7 @@ static int ambarella_nand_resume(struct device *dev)
 	host = platform_get_drvdata(pdev);
 	ambarella_nand_init_hw(host);
 	enable_irq(host->irq);
-	if (host->is_spinand) {
-		struct nand_chip *chip = &host->chip;
-		chip->legacy.cmdfunc(chip, NAND_CMD_RESET, -1, -1);
-	}
+	nand_reset_op(&host->chip);
 
 	return 0;
 }
