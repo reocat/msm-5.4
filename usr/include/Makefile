@@ -33,6 +33,7 @@ header-test- += linux/elfcore.h
 header-test- += linux/errqueue.h
 header-test- += linux/fsmap.h
 header-test- += linux/hdlc/ioctl.h
+header-test- += linux/ipu.h
 header-test- += linux/ivtv.h
 header-test- += linux/kexec.h
 header-test- += linux/matroxfb.h
