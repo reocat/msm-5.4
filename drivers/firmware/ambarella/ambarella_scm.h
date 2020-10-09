@@ -24,20 +24,20 @@
 #define AMBA_SCM_SVC_PM				0x2	/* Deprecated */
 #define AMBA_SCM_PM_GPIO_SETUP			0x1	/* Deprecated */
 
-#define AMBA_SIP_ACCESS_REG			0x3
-#define AMBA_SIP_ACCESS_REG_READ		0x1
-#define AMBA_SIP_ACCESS_REG_WRITE		0x2
-#define AMBA_SIP_ACCESS_REG_SETBIT		0x3
-#define AMBA_SIP_ACCESS_REG_CLRBIT		0x4
+#define AMBA_SIP_ACCESS_REG			0x3	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_READ		0x1	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_WRITE		0x2	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_SETBIT		0x3	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_CLRBIT		0x4	/* Deprecated */
 
-#define AMBA_SIP_ACCESS_REG_READ8		0x5
-#define AMBA_SIP_ACCESS_REG_READ16		0x6
-#define AMBA_SIP_ACCESS_REG_READ32		0x7
-#define AMBA_SIP_ACCESS_REG_READ64		0x8
-#define AMBA_SIP_ACCESS_REG_WRITE8		0x9
-#define AMBA_SIP_ACCESS_REG_WRITE16		0xa
-#define AMBA_SIP_ACCESS_REG_WRITE32		0xb
-#define AMBA_SIP_ACCESS_REG_WRITE64		0xc
+#define AMBA_SIP_ACCESS_REG_READ8		0x5	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_READ16		0x6	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_READ32		0x7	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_READ64		0x8	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_WRITE8		0x9	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_WRITE16		0xa	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_WRITE32		0xb	/* Deprecated */
+#define AMBA_SIP_ACCESS_REG_WRITE64		0xc	/* Deprecated */
 
 /* XXX svc ID 0xff */
 #define AMBA_SCM_SVC_QUERY			0xff

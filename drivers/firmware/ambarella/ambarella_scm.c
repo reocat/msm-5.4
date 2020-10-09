@@ -36,34 +36,6 @@ static int ambarella_scm_query(void)
 	return res.a0;
 }
 
-u32 ambarella_smc_readl(void __iomem *addr)
-{
-	struct arm_smccc_res res;
-	u32 fn, cmd;
-
-	fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_READ);
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP, fn);
-
-	arm_smccc_smc(cmd, (unsigned long)addr, 0, 0, 0, 0, 0, 0, &res);
-
-	return res.a0;
-}
-EXPORT_SYMBOL(ambarella_smc_readl);
-
-void ambarella_smc_writel(u32 val, void __iomem *addr)
-{
-	struct arm_smccc_res res;
-	u32 fn, cmd;
-
-	fn = SVC_SCM_FN(AMBA_SIP_ACCESS_REG, AMBA_SIP_ACCESS_REG_WRITE);
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL, ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP, fn);
-
-	arm_smccc_smc(cmd, (unsigned long)addr, val, 0, 0, 0, 0, 0, &res);
-}
-EXPORT_SYMBOL(ambarella_smc_writel);
-
 int ambarella_aarch64_cntfrq_update(void)
 {
 	u32 fn;
@@ -81,95 +53,6 @@ int ambarella_aarch64_cntfrq_update(void)
 EXPORT_SYMBOL(ambarella_aarch64_cntfrq_update);
 
 /* ---------------------------------------------------------------------------- */
-
-int __smccc_read(const volatile void __iomem *addr, u64 *val, u8 width)
-{
-	struct arm_smccc_res res;
-	struct vm_struct *area;
-	u64 offset;
-	u32 op, cmd;
-
-	area = find_vm_area((void *)addr);
-	if (!area) {
-		pr_err("SMCCC READ error.\n");
-		return -ENXIO;
-	}
-
-	offset = (u64)addr & (get_vm_area_size(area) - 1);
-
-	switch (width) {
-	case 64:
-		op = AMBA_SIP_ACCESS_REG_READ64;
-		break;
-	case 32:
-		op = AMBA_SIP_ACCESS_REG_READ32;
-		break;
-	case 16:
-		op = AMBA_SIP_ACCESS_REG_READ16;
-		break;
-	case 8:
-		op = AMBA_SIP_ACCESS_REG_READ8;
-		break;
-	default:
-		return -ENOEXEC;
-	}
-
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL,
-			ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP,
-			SVC_SCM_FN(AMBA_SIP_ACCESS_REG, op));
-
-	arm_smccc_smc(cmd, (unsigned long)area->phys_addr + offset,
-			0, 0, 0, 0, 0, 0, &res);
-	*val = res.a0;
-
-	return 0;
-
-}
-EXPORT_SYMBOL(__smccc_read);
-
-int __smccc_write(volatile void __iomem *addr, u64 val, u8 width)
-{
-	struct arm_smccc_res res;
-	struct vm_struct *area;
-	u32 op, cmd;
-	u64 offset;
-
-	area = find_vm_area((const void *)addr);
-	if (!area) {
-		pr_err("SMCCC WRITE error.\n");
-		return -ENXIO;
-	}
-
-	offset = (u64)addr & (get_vm_area_size(area) - 1);
-
-	switch (width) {
-	case 64:
-		op = AMBA_SIP_ACCESS_REG_WRITE64;
-		break;
-	case 32:
-		op = AMBA_SIP_ACCESS_REG_WRITE32;
-		break;
-	case 16:
-		op = AMBA_SIP_ACCESS_REG_WRITE16;
-		break;
-	case 8:
-		op = AMBA_SIP_ACCESS_REG_WRITE8;
-		break;
-	default:
-		return -ENOEXEC;
-	}
-
-	cmd = ARM_SMCCC_CALL_VAL(ARM_SMCCC_FAST_CALL,
-			ARM_SMCCC_SMC_64,
-			ARM_SMCCC_OWNER_SIP,
-			SVC_SCM_FN(AMBA_SIP_ACCESS_REG, op));
-
-	arm_smccc_smc(cmd, (unsigned long)area->phys_addr + offset,
-			val, 0, 0, 0, 0, 0, &res);
-	return 0;
-}
-EXPORT_SYMBOL(__smccc_write);
 
 int __init ambarella_scm_init(void)
 {
