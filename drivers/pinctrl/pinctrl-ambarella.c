@@ -456,8 +456,7 @@ static int amb_pinconf_set(struct pinctrl_dev *pctldev, unsigned int pin,
 			val = readl_relaxed(reg);
 			writel_relaxed(val & ~(0x1 << offset), reg);
 
-			/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg,
-			 * because bit[1:0] = 00 is 2mA, 10 is 4mA, 01 is 8mA, 11 is 12mA */
+			/* set bit1 of DS value to DS0 reg, and set bit0 of DS value to DS1 reg */
 			reg = soc->ds_base + GPIO_DS_OFFSET(bank);
 			val = readl_relaxed(reg);
 			val |= ((CONF_TO_DS_VAL(config) >> 1) & 0x1) << offset;
