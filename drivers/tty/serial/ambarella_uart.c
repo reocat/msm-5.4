@@ -280,7 +280,7 @@ static inline void serial_ambarella_receive_chars(struct uart_port *port,
 
 ignore_char:
 		ls = readl_relaxed(port->membase + UART_LS_OFFSET);
-	} while ((ls & UART_LS_DR) && (max_count-- > 0));
+	} while ((ls & (UART_LS_DR | UART_LSR_BI)) && (max_count-- > 0));
 
 	spin_unlock(&port->lock);
 	tty_flip_buffer_push(&port->state->port);
