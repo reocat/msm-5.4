@@ -307,6 +307,7 @@
 			reg-names = "gpio0", "gpio1", "gpio2", "gpio3",
 				    "gpio4", "iomux", "pad", "ds";
 			#gpio-range-cells = <3>;
+			amb,secure-ctrl-bit = <50 51 52 53 54 48>;
 
 			gpio: gpio@0 {
 				compatible = "ambarella,gpio";

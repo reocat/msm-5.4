@@ -316,6 +316,7 @@ Required properties:
 - #address-cells: should be 1.
 - #size-cells: should be 0.
 - device: phandle of devices need to be put in secure world.
+- gpio: specify the gpios which only can be access in secure world.
 
 iii) Properties in device node
 ------------------------------
@@ -333,6 +334,8 @@ PS:
   b) If either "amb,secure-reg-ro" or "amb,secure-reg-na" is specified, the registers
      not specified by these two properties but belong to this device are accessible
      in non-secure world.
+  c) If secure gpios are specified, the `pinctrl` and the corresponding GPIO banks are
+     put in secure world.
 
 iv) Example
 -----------
