@@ -423,7 +423,7 @@
 };
 
 &snvs_rtc {
-    status = "disabled";
+    status = "okay";
 };
 
 &ssi2 {
