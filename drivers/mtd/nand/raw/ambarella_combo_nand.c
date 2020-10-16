@@ -35,6 +35,7 @@
 #include <linux/io.h>
 #include <linux/of.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <linux/regmap.h>
 #include <linux/mfd/syscon.h>
 #include <linux/mtd/mtd.h>
@@ -45,6 +46,7 @@
 #include <plat/rct.h>
 #include <plat/nand_combo.h>
 #include <plat/event.h>
+#include <linux/cpufreq.h>
 
 #define AMBARELLA_NAND_DMA_BUFFER_SIZE	8192
 
@@ -55,6 +57,7 @@ struct ambarella_nand_host {
 	struct device			*dev;
 	wait_queue_head_t		wq;
 	spinlock_t			lock;
+	struct mutex                    mutex;
 
 	void __iomem			*regbase;
 	struct regmap			*reg_rct;
@@ -92,10 +95,11 @@ struct ambarella_nand_host {
 	int				err_code;
 	u32				control_reg;
 	u32				timing[6];
+	struct clk			*clk;
 
-	struct notifier_block		system_event;
-	struct semaphore		system_event_sem;
-
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block		cpufreq_nb;
+#endif
 };
 
 /* ==========================================================================*/
@@ -297,7 +301,7 @@ static int ambarella_nand_set_spinand_timing(struct ambarella_nand_host *host)
 	u8 thhqx, twps, twph;
 	u32 t, clk, val;
 
-	clk = (clk_get_rate(clk_get(host->dev, NULL)) / 1000000);
+	clk = clk_get_rate(host->clk) / 1000000;
 
 	/* timing 0 */
 	t = host->timing[0];
@@ -377,7 +381,7 @@ static int ambarella_nand_set_timing(struct ambarella_nand_host *host)
 	if (host->is_spinand)
 		return ambarella_nand_set_spinand_timing(host);
 
-	clk = (clk_get_rate(clk_get(host->dev, NULL)) / 1000000);
+	clk = clk_get_rate(host->clk) / 1000000;
 
 	/* timing 0 */
 	t = host->timing[0];
@@ -494,32 +498,50 @@ static int ambarella_nand_set_timing(struct ambarella_nand_host *host)
 	return 0;
 }
 
-static int ambarella_nand_system_event(struct notifier_block *nb,
-	unsigned long val, void *data)
+#ifdef CONFIG_CPU_FREQ
+static int ambarella_nand_cpufreq_callback(struct notifier_block *nb,
+		unsigned long val, void *data)
 {
 	struct ambarella_nand_host *host;
-	int rval = NOTIFY_OK;
+	bool clk_changed = false;
 
-	host = container_of(nb, struct ambarella_nand_host, system_event);
+	host = container_of(nb, struct ambarella_nand_host, cpufreq_nb);
 
-	switch (val) {
-	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_debug("%s: Pre Change\n", __func__);
-		down(&host->system_event_sem);
-		break;
+	if (val == CPUFREQ_PRECHANGE) {
+		pr_info("%s: CPUFREQ_PRECHANGE \n", __func__);
+		mutex_lock(&host->mutex);
+	} else if (val == CPUFREQ_POSTCHANGE) {
+		pr_info("%s: CPUFREQ_POSTCHANGE \n", __func__);
 
-	case AMBA_EVENT_POST_CPUFREQ:
-		pr_debug("%s: Post Change\n", __func__);
-		ambarella_nand_set_timing(host);
-		up(&host->system_event_sem);
-		break;
+		if (host->clk) {
+			struct clk *parent = clk_get_parent(host->clk);
+			const char *clk_name = __clk_get_name(host->clk);
+			const char *parent_clk_name;
 
-	default:
-		break;
+			if (parent)
+				parent_clk_name = __clk_get_name(parent);
+
+			if (!strcmp(clk_name, "gclk_core")
+					|| !strcmp(clk_name,"gclk_ahb")
+					|| !strcmp(clk_name,"gclk_apb")) {
+				clk_changed = true;
+
+			} else if (parent && (!strcmp(parent_clk_name, "gclk_core")
+						|| !strcmp(parent_clk_name,"gclk_ahb")
+						|| !strcmp(parent_clk_name,"gclk_apb"))) {
+				clk_changed = true;
+			}
+		}
+
+		if (clk_changed)
+			ambarella_nand_set_timing(host);
+
+		mutex_unlock(&host->mutex);
 	}
 
-	return rval;
+	return 0;
 }
+#endif
 
 static irqreturn_t ambarella_nand_isr_handler(int irq, void *dev_id)
 {
@@ -768,6 +790,8 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 
 	host->int_sts = 0;
 
+	mutex_lock(&host->mutex);
+
 	spin_lock_irq(&host->lock);
 
 	if (NAND_CMD_CMD(native_cmd) == NAND_AMB_CMD_READ ||
@@ -823,6 +847,8 @@ static int ambarella_nand_issue_cmd(struct ambarella_nand_host *host,
 	/* avoid to flush previous error info */
 	if (host->err_code == 0)
 		host->err_code = rval;
+
+	mutex_unlock(&host->mutex);
 
 	return rval;
 }
@@ -1536,7 +1562,7 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 
 	spin_lock_init(&host->lock);
 	init_waitqueue_head(&host->wq);
-	sema_init(&host->system_event_sem, 1);
+	mutex_init(&host->mutex);
 
 	nand_controller_init(&host->controller);
 
@@ -1553,6 +1579,8 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	rval = ambarella_nand_get_resource(host, pdev);
 	if (rval < 0)
 		goto err_exit1;
+
+	host->clk = clk_get(host->dev, NULL);
 
 	ambarella_nand_init_chip(host, dn);
 
@@ -1571,12 +1599,19 @@ static int ambarella_nand_probe(struct platform_device *pdev)
 	if (rval < 0)
 		goto err_exit2;
 
-	host->system_event.notifier_call = ambarella_nand_system_event;
-	ambarella_register_event_notifier(&host->system_event);
+#ifdef CONFIG_CPU_FREQ
+	host->cpufreq_nb.notifier_call = ambarella_nand_cpufreq_callback;
+	rval = cpufreq_register_notifier(&host->cpufreq_nb, CPUFREQ_TRANSITION_NOTIFIER);
+	if (rval < 0) {
+		pr_err("%s: Failed to register cpufreq notifier %d\n", __func__, rval);
+		return rval;
+	}
+#endif
 
 	return 0;
 
 err_exit2:
+	clk_put(host->clk);
 	free_irq(host->irq, host);
 err_exit1:
 	dma_free_coherent(host->dev,
@@ -1592,11 +1627,15 @@ static int ambarella_nand_remove(struct platform_device *pdev)
 	int rval = 0;
 
 	if (host) {
-		ambarella_unregister_event_notifier(&host->system_event);
+#ifdef CONFIG_CPU_FREQ
+		cpufreq_unregister_notifier(&host->cpufreq_nb,
+				CPUFREQ_TRANSITION_NOTIFIER);
+#endif
 
 		nand_release(&host->chip);
 
 		free_irq(host->irq, host);
+		clk_put(host->clk);
 
 		dma_free_coherent(host->dev,
 			AMBARELLA_NAND_DMA_BUFFER_SIZE,

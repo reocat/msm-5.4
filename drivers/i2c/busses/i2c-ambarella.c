@@ -34,9 +34,11 @@
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/clk.h>
+#include <linux/clk-provider.h>
 #include <asm/dma.h>
 #include <plat/idc.h>
 #include <plat/event.h>
+#include <linux/cpufreq.h>
 
 #ifndef CONFIG_I2C_AMBARELLA_RETRIES
 #define CONFIG_I2C_AMBARELLA_RETRIES		(3)
@@ -99,8 +101,9 @@ struct ambarella_i2c_dev_info {
 	wait_queue_head_t			msg_wait;
 	unsigned int				msg_index;
 
-	struct notifier_block			system_event;
-	struct semaphore			system_event_sem;
+#ifdef CONFIG_CPU_FREQ
+	struct notifier_block			cpufreq_nb;
+#endif
 	struct clk				*clk;
 };
 
@@ -201,34 +204,51 @@ static inline void ambarella_i2c_set_hs_clk(struct ambarella_i2c_dev_info *pinfo
 	writel_relaxed(IDC_ENR_REG_ENABLE, pinfo->regbase + IDC_ENR_OFFSET);
 }
 
-static int ambarella_i2c_system_event(struct notifier_block *nb,
-	unsigned long val, void *data)
+#ifdef CONFIG_CPU_FREQ
+static int ambarella_i2c_cpufreq_callback(struct notifier_block *nb,
+		unsigned long val, void *data)
 {
-	int					errorCode = NOTIFY_OK;
-	struct platform_device			*pdev;
-	struct ambarella_i2c_dev_info		*pinfo;
+	struct ambarella_i2c_dev_info *pinfo;
+	bool clk_changed = false;
 
-	pinfo = container_of(nb, struct ambarella_i2c_dev_info, system_event);
-	pdev = to_platform_device(pinfo->dev);
+	pinfo = container_of(nb, struct ambarella_i2c_dev_info, cpufreq_nb);
 
-	switch (val) {
-	case AMBA_EVENT_PRE_CPUFREQ:
-		pr_debug("%s[%d]: Pre Change\n", __func__, pdev->id);
-		down(&pinfo->system_event_sem);
-		break;
+	if (val == CPUFREQ_PRECHANGE) {
+		i2c_lock_bus(&pinfo->adap, I2C_LOCK_ROOT_ADAPTER);
+		dev_info(pinfo->dev, "%s: CPUFREQ_PRECHANGE \n", __func__);
+	} else if (val == CPUFREQ_POSTCHANGE) {
+		dev_info(pinfo->dev, "%s: CPUFREQ_POSTCHANGE \n", __func__);
 
-	case AMBA_EVENT_POST_CPUFREQ:
-		pr_debug("%s[%d]: Post Change\n", __func__, pdev->id);
-		ambarella_i2c_set_clk(pinfo);
-		up(&pinfo->system_event_sem);
-		break;
+		if (pinfo->clk) {
+			struct clk *parent = clk_get_parent(pinfo->clk);
+			const char *clk_name = __clk_get_name(pinfo->clk);
+			const char *parent_clk_name;
 
-	default:
-		break;
+			if (parent)
+				parent_clk_name = __clk_get_name(parent);
+
+			if (!strcmp(clk_name, "gclk_core")
+					|| !strcmp(clk_name,"gclk_ahb")
+					|| !strcmp(clk_name,"gclk_apb")) {
+				clk_changed = true;
+
+			} else if (parent && (!strcmp(parent_clk_name, "gclk_core")
+						|| !strcmp(parent_clk_name,"gclk_ahb")
+						|| !strcmp(parent_clk_name,"gclk_apb"))) {
+				clk_changed = true;
+			}
+
+		}
+
+		if (clk_changed)
+			ambarella_i2c_set_clk(pinfo);
+
+		i2c_unlock_bus(&pinfo->adap, I2C_LOCK_ROOT_ADAPTER);
 	}
 
-	return errorCode;
+	return 0;
 }
+#endif
 
 static inline void ambarella_i2c_hw_init(struct ambarella_i2c_dev_info *pinfo)
 {
@@ -548,8 +568,6 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		}
 	}
 
-	down(&pinfo->system_event_sem);
-
 	for (retryCount = 0; retryCount <= adap->retries; retryCount++) {
 		errorCode = 0;
 
@@ -603,7 +621,6 @@ static int ambarella_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg *msgs,
 		}
 	}
 
-	up(&pinfo->system_event_sem);
 
 	if (errorCode) {
 		if (pinfo->state == AMBA_I2C_STATE_NO_ACK) {
@@ -737,7 +754,6 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 	}
 
 	init_waitqueue_head(&pinfo->msg_wait);
-	sema_init(&pinfo->system_event_sem, 1);
 
 	pinfo->clk = clk_get(pinfo->dev, NULL);
 
@@ -769,8 +785,14 @@ static int ambarella_i2c_probe(struct platform_device *pdev)
 		return errorCode;
 	}
 
-	pinfo->system_event.notifier_call = ambarella_i2c_system_event;
-	ambarella_register_event_notifier(&pinfo->system_event);
+#ifdef CONFIG_CPU_FREQ
+	pinfo->cpufreq_nb.notifier_call = ambarella_i2c_cpufreq_callback;
+	errorCode = cpufreq_register_notifier(&pinfo->cpufreq_nb, CPUFREQ_TRANSITION_NOTIFIER);
+	if (errorCode < 0) {
+		pr_err("%s: Failed to register cpufreq notifier %d\n", __func__, errorCode);
+		return errorCode;
+	}
+#endif
 
 	dev_info(&pdev->dev, "Ambarella I2C adapter[%d] probed, clock:%d!\n", adap->nr, pinfo->clk_limit);
 
@@ -784,7 +806,10 @@ static int ambarella_i2c_remove(struct platform_device *pdev)
 
 	pinfo = platform_get_drvdata(pdev);
 	if (pinfo) {
-		ambarella_unregister_event_notifier(&pinfo->system_event);
+#ifdef CONFIG_CPU_FREQ
+		cpufreq_unregister_notifier(&pinfo->cpufreq_nb,
+				CPUFREQ_TRANSITION_NOTIFIER);
+#endif
 		i2c_del_adapter(&pinfo->adap);
 	}
 
@@ -805,7 +830,6 @@ static int ambarella_i2c_suspend(struct device *dev)
 	pdev = to_platform_device(dev);
 	pinfo = platform_get_drvdata(pdev);
 	if (pinfo) {
-		down(&pinfo->system_event_sem);
 		disable_irq(pinfo->irq);
 	}
 
@@ -825,7 +849,6 @@ static int ambarella_i2c_resume(struct device *dev)
 	if (pinfo) {
 		ambarella_i2c_hw_init(pinfo);
 		enable_irq(pinfo->irq);
-		up(&pinfo->system_event_sem);
 	}
 
 	dev_dbg(&pdev->dev, "%s\n", __func__);

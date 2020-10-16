@@ -968,13 +968,6 @@ struct arch_timer_kvm_info *arch_timer_get_kvm_info(void)
 	return &arch_timer_kvm_info;
 }
 
-#ifdef CONFIG_ARCH_AMBARELLA
-struct clocksource *arch_clocksource_default_clock(void)
-{
-	return &clocksource_counter;
-}
-#endif
-
 static void __init arch_counter_register(unsigned type)
 {
 	u64 start_count;
@@ -1640,4 +1633,10 @@ static int __init arch_timer_acpi_init(struct acpi_table_header *table)
 	return arch_timer_common_init();
 }
 TIMER_ACPI_DECLARE(arch_timer, ACPI_SIG_GTDT, arch_timer_acpi_init);
+#endif
+
+#ifdef CONFIG_ARCH_AMBARELLA
+#ifdef CONFIG_CPU_FREQ
+#include "ambarella_timer_fixup.c"
+#endif
 #endif

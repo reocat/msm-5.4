@@ -107,19 +107,21 @@
 	cpufreq {
 		compatible = "ambarella,cpufreq";
 		/*
-		 * Config effective clocks. '%KHZ'
-		 *
-		 * 0 - cortex.
-		 * 1 - core.
-		 * 2 - cortex and core.
+		 * MASK
+		 * + --- + ----- + ----- +
+		 * | bit |   1   |   0   |
+		 * + --- + ----- + ----- +
+		 * | clk |  CORE | CORTEX|
+		 * + --- + ----- + ----- +
 		 */
-		cpufreq-effective-clock = <0>;			/* default 'cortex' */
+		cpufreq-mask = <3>;
+		amb,timer-freq-adjust-off;
 		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
 			<1080000  672000>,
-			< 816000  504000>,
-			< 600000  336000>;
+			<816000  504000>,
+			<600000  336000>;
 	};
 
 	gic: interrupt-controller@f3000000 {
