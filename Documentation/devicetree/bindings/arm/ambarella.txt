@@ -44,6 +44,7 @@ Table of Contents
     32) - SOUND node
     33) - HW RANDOM node
     34) - DMIC node
+    35) - CPUfreq node
 
   III - Misc Node definition
     1)  - BOGUS BUS node
@@ -1427,6 +1428,30 @@ Required properties:
 Optional properties:
 - amb,custom-iir: should be specified if hardware has custom-iir registers and
   user want to use it for DC blocking.
+
+35) - CPUfreq node
+===============
+
+
+Required properties:
+- compatible: "ambarella,cpufreq".
+
+Optional properties:
+- cpufreq-mask: Specify the clock which can be adjusted.
+	bit0: gclk_cortex
+	bit1: gclk_core
+	`0` means corresponding bit of clock is disabled adjustment.
+	`1` means corresponding bit of clock is enabled adjustment.
+
+- amb,timer-freq-adjust-off: Disable update the frequency of 'arch-arm-timer'.
+	On S5L, CV2, CV22 and CV25, the clock source of 'arch-arm-timer' is 'gclk_cortex',
+	so the timer frequency should be changed when adjusting the cortex frequency.
+	Due to the arm register `cntfrq_el0` can not be modified in non secure world,
+	it need to call Ambarella specific `smc`.
+	On S6LM and CV28, clock source of 'arch-arm-timer' is 'gclk_enet'. it should be set
+	to disable frequency adjustment of `arch-arch-timer`.
+
+- clocks-frequency-cortex-core: Specify the frequency table.
 
 
 

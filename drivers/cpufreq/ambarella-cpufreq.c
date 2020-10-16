@@ -230,6 +230,7 @@ static int ambarella_cpufreq_probe(struct platform_device *pdev)
 		goto err_put_node;
 	}
 
+	/* For backwards compatibility */
 	rval = of_property_read_u32(np, "cpufreq-effective-clock", &effective_clk);
 	if (rval || effective_clk < 0 || effective_clk > 2) {
 		amb_cpufreq->cpufreq_mask = 0;
