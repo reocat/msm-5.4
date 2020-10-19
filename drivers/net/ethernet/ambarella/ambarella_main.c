@@ -2530,7 +2530,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 		if (lp->phydev == NULL) {
 			dev_err(&pdev->dev, "No PHY device.\n");
 			ret_val = -ENODEV;
-			goto ambeth_drv_probe_free_netdev;
+			goto ambeth_drv_probe_remove_mdio;
 		}
 	}
 
@@ -2578,6 +2578,7 @@ static int ambeth_drv_probe(struct platform_device *pdev)
 
 ambeth_drv_probe_netif_napi_del:
 	netif_napi_del(&lp->napi);
+ambeth_drv_probe_remove_mdio:
 	mdiobus_unregister(&lp->new_bus);
 
 ambeth_drv_probe_free_netdev:
