@@ -119,9 +119,9 @@
 		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
-			<1080000  672000>,
-			<816000  504000>,
-			<600000  336000>;
+			<1080000  456000>,
+			<816000  336000>,
+			<600000  240000>;
 	};
 
 	gic: interrupt-controller@f3000000 {
