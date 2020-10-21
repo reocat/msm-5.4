@@ -482,7 +482,6 @@ static int ksz9031_of_load_skew_values(struct phy_device *phydev,
 {
 	int val[4] = {-1, -2, -3, -4};
 	int matches = 0;
-	u16 mask;
 	u16 maxval;
 	u16 newval;
 	int i;
@@ -502,11 +501,17 @@ static int ksz9031_of_load_skew_values(struct phy_device *phydev,
 	maxval = (field_sz == 4) ? 0xf : 0x1f;
 	for (i = 0; i < numfields; i++)
 		if (val[i] != -(i + 1)) {
-			mask = 0xffff;
-			mask ^= maxval << (field_sz * i);
-			newval = (newval & mask) |
-				(((val[i] / KSZ9031_PS_TO_REG) & maxval)
-					<< (field_sz * i));
+			u16 fldval;
+			u16 mask;
+
+			fldval = val[i] / KSZ9031_PS_TO_REG;
+			if ( fldval > maxval )
+				fldval = maxval;
+
+			mask = 0xffff ^ (maxval << (field_sz * i));
+
+			newval &= mask;
+			newval |= fldval << (field_sz * i);
 		}
 
 	return ksz9031_extended_write(phydev, OP_DATA, 2, reg, newval);

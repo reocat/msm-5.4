@@ -228,6 +228,7 @@ struct imx_port {
 	unsigned int		have_rtscts:1;
 	unsigned int		have_rtsgpio:1;
 	unsigned int		dte_mode:1;
+	unsigned int            revpol:1;
 	struct clk		*clk_ipg;
 	struct clk		*clk_per;
 	const struct imx_uart_data *devdata;
@@ -1358,6 +1359,11 @@ static int imx_startup(struct uart_port *port)
 			/* disable broken interrupts */
 			temp &= ~(UCR3_RI | UCR3_DCD);
 
+		if (sport->revpol)
+		  temp |= UCR3_INVT;
+		else
+		  temp &= ~UCR3_INVT;
+
 		writel(temp, sport->port.membase + UCR3);
 	}
 
@@ -2093,6 +2099,9 @@ static int serial_imx_probe_dt(struct imx_port *sport,
 	if (of_get_property(np, "rts-gpios", NULL))
 		sport->have_rtsgpio = 1;
 
+	if (of_get_property(np, "reverse-polarity", NULL))
+		sport->revpol = 1;
+
 	return 0;
 }
 #else
@@ -2125,6 +2134,7 @@ static int serial_imx_probe(struct platform_device *pdev)
 	int ret = 0, reg;
 	struct resource *res;
 	int txirq, rxirq, rtsirq;
+	unsigned long temp;
 
 	sport = devm_kzalloc(&pdev->dev, sizeof(*sport), GFP_KERNEL);
 	if (!sport)
@@ -2224,19 +2234,24 @@ static int serial_imx_probe(struct platform_device *pdev)
 		 * enabled later because they cannot be cleared
 		 * (confirmed on i.MX25) which makes them unusable.
 		 */
-		writel(IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP | UCR3_DSR,
-		       sport->port.membase + UCR3);
+                temp = readl(sport->port.membase + UCR3);
 
+		temp &= ~(UCR3_RI | UCR3_DCD);
+		temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP | UCR3_DSR;
+
+		writel(temp, sport->port.membase + UCR3);
 	} else {
-		unsigned long ucr3 = UCR3_DSR;
+		temp = readl(sport->port.membase + UFCR);
+		if (temp & UFCR_DCEDTE)
+			writel(temp & ~UFCR_DCEDTE, sport->port.membase + UFCR);
 
-		reg = readl(sport->port.membase + UFCR);
-		if (reg & UFCR_DCEDTE)
-			writel(reg & ~UFCR_DCEDTE, sport->port.membase + UFCR);
+                temp = readl(sport->port.membase + UCR3);
+		temp |= UCR3_DSR;
 
 		if (!is_imx1_uart(sport))
-			ucr3 |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
-		writel(ucr3, sport->port.membase + UCR3);
+			temp |= IMX21_UCR3_RXDMUXSEL | UCR3_ADNIMP;
+
+		writel(temp, sport->port.membase + UCR3);
 	}
 
 	clk_disable_unprepare(sport->clk_ipg);

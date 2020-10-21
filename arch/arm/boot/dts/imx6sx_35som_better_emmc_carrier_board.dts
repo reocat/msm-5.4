@@ -47,8 +47,8 @@
 
         bt_reset: bt-reset {
 			compatible = "gpio-reset";
-			reset-gpios = <&gpio1 2 GPIO_ACTIVE_LOW>;
-			//reset-delay-us = <1000>;
+			reset-gpios = <&gpio4 12 GPIO_ACTIVE_LOW>;
+			reset-delay-us = <1000>;
 			#reset-cells = <0>;
 		};
 
@@ -62,18 +62,6 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&gpio2 2 GPIO_ACTIVE_HIGH>;
 			enable-active-high;
-		};
-//this is a GPIO type regulator for PWM, but for sentience gateway we don't have a GPIO to enable disable backlight
-
-		wlreg_on: fixedregulator@100 {
-			compatible = "regulator-fixed";
-			regulator-min-microvolt = <3300000>;
-			regulator-max-microvolt = <3300000>;
-			regulator-name = "wlreg_on";
-			gpio = <&gpio4 11 GPIO_ACTIVE_HIGH>;
-			startup-delay-us = <100>;
-			enable-active-high;
-			regulator-always-on;
 		};
 		
 		reg_psu_5v: regulator@3 {
@@ -242,31 +230,6 @@
 	fsl,shared-mem-size = <0x1000>;
 };
 
-/*
-&pwm1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm1_0>;
-	status = "okay";
-};
-
-&pwm2 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm2_0>;
-	status = "okay";
-};
-
-&pwm3 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm3_0>;
-	status = "okay";
-};
-
-&pwm4 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_pwm4_0>;
-	status = "okay";
-};
-*/
 
 &pxp {
 	status = "okay";
@@ -332,24 +295,6 @@
 };
 
 
-&ecspi2 {
-	fsl,spi-num-chipselects = <1>;
-	cs-gpios = <&gpio4 0 0>;
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi2>;
-	status = "okay";
-
-/*
-	flash: m25p80@0 {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		compatible = "st,m25p32";
-		spi-max-frequency = <20000000>;
-		reg = <0>;
-	};
-*/
-};
-
 
 //PORT3(PORT7)
 &ecspi5 {
@@ -378,7 +323,7 @@
 	};
 
 	spidev@2 {
-  	    compatible = "spidev";
+  	    compatible = "rohm,dh2228fv";
         spi-max-frequency = <10000000>;
 		reg = <2>;
 		dmas = <&sdma 11 7 1>, <&sdma 12 7 2>;
@@ -413,6 +358,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	non-removable;
+	wifi-host;
 	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
@@ -529,14 +475,7 @@
 				MX6SX_PAD_NAND_DATA07__RAWNAND_DATA07   0xb091
 			>;
 		};
-		/*
-		pinctrl_i2c1: i2c1grp {
-			fsl,pins = <
-				MX6SX_PAD_GPIO1_IO01__I2C1_SDA		0x4001b8b1
-				MX6SX_PAD_GPIO1_IO00__I2C1_SCL		0x4001b8b1
-			>;
-		};
-		*/
+
 		pinctrl_i2c2: i2c2grp {
 			fsl,pins = <
 				MX6SX_PAD_QSPI1B_DATA2__I2C2_SDA 0x4001b8b1                          
@@ -544,24 +483,6 @@
 			>;
 		};
 		
-		/*
-		pinctrl_i2c3: i2c3grp {
-			fsl,pins = <
-				MX6SX_PAD_KEY_ROW4__I2C3_SDA 0x4001b8b1
-				MX6SX_PAD_KEY_COL4__I2C3_SCL 0x4001b8b1
-			>;
-		};
-		*/
-
-		/*
-		pinctrl_i2c4: i2c4grp {
-			fsl,pins = <
-				MX6SX_PAD_SD3_DATA0__I2C4_SCL		0x4001b8b1
-				MX6SX_PAD_SD3_DATA1__I2C4_SDA		0x4001b8b1
-				MX6SX_PAD_NAND_DATA04__GPIO4_IO_8	0x1b0b1
-			>;
-		};
-		*/
 		
 		pinctrl_pwm1_0: pwm1grp-0 {
 			fsl,pins = <
@@ -612,7 +533,7 @@
 		pinctrl_uart1: uart1grp {// uart1 is used as IO. Console removed
 			fsl,pins = <				
 				MX6SX_PAD_GPIO1_IO04__UART1_TX          0x1b0b1
-                MX6SX_PAD_GPIO1_IO05__UART1_RX          0x1b0b1				
+                		MX6SX_PAD_GPIO1_IO05__UART1_RX          0x1b0b1				
 			>;
 		};
 		
@@ -652,9 +573,8 @@
         
 		pinctrl_bt: btgrp {
          		fsl,pins = <
-             			//MX6SX_PAD_NAND_RE_B__GPIO4_IO_12      0x13069 
-					MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2        0x13069
-          			 >;
+             			MX6SX_PAD_NAND_RE_B__GPIO4_IO_12      0x13069 
+          		>;
                 };/* BT_REG_ON */
 
 		pinctrl_uart6: uart6grp {// uart6 is for x4 485
@@ -662,7 +582,7 @@
 				MX6SX_PAD_KEY_COL1__UART6_TX 0x1b0b1
 				MX6SX_PAD_KEY_ROW1__UART6_RX 0x1b0b1
 				MX6SX_PAD_KEY_COL0__UART6_RTS_B       0x1b0b1
-			    MX6SX_PAD_KEY_ROW0__UART6_CTS_B       0x1b0b1
+				MX6SX_PAD_KEY_ROW0__UART6_CTS_B       0x1b0b1
 			>;
 		};
 		
@@ -671,31 +591,6 @@
                                 MX6SX_PAD_KEY_ROW4__GPIO2_IO_19 0x1b0b1         
                         >;
                 };	
-		
-		/*
-		pinctrl_ecspi1: ecspi1grp {
-			fsl,pins = <
-				MX6SX_PAD_KEY_ROW0__ECSPI1_MOSI			0x1b089//QSPI1A_DATA0
-				MX6SX_PAD_KEY_COL1__ECSPI1_MISO			0x1b0b9//QSPI1A_DATA1
-				MX6SX_PAD_KEY_COL0__ECSPI1_SCLK			0x1b089//QSPI1A_SCLK
-				MX6SX_PAD_KEY_ROW1__ECSPI1_SS0			0x0b089//QSPI1A_SS0_B
-				MX6SX_PAD_QSPI1A_DATA0__ECSPI1_MOSI	0x1b0b9		//0x1b089
-				MX6SX_PAD_QSPI1A_DATA1__ECSPI1_MISO	0x1b0b9		//0x1b0b9
-				MX6SX_PAD_QSPI1A_SCLK__ECSPI1_SCLK	0x1b0b9		//0x1b0b9
-				MX6SX_PAD_QSPI1A_SS0_B__ECSPI1_SS0	0x0b0b9		//0x0b089
-			>;
-		};
-		*/
-		
-		pinctrl_ecspi2: ecspi2grp {
-			fsl,pins = <
-				MX6SX_PAD_NAND_CLE__ECSPI2_SCLK			0x100b1
-				MX6SX_PAD_NAND_WP_B__ECSPI2_MOSI		0x100b1
-				MX6SX_PAD_NAND_READY_B__ECSPI2_MISO		0x100b1
-				MX6SX_PAD_NAND_ALE__GPIO4_IO_0			0x100b1
-				//MX6SX_PAD_NAND_ALE__ECSPI2_SS0
-			>;
-		};
 		
 		pinctrl_ecspi5: ecspi5grp {
 			fsl,pins = <
@@ -740,7 +635,8 @@
 				MX6SX_PAD_NAND_DATA07__GPIO4_IO_11      0x170D1
 				//MX6SX_PAD_NAND_DATA06__GPIO4_IO_10	0x170D1
 			>;
-		};
+		};/* WLAN */
+
 		pinctrl_usdhc4_1: usdhc4grp-1 
 		{
 			fsl,pins = 

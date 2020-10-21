@@ -78,6 +78,12 @@ modules.builtin
 !.cocciconfig
 
 #
+# Also don't ignore Eclipse files
+#
+!.project
+!.cproject
+!.settings
+
 # Generated include files
 #
 include/config
