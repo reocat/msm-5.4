@@ -122,7 +122,7 @@
 		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
-			<1080000  792000>,
+			<1008000  792000>,
 			< 816000  576000>,
 			< 600000  336000>;
 	};

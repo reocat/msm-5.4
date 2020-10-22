@@ -565,7 +565,6 @@ webcam_bind(struct usb_composite_dev *cdev)
 	uvc_opts->streaming_interval = streaming_interval;
 	uvc_opts->streaming_maxpacket = streaming_maxpacket;
 	uvc_opts->streaming_maxburst = streaming_maxburst;
-	uvc_set_trace_param(trace);
 
 	uvc_opts->fs_control = uvc_fs_control_cls;
 	uvc_opts->ss_control = uvc_ss_control_cls;

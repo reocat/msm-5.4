@@ -106,12 +106,12 @@
 		 * | clk |  CORE | CORTEX|
 		 * + --- + ----- + ----- +
 		 */
-		cpufreq-mask = <3>;
+		cpufreq-mask = <1>;
 		amb,timer-freq-adjust-off;
 		clocks = <&gclk_cortex &gclk_core>;
 		clock-names = "cortex_clk", "core_clk";
 		clocks-frequency-cortex-core =
-			<1080000  504000>,
+			<1008000  504000>,
 			<816000  336000>,
 			<600000  240000>;
 	};
