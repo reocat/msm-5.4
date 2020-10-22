@@ -122,9 +122,6 @@ static void ambarella_pll_set_ctrl3(struct clk_hw *hw, unsigned long pre_scaler,
 	} else {
 		pllvco = (parent_rate / pre_scaler) * intp * sdiv;
 
-		printk("vco = %ld, %ld, %ld, %ld, %ld\n", pllvco, parent_rate, pre_scaler,
-			intp, sdiv);
-
 		if (pllvco > 980000000ull)
 			ctrl3_val.s.pll_vco_range = 3;
 		else if (pllvco > 700000000ull)
