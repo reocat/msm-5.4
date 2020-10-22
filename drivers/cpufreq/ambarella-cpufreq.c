@@ -269,8 +269,10 @@ static int ambarella_cpufreq_probe(struct platform_device *pdev)
 		goto err_put_node;
 	}
 
+#if 0
 	if (!(amb_cpufreq->cpufreq_mask & CPUFREQ_CORE_MASK))
 		ambarella_cpufreq_driver.flags |= CPUFREQ_ASYNC_NOTIFICATION;
+#endif
 
 	if (amb_cpufreq->cpufreq_mask & CPUFREQ_CORTEX_MASK) {
 		/* notify to adjust the frequency of arm timer */
