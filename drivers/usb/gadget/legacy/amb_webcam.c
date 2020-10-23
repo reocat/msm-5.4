@@ -200,8 +200,8 @@ static const struct uvc_extension_unit_desc uvc_extension_unit = {
 	.bNrInPins		= 1,
 	.baSourceID[0]		= 2,
 	.bControlSize		= 2,
-	.bmControls[0]		= 0x0,
-	.bmControls[1]		= 0x0,
+	.bmControls[0]		= 0xFF,
+	.bmControls[1]		= 0xFF,
 	.iExtension		= 0,
 };
 
