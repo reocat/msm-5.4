@@ -14,6 +14,7 @@
 #include <linux/dma-mapping.h>
 #include <drm/bridge/dw_hdmi.h>
 #include <drm/drm_edid.h>
+#include <drm/drm_connector.h>
 
 #include <sound/hdmi-codec.h>
 #include <sound/asoundef.h>
@@ -117,7 +118,7 @@ static int audio_get_eld(struct device *dev, void *data,
 
 	eld = audio->get_eld(audio->hdmi);
 	if (eld)
-		memcpy(buf, eld, min(sizeof(dw->data.eld), len));
+		memcpy(buf, eld, min_t(size_t, MAX_ELD_BYTES, len));
 	else
 		/* Pass en empty ELD if connector not available */
 		memset(buf, 0, len);
