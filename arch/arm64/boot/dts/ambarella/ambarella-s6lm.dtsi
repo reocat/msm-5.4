@@ -821,6 +821,11 @@
 						   0xba0046 0xba0048 0xba0049 0xba004a>;
 			};
 
+			vin_master_sync_pins: vinc0@0 {
+				reg = <0>;
+				amb,pinmux-ids = <0x1043 0x1044>;
+			};
+
 		};
 	};
 
@@ -1239,6 +1244,8 @@
 			interrupts = <0 110 0x1 0 111 0x1 0 112 0x1>;
 			interrupt-names = "idsp", "idsp_sof", "idsp_last_pixel";
 			clocks = <&gclk_so>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&vin_master_sync_pins>;
 		};
 
 		/* node for vin1 controller */
