@@ -39,7 +39,7 @@
 
 #define AMBARELLA_WDT_MAX_CYCLE		0xffffffff
 
-static int heartbeat = -1; /* -1 means get value from FDT */
+static int heartbeat; /* get value from FDT */
 module_param(heartbeat, int, 0);
 MODULE_PARM_DESC(heartbeat, "Initial watchdog heartbeat in seconds");
 
@@ -174,7 +174,7 @@ static int ambarella_wdt_probe(struct platform_device *pdev)
 	}
 
 	/* irq < 0 means to disable interrupt mode */
-	ambwdt->irq = platform_get_irq(pdev, 0);
+	ambwdt->irq = platform_get_irq_optional(pdev, 0);
 	if (ambwdt->irq > 0) {
 		rval = devm_request_irq(&pdev->dev, ambwdt->irq,
 					ambarella_wdt_irq, IRQF_TRIGGER_RISING,
