@@ -24,6 +24,15 @@
 #define OCOTP_UID_LOW			0x410
 #define OCOTP_UID_HIGH			0x420
 
+#define OCOTP_IMX8MP_ANA_TRIM_1		0xd70
+#define OCOTP_IMX8MP_LDO_MASK		0x1f
+#define OCOTP_IMX8MP_LDO0_SHIFT		16
+#define OCOTP_IMX8MP_LDO1_SHIFT		24
+#define OCOTP_IMX8MP_ANA_TRIM_2		0xd80
+#define OCOTP_IMX8MP_LDO2_SHIFT		0
+
+#define OCOTP_IMX8MP_LDO_NUM		3
+
 #define IMX8MP_OCOTP_UID_OFFSET		0x10
 
 /* Same as ANADIG_DIGPROG_IMX7D */
@@ -35,6 +44,7 @@ struct imx8_soc_data {
 };
 
 static u64 soc_uid;
+static int ldo_trim[3] = { -1, -1, -1 };
 
 #ifdef CONFIG_HAVE_ARM_SMCCC
 static u32 imx8mq_soc_revision_from_atf(void)
@@ -121,6 +131,40 @@ static void __init imx8mm_soc_uid(void)
 	of_node_put(np);
 }
 
+static void __init imx8mp_read_ldo_trim(void)
+{
+	void __iomem *ocotp_base;
+	struct device_node *np;
+	u32 fuse;
+
+	if (!of_machine_is_compatible("fsl,imx8mp"))
+		return;
+
+	np = of_find_compatible_node(NULL, NULL, "fsl,imx8mp-ocotp");
+	if (!np)
+		goto out;
+
+	ocotp_base = of_iomap(np, 0);
+	if (!ocotp_base){
+		WARN_ON(!ocotp_base);
+		goto out;
+	}
+
+	fuse = readl_relaxed(ocotp_base + OCOTP_IMX8MP_ANA_TRIM_2);
+	ldo_trim[2] = fuse & OCOTP_IMX8MP_LDO_MASK;
+
+	fuse = readl_relaxed(ocotp_base + OCOTP_IMX8MP_ANA_TRIM_1);
+	ldo_trim[1] = (fuse >> OCOTP_IMX8MP_LDO1_SHIFT) &
+		OCOTP_IMX8MP_LDO_MASK;
+	ldo_trim[0] = (fuse >> OCOTP_IMX8MP_LDO0_SHIFT) &
+		OCOTP_IMX8MP_LDO_MASK;
+
+	iounmap(ocotp_base);
+
+out:
+	of_node_put(np);
+}
+
 static u32 __init imx8mm_soc_revision(struct device *dev)
 {
 	struct device_node *np;
@@ -148,6 +192,8 @@ static u32 __init imx8mm_soc_revision(struct device *dev)
 	} else {
 		imx8mm_soc_uid();
 	}
+
+	imx8mp_read_ldo_trim();
 
 	return rev;
 }
@@ -289,6 +335,12 @@ static struct platform_driver imx8_soc_info_driver = {
 		.of_match_table = imx8_soc_match,
 	},
 };
+
+int imx8mp_get_ldo_trim(int ldo)
+{
+	return ldo_trim[ldo];
+}
+EXPORT_SYMBOL_GPL(imx8mp_get_ldo_trim);
 
 module_platform_driver(imx8_soc_info_driver);
 MODULE_LICENSE("GPL v2");
