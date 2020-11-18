@@ -286,7 +286,7 @@ lpfc_els_abort(struct lpfc_hba *phba, struct lpfc_nodelist *ndlp)
  * This routine is only called if we are SLI3, direct connect pt2pt
  * mode and the remote NPort issues the PLOGI after link up.
  */
-void
+static void
 lpfc_defer_pt2pt_acc(struct lpfc_hba *phba, LPFC_MBOXQ_t *link_mbox)
 {
 	LPFC_MBOXQ_t *login_mbox;
@@ -2211,7 +2211,9 @@ lpfc_cmpl_prli_prli_issue(struct lpfc_vport *vport, struct lpfc_nodelist *ndlp,
 		if (bf_get_be32(prli_init, nvpr))
 			ndlp->nlp_type |= NLP_NVME_INITIATOR;
 
-		if (phba->nsler && bf_get_be32(prli_nsler, nvpr))
+		if (phba->nsler && bf_get_be32(prli_nsler, nvpr) &&
+		    bf_get_be32(prli_conf, nvpr))
+
 			ndlp->nlp_nvme_info |= NLP_NVME_NSLER;
 		else
 			ndlp->nlp_nvme_info &= ~NLP_NVME_NSLER;

@@ -9,6 +9,7 @@
 #include <linux/xattr.h>
 #include <linux/uio.h>
 #include <linux/uaccess.h>
+#include <linux/security.h>
 #include "overlayfs.h"
 
 static char ovl_whatisit(struct inode *inode, struct inode *realinode)
@@ -27,14 +28,28 @@ static char ovl_whatisit(struct inode *inode, struct inode *realinode)
 static struct file *ovl_open_realfile(const struct file *file,
 				      struct inode *realinode)
 {
+	struct path realpath;
 	struct inode *inode = file_inode(file);
 	struct file *realfile;
 	const struct cred *old_cred;
 	int flags = file->f_flags | OVL_OPEN_FLAGS;
+	int acc_mode = ACC_MODE(flags);
+	int err;
+
+	if (flags & O_APPEND)
+		acc_mode |= MAY_APPEND;
 
 	old_cred = ovl_override_creds(inode->i_sb);
-	realfile = open_with_fake_path(&file->f_path, flags, realinode,
-				       current_cred());
+	err = inode_permission(realinode, MAY_OPEN | acc_mode);
+	if (err) {
+		realfile = ERR_PTR(err);
+	} else if (!inode_owner_or_capable(realinode)) {
+		realfile = ERR_PTR(-EPERM);
+	} else {
+		ovl_path_real(file->f_path.dentry, &realpath);
+		realfile = open_with_fake_path(&realpath, flags, realinode,
+					       current_cred());
+	}
 	revert_creds(old_cred);
 
 	pr_debug("open(%p[%pD2/%c], 0%o) -> (%p, 0%o)\n",
@@ -334,7 +349,11 @@ static int ovl_mmap(struct file *file, struct vm_area_struct *vma)
 	revert_creds(old_cred);
 
 	if (ret) {
-		/* Drop reference count from new vm_file value */
+		/*
+		 * Drop reference count from new vm_file value and restore
+		 * original vm_file value
+		 */
+		vma->vm_file = file;
 		fput(realfile);
 	} else {
 		/* Drop reference count from previous vm_file value */
@@ -400,7 +419,9 @@ static long ovl_real_ioctl(struct file *file, unsigned int cmd,
 		return ret;
 
 	old_cred = ovl_override_creds(file_inode(file)->i_sb);
-	ret = vfs_ioctl(real.file, cmd, arg);
+	ret = security_file_ioctl(real.file, cmd, arg);
+	if (!ret)
+		ret = vfs_ioctl(real.file, cmd, arg);
 	revert_creds(old_cred);
 
 	fdput(real);

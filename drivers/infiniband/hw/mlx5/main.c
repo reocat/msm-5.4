@@ -2167,7 +2167,7 @@ static int uar_mmap(struct mlx5_ib_dev *dev, enum mlx5_ib_mmap_cmd cmd,
 	mlx5_ib_dbg(dev, "uar idx 0x%lx, pfn %pa\n", idx, &pfn);
 
 	err = rdma_user_mmap_io(&context->ibucontext, vma, pfn, PAGE_SIZE,
-				prot);
+				prot, NULL);
 	if (err) {
 		mlx5_ib_err(dev,
 			    "rdma_user_mmap_io failed with error=%d, mmap_cmd=%s\n",
@@ -2209,7 +2209,8 @@ static int dm_mmap(struct ib_ucontext *context, struct vm_area_struct *vma)
 	      PAGE_SHIFT) +
 	      page_idx;
 	return rdma_user_mmap_io(context, vma, pfn, map_size,
-				 pgprot_writecombine(vma->vm_page_prot));
+				 pgprot_writecombine(vma->vm_page_prot),
+				 NULL);
 }
 
 static int mlx5_ib_mmap(struct ib_ucontext *ibcontext, struct vm_area_struct *vma)
@@ -2247,7 +2248,8 @@ static int mlx5_ib_mmap(struct ib_ucontext *ibcontext, struct vm_area_struct *vm
 			PAGE_SHIFT;
 		return rdma_user_mmap_io(&context->ibucontext, vma, pfn,
 					 PAGE_SIZE,
-					 pgprot_noncached(vma->vm_page_prot));
+					 pgprot_noncached(vma->vm_page_prot),
+					 NULL);
 	case MLX5_IB_MMAP_CLOCK_INFO:
 		return mlx5_ib_mmap_clock_info_page(dev, vma, context);
 
@@ -5142,8 +5144,7 @@ static int mlx5_port_immutable(struct ib_device *ibdev, u8 port_num,
 	immutable->pkey_tbl_len = attr.pkey_tbl_len;
 	immutable->gid_tbl_len = attr.gid_tbl_len;
 	immutable->core_cap_flags = get_core_cap_flags(ibdev, &rep);
-	if ((ll == IB_LINK_LAYER_INFINIBAND) || MLX5_CAP_GEN(dev->mdev, roce))
-		immutable->max_mad_size = IB_MGMT_MAD_SIZE;
+	immutable->max_mad_size = IB_MGMT_MAD_SIZE;
 
 	return 0;
 }
@@ -5246,11 +5247,9 @@ static int mlx5_enable_eth(struct mlx5_ib_dev *dev)
 {
 	int err;
 
-	if (MLX5_CAP_GEN(dev->mdev, roce)) {
-		err = mlx5_nic_vport_enable_roce(dev->mdev);
-		if (err)
-			return err;
-	}
+	err = mlx5_nic_vport_enable_roce(dev->mdev);
+	if (err)
+		return err;
 
 	err = mlx5_eth_lag_init(dev);
 	if (err)
@@ -5259,8 +5258,7 @@ static int mlx5_enable_eth(struct mlx5_ib_dev *dev)
 	return 0;
 
 err_disable_roce:
-	if (MLX5_CAP_GEN(dev->mdev, roce))
-		mlx5_nic_vport_disable_roce(dev->mdev);
+	mlx5_nic_vport_disable_roce(dev->mdev);
 
 	return err;
 }
@@ -5268,8 +5266,7 @@ err_disable_roce:
 static void mlx5_disable_eth(struct mlx5_ib_dev *dev)
 {
 	mlx5_eth_lag_cleanup(dev);
-	if (MLX5_CAP_GEN(dev->mdev, roce))
-		mlx5_nic_vport_disable_roce(dev->mdev);
+	mlx5_nic_vport_disable_roce(dev->mdev);
 }
 
 struct mlx5_ib_counter {
@@ -6442,7 +6439,7 @@ static const struct ib_device_ops mlx5_ib_dev_port_rep_ops = {
 	.query_port = mlx5_ib_rep_query_port,
 };
 
-static int mlx5_ib_stage_rep_non_default_cb(struct mlx5_ib_dev *dev)
+static int mlx5_ib_stage_raw_eth_non_default_cb(struct mlx5_ib_dev *dev)
 {
 	ib_set_device_ops(&dev->ib_dev, &mlx5_ib_dev_port_rep_ops);
 	return 0;
@@ -6482,7 +6479,7 @@ static void mlx5_ib_stage_common_roce_cleanup(struct mlx5_ib_dev *dev)
 	mlx5_remove_netdev_notifier(dev, port_num);
 }
 
-static int mlx5_ib_stage_rep_roce_init(struct mlx5_ib_dev *dev)
+static int mlx5_ib_stage_raw_eth_roce_init(struct mlx5_ib_dev *dev)
 {
 	struct mlx5_core_dev *mdev = dev->mdev;
 	enum rdma_link_layer ll;
@@ -6498,7 +6495,7 @@ static int mlx5_ib_stage_rep_roce_init(struct mlx5_ib_dev *dev)
 	return err;
 }
 
-static void mlx5_ib_stage_rep_roce_cleanup(struct mlx5_ib_dev *dev)
+static void mlx5_ib_stage_raw_eth_roce_cleanup(struct mlx5_ib_dev *dev)
 {
 	mlx5_ib_stage_common_roce_cleanup(dev);
 }
@@ -6712,6 +6709,8 @@ void __mlx5_ib_remove(struct mlx5_ib_dev *dev,
 		      const struct mlx5_ib_profile *profile,
 		      int stage)
 {
+	dev->ib_active = false;
+
 	/* Number of stages to cleanup */
 	while (stage) {
 		stage--;
@@ -6805,7 +6804,7 @@ static const struct mlx5_ib_profile pf_profile = {
 		     mlx5_ib_stage_delay_drop_cleanup),
 };
 
-const struct mlx5_ib_profile uplink_rep_profile = {
+const struct mlx5_ib_profile raw_eth_profile = {
 	STAGE_CREATE(MLX5_IB_STAGE_INIT,
 		     mlx5_ib_stage_init_init,
 		     mlx5_ib_stage_init_cleanup),
@@ -6816,11 +6815,11 @@ const struct mlx5_ib_profile uplink_rep_profile = {
 		     mlx5_ib_stage_caps_init,
 		     NULL),
 	STAGE_CREATE(MLX5_IB_STAGE_NON_DEFAULT_CB,
-		     mlx5_ib_stage_rep_non_default_cb,
+		     mlx5_ib_stage_raw_eth_non_default_cb,
 		     NULL),
 	STAGE_CREATE(MLX5_IB_STAGE_ROCE,
-		     mlx5_ib_stage_rep_roce_init,
-		     mlx5_ib_stage_rep_roce_cleanup),
+		     mlx5_ib_stage_raw_eth_roce_init,
+		     mlx5_ib_stage_raw_eth_roce_cleanup),
 	STAGE_CREATE(MLX5_IB_STAGE_SRQ,
 		     mlx5_init_srq_table,
 		     mlx5_cleanup_srq_table),
@@ -6896,6 +6895,7 @@ static void *mlx5_ib_add_slave_port(struct mlx5_core_dev *mdev)
 
 static void *mlx5_ib_add(struct mlx5_core_dev *mdev)
 {
+	const struct mlx5_ib_profile *profile;
 	enum rdma_link_layer ll;
 	struct mlx5_ib_dev *dev;
 	int port_type_cap;
@@ -6931,7 +6931,12 @@ static void *mlx5_ib_add(struct mlx5_core_dev *mdev)
 	dev->mdev = mdev;
 	dev->num_ports = num_ports;
 
-	return __mlx5_ib_add(dev, &pf_profile);
+	if (ll == IB_LINK_LAYER_ETHERNET && !mlx5_is_roce_enabled(mdev))
+		profile = &raw_eth_profile;
+	else
+		profile = &pf_profile;
+
+	return __mlx5_ib_add(dev, profile);
 }
 
 static void mlx5_ib_remove(struct mlx5_core_dev *mdev, void *context)

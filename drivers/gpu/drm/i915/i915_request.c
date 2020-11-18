@@ -215,7 +215,7 @@ static void remove_from_engine(struct i915_request *rq)
 	spin_unlock(&locked->active.lock);
 }
 
-static bool i915_request_retire(struct i915_request *rq)
+bool i915_request_retire(struct i915_request *rq)
 {
 	struct i915_active_request *active, *next;
 
@@ -1527,8 +1527,8 @@ bool i915_retire_requests(struct drm_i915_private *i915)
 			continue;
 
 		intel_timeline_get(tl);
-		GEM_BUG_ON(!tl->active_count);
-		tl->active_count++; /* pin the list element */
+		GEM_BUG_ON(!atomic_read(&tl->active_count));
+		atomic_inc(&tl->active_count); /* pin the list element */
 		spin_unlock_irqrestore(&timelines->lock, flags);
 
 		retire_requests(tl);
@@ -1537,14 +1537,14 @@ bool i915_retire_requests(struct drm_i915_private *i915)
 
 		/* Resume iteration after dropping lock */
 		list_safe_reset_next(tl, tn, link);
-		if (!--tl->active_count)
+		if (atomic_dec_and_test(&tl->active_count))
 			list_del(&tl->link);
 
 		mutex_unlock(&tl->mutex);
 
 		/* Defer the final release to after the spinlock */
 		if (refcount_dec_and_test(&tl->kref.refcount)) {
-			GEM_BUG_ON(tl->active_count);
+			GEM_BUG_ON(atomic_read(&tl->active_count));
 			list_add(&tl->link, &free);
 		}
 	}

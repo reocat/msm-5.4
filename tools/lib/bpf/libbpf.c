@@ -5932,7 +5932,7 @@ int parse_cpu_mask_str(const char *s, bool **mask, int *mask_sz)
 		}
 		if (start < 0 || start > end) {
 			pr_warning("Invalid CPU range [%d,%d] in %s\n",
-				   start, end, s);
+				start, end, s);
 			err = -EINVAL;
 			goto cleanup;
 		}
@@ -5967,7 +5967,7 @@ int parse_cpu_mask_file(const char *fcpu, bool **mask, int *mask_sz)
 	if (fd < 0) {
 		err = -errno;
 		pr_warning("Failed to open cpu mask file %s: %d\n", fcpu, err);
-		return err;
+		return -err;
 	}
 	len = read(fd, buf, sizeof(buf));
 	close(fd);

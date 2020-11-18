@@ -46,7 +46,7 @@
 #include <sound/initval.h>
 #include <sound/hdaudio.h>
 #include <sound/hda_i915.h>
-#include <sound/intel-nhlt.h>
+#include <sound/intel-dsp-config.h>
 #include <linux/vgaarb.h>
 #include <linux/vga_switcheroo.h>
 #include <linux/firmware.h>
@@ -124,7 +124,7 @@ static char *patch[SNDRV_CARDS];
 static bool beep_mode[SNDRV_CARDS] = {[0 ... (SNDRV_CARDS-1)] =
 					CONFIG_SND_HDA_INPUT_BEEP_MODE};
 #endif
-static bool dmic_detect = IS_ENABLED(CONFIG_SND_HDA_INTEL_DETECT_DMIC);
+static bool dmic_detect = 1;
 
 module_param_array(index, int, NULL, 0444);
 MODULE_PARM_DESC(index, "Index value for Intel HD audio interface.");
@@ -160,7 +160,9 @@ MODULE_PARM_DESC(beep_mode, "Select HDA Beep registration mode "
 			    "(0=off, 1=on) (default=1).");
 #endif
 module_param(dmic_detect, bool, 0444);
-MODULE_PARM_DESC(dmic_detect, "DMIC detect on SKL+ platforms");
+MODULE_PARM_DESC(dmic_detect, "Allow DSP driver selection (bypass this driver) "
+			     "(0=off, 1=on) (default=1); "
+		 "deprecated, use snd-intel-dspcfg.dsp_driver option instead");
 
 #ifdef CONFIG_PM
 static int param_set_xint(const char *val, const struct kernel_param *kp);
@@ -373,7 +375,7 @@ enum {
 #define IS_CFL(pci) ((pci)->vendor == 0x8086 && (pci)->device == 0xa348)
 #define IS_CNL(pci) ((pci)->vendor == 0x8086 && (pci)->device == 0x9dc8)
 
-static char *driver_short_names[] = {
+static const char * const driver_short_names[] = {
 	[AZX_DRIVER_ICH] = "HDA Intel",
 	[AZX_DRIVER_PCH] = "HDA Intel PCH",
 	[AZX_DRIVER_SCH] = "HDA Intel MID",
@@ -500,7 +502,7 @@ static void bxt_reduce_dma_latency(struct azx *chip)
 static int intel_get_lctl_scf(struct azx *chip)
 {
 	struct hdac_bus *bus = azx_bus(chip);
-	static int preferred_bits[] = { 2, 3, 1, 4, 5 };
+	static const int preferred_bits[] = { 2, 3, 1, 4, 5 };
 	u32 val, t;
 	int i;
 
@@ -1530,7 +1532,7 @@ static int check_position_fix(struct azx *chip, int fix)
 
 static void assign_position_fix(struct azx *chip, int fix)
 {
-	static azx_get_pos_callback_t callbacks[] = {
+	static const azx_get_pos_callback_t callbacks[] = {
 		[POS_FIX_AUTO] = NULL,
 		[POS_FIX_LPIB] = azx_get_pos_lpib,
 		[POS_FIX_POSBUF] = azx_get_pos_posbuf,
@@ -2052,25 +2054,6 @@ static const struct hda_controller_ops pci_hda_ops = {
 	.position_check = azx_position_check,
 };
 
-static int azx_check_dmic(struct pci_dev *pci, struct azx *chip)
-{
-	struct nhlt_acpi_table *nhlt;
-	int ret = 0;
-
-	if (chip->driver_type == AZX_DRIVER_SKL &&
-	    pci->class != 0x040300) {
-		nhlt = intel_nhlt_init(&pci->dev);
-		if (nhlt) {
-			if (intel_nhlt_get_dmic_geo(&pci->dev, nhlt)) {
-				ret = -ENODEV;
-				dev_info(&pci->dev, "Digital mics found on Skylake+ platform, aborting probe\n");
-			}
-			intel_nhlt_free(nhlt);
-		}
-	}
-	return ret;
-}
-
 static int azx_probe(struct pci_dev *pci,
 		     const struct pci_device_id *pci_id)
 {
@@ -2093,6 +2076,18 @@ static int azx_probe(struct pci_dev *pci,
 		return -ENOENT;
 	}
 
+	/*
+	 * stop probe if another Intel's DSP driver should be activated
+	 */
+	if (dmic_detect) {
+		err = snd_intel_dsp_driver_probe(pci);
+		if (err != SND_INTEL_DSP_DRIVER_ANY &&
+		    err != SND_INTEL_DSP_DRIVER_LEGACY)
+			return -ENODEV;
+	} else {
+		dev_warn(&pci->dev, "dmic_detect option is deprecated, pass snd-intel-dspcfg.dsp_driver=1 option instead\n");
+	}
+
 	err = snd_card_new(&pci->dev, index[dev], id[dev], THIS_MODULE,
 			   0, &card);
 	if (err < 0) {
@@ -2105,17 +2100,6 @@ static int azx_probe(struct pci_dev *pci,
 		goto out_free;
 	card->private_data = chip;
 	hda = container_of(chip, struct hda_intel, chip);
-
-	/*
-	 * stop probe if digital microphones detected on Skylake+ platform
-	 * with the DSP enabled. This is an opt-in behavior defined at build
-	 * time or at run-time with a module parameter
-	 */
-	if (dmic_detect) {
-		err = azx_check_dmic(pci, chip);
-		if (err < 0)
-			goto out_free;
-	}
 
 	pci_set_drvdata(pci, card);
 
@@ -2229,7 +2213,7 @@ static void set_default_power_save(struct azx *chip)
 }
 
 /* number of codec slots for each chipset: 0 = default slots (i.e. 4) */
-static unsigned int azx_max_codecs[AZX_NUM_DRIVERS] = {
+static const unsigned int azx_max_codecs[AZX_NUM_DRIVERS] = {
 	[AZX_DRIVER_NVIDIA] = 8,
 	[AZX_DRIVER_TERA] = 1,
 };

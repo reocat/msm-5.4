@@ -8838,8 +8838,13 @@ enum {
 #define     ICL_PCODE_MEM_SS_READ_QGV_POINT_INFO(point)	(((point) << 16) | (0x1 << 8))
 #define   GEN6_PCODE_READ_D_COMP		0x10
 #define   GEN6_PCODE_WRITE_D_COMP		0x11
+#define   ICL_PCODE_EXIT_TCCOLD			0x12
 #define   HSW_PCODE_DE_WRITE_FREQ_REQ		0x17
 #define   DISPLAY_IPS_CONTROL			0x19
+#define   TGL_PCODE_TCCOLD			0x26
+#define     TGL_PCODE_EXIT_TCCOLD_DATA_L_EXIT_FAILED	REG_BIT(0)
+#define     TGL_PCODE_EXIT_TCCOLD_DATA_H_BLOCK_REQ	0
+#define     TGL_PCODE_EXIT_TCCOLD_DATA_H_UNBLOCK_REQ	REG_BIT(0)
             /* See also IPS_CTL */
 #define     IPS_PCODE_CONTROL			(1 << 30)
 #define   HSW_PCODE_DYNAMIC_DUTY_CYCLE_CONTROL	0x1A
@@ -9109,6 +9114,9 @@ enum {
 
 #define HSW_AUD_CHICKENBIT			_MMIO(0x65f10)
 #define   SKL_AUD_CODEC_WAKE_SIGNAL		(1 << 15)
+
+#define AUD_PIN_BUF_CTL		_MMIO(0x48414)
+#define   AUD_PIN_BUF_ENABLE		REG_BIT(31)
 
 /*
  * HSW - ICL power wells

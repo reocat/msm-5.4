@@ -205,6 +205,21 @@ static void quirk_mmio_always_on(struct pci_dev *dev)
 DECLARE_PCI_FIXUP_CLASS_EARLY(PCI_ANY_ID, PCI_ANY_ID,
 				PCI_CLASS_BRIDGE_HOST, 8, quirk_mmio_always_on);
 
+/* The BAR0 ~ BAR4 of Marvell 9125 device can't be accessed
+*  by IO resource file, and need to skip the files
+*/
+static void quirk_marvell_mask_bar(struct pci_dev *dev)
+{
+	int i;
+
+	for (i = 0; i < 5; i++)
+		if (dev->resource[i].start)
+			dev->resource[i].start =
+				dev->resource[i].end = 0;
+}
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_MARVELL_EXT, 0x9125,
+				quirk_marvell_mask_bar);
+
 /*
  * The Mellanox Tavor device gives false positive parity errors.  Mark this
  * device with a broken_parity_status to allow PCI scanning code to "skip"
@@ -4650,6 +4665,7 @@ static bool pci_quirk_intel_spt_pch_acs_match(struct pci_dev *dev)
 		return false;
 
 	switch (dev->device) {
+	case 0x06ac ... 0x06c3: /* Comet Lake */
 	case 0xa110 ... 0xa11f: case 0xa167 ... 0xa16a: /* Sunrise Point */
 	case 0xa290 ... 0xa29f: case 0xa2e7 ... 0xa2ee: /* Union Point */
 	case 0x9d10 ... 0x9d1b: /* 7th & 8th Gen Mobile */
@@ -5180,6 +5196,27 @@ DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_AMD, 0x149c, quirk_no_flr);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_INTEL, 0x1502, quirk_no_flr);
 DECLARE_PCI_FIXUP_EARLY(PCI_VENDOR_ID_INTEL, 0x1503, quirk_no_flr);
 
+static void quirk_intel_th_rtit_bar(struct pci_dev *dev)
+{
+	struct resource *r = &dev->resource[4];
+
+	/*
+	 * Hello, Denverton!
+	 * Denverton reports 2k of RTIT_BAR (resource 4), which can't be
+	 * right given the 16 threads. When Intel TH gets enabled, the
+	 * actual resource overlaps the XHCI MMIO space and causes it
+	 * to die.
+	 * We're not really using RTIT_BAR at all at the moment, so it's
+	 * a safe choice to disable this resource.
+	 */
+	if (r->end == r->start + 0x7ff) {
+		r->flags = 0;
+		r->start = 0;
+		r->end   = 0;
+	}
+}
+DECLARE_PCI_FIXUP_HEADER(PCI_VENDOR_ID_INTEL, 0x19e1, quirk_intel_th_rtit_bar);
+
 static void quirk_no_ext_tags(struct pci_dev *pdev)
 {
 	struct pci_host_bridge *bridge = pci_find_host_bridge(pdev->bus);
@@ -5596,6 +5633,13 @@ static void pci_fixup_no_d0_pme(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_ASMEDIA, 0x2142, pci_fixup_no_d0_pme);
 
+static void apex_pci_fixup_class(struct pci_dev *pdev)
+{
+	pdev->class = (PCI_CLASS_SYSTEM_OTHER << 8) | pdev->class;
+}
+DECLARE_PCI_FIXUP_CLASS_HEADER(0x1ac1, 0x089a,
+			       PCI_CLASS_NOT_DEFINED, 8, apex_pci_fixup_class);
+
 /*
  * Device [12d8:0x400e] and [12d8:0x400f]
  * These devices advertise PME# support in all power states but don't
@@ -5608,10 +5652,3 @@ static void pci_fixup_no_pme(struct pci_dev *dev)
 }
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_PERICOM, 0x400e, pci_fixup_no_pme);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_PERICOM, 0x400f, pci_fixup_no_pme);
-
-static void apex_pci_fixup_class(struct pci_dev *pdev)
-{
-	pdev->class = (PCI_CLASS_SYSTEM_OTHER << 8) | pdev->class;
-}
-DECLARE_PCI_FIXUP_CLASS_HEADER(0x1ac1, 0x089a,
-			       PCI_CLASS_NOT_DEFINED, 8, apex_pci_fixup_class);

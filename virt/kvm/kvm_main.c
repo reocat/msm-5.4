@@ -1948,7 +1948,7 @@ static void __kvm_unmap_gfn(struct kvm_memory_slot *memslot,
 	map->page = NULL;
 }
 
-int kvm_unmap_gfn(struct kvm_vcpu *vcpu, struct kvm_host_map *map,
+int kvm_unmap_gfn(struct kvm_vcpu *vcpu, struct kvm_host_map *map, 
 		  struct gfn_to_pfn_cache *cache, bool dirty, bool atomic)
 {
 	__kvm_unmap_gfn(gfn_to_memslot(vcpu->kvm, map->gfn), map,
