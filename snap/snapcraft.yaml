@@ -56,6 +56,38 @@ parts:
         prime:
              - -host_lz4
 
+    bootimg:
+        plugin: nil
+        after:
+            - lz4-tools
+            - kernel
+        override-build: |
+            ${SNAPCRAFT_STAGE}/host_lz4 \
+                ${SNAPCRAFT_STAGE}/kernel.img \
+                kernel.lz4
+            # number representation from 0 to 255 (one char long)
+            chr() {
+              printf "\\$(printf '%03o' "$1")"
+            }
+            # from 0 to 65535 (two char long)
+            word() {
+              chr $(($1 % 256))
+              chr $(($1 / 256))
+            }
+            # from 0 to 4294967295 (four char long)
+            dword() {
+              word $(($1 % 65536))
+              word $(($1 / 65536))
+            }
+            kernelSize=$(stat -L -c%s kernel.lz4)
+            initrdSize=$(stat -L -c%s ${SNAPCRAFT_STAGE}/initrd.img)
+            # first 4 bytes of the boot image represents size of the kernel image
+            # so bootloader knows how much data to load
+            dword ${kernelSize} > ${SNAPCRAFT_PART_INSTALL}/boot.img
+            cat kernel.lz4 >> ${SNAPCRAFT_PART_INSTALL}/boot.img
+            dword ${initrdSize} >> ${SNAPCRAFT_PART_INSTALL}/boot.img
+            cat ${SNAPCRAFT_STAGE}/initrd.img >> ${SNAPCRAFT_PART_INSTALL}/boot.img
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
