@@ -42,3 +42,14 @@ parts:
         prime:
             - -initrd.img
             - -kernel.img
+
+build-packages:
+    - dpkg-dev
+    - android-tools-mkbootimg
+    - libssl-dev
+    - libfdt-dev
+    - cpio
+    - flex
+    - bison
+    - wget
+    - initramfs-tools-core
