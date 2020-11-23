@@ -43,6 +43,19 @@ parts:
             - -initrd.img
             - -kernel.img
 
+    lz4-tools:
+        plugin: nil
+        source: git+ssh://git.launchpad.net/~nuremberg-team/nuremberg/+git/amba-lz4tools
+        source-type: git
+        override-build: |
+            gcc \
+                host_lz4.c \
+                liblz4.c \
+                -DBUILD_HOST_TOOLS=yes \
+                -o ${SNAPCRAFT_PART_INSTALL}/host_lz4
+        prime:
+             - -host_lz4
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
