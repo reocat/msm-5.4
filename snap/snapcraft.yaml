@@ -108,6 +108,16 @@ parts:
         prime:
             - -*
 
+    amba-include:
+        plugin: dump
+        source: git+ssh://git.launchpad.net/~nuremberg-team/nuremberg/+git/amba-include
+        source-type: git
+        source-tag: Ambarella-cv2x-linux-sdk-3.0.0
+        organize:
+            "*": amba-include/
+        prime:
+            - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
