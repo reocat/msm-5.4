@@ -88,6 +88,16 @@ parts:
             dword ${initrdSize} >> ${SNAPCRAFT_PART_INSTALL}/boot.img
             cat ${SNAPCRAFT_STAGE}/initrd.img >> ${SNAPCRAFT_PART_INSTALL}/boot.img
 
+    amba-private-drivers:
+        plugin: dump
+        source: git+ssh://git.launchpad.net/~nuremberg-team/nuremberg/+git/amba-private-drivers
+        source-type: git
+        source-branch: sdk-3.0.0
+        organize:
+            "*": amba-private-drivers/
+        prime:
+            - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
