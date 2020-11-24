@@ -118,6 +118,17 @@ parts:
         prime:
             - -*
 
+    amba-board:
+        plugin: dump
+        source: git+ssh://git.launchpad.net/~nuremberg-team/nuremberg/+git/amba-boards-cv2_chestnut
+        source-type: git
+        source-branch: uc-18-poc-rebase
+        organize:
+            "*": amba-board/
+            .config: amba-board/.config
+        prime:
+            - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
