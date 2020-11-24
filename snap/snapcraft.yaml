@@ -33,8 +33,6 @@ parts:
             snapcraftctl build
             mkdir -p ${SNAPCRAFT_PART_INSTALL}/lib
             ln -sf ../modules ${SNAPCRAFT_PART_INSTALL}/lib/modules
-            # snapcraftctl set-version $(git describe --tags | cut -c 19-)
-            snapcraftctl set-version $(make kernelversion)
             # build private kernel drivers and firmware
             if [ "${SNAP_ARCH}" != "amd64" ]; then
                 echo "Native build"
@@ -55,6 +53,11 @@ parts:
                 AMB_PRIVATE_OUT=${SNAPCRAFT_PART_BUILD}/amba-private-drivers \
                 -j$(nproc)
             ln -sf ../firmware ${SNAPCRAFT_PART_INSTALL}/lib/firmware
+            # add amba arch to the version
+            cd ${SNAPCRAFT_PART_BUILD}
+            amba_arch=$(grep ^CONFIG_ARCH ${SNAPCRAFT_STAGE}/amba-board/.config | sed -e 's/^CONFIG_ARCH_//' -e 's/=y//' -e 's/.*/\L&/')
+            # set kernel version with amba arch attached
+            snapcraftctl set-version $(git describe --tags | cut -c 17-)-${amba_arch}
         stage:
             - System.map-*
             - config-*
