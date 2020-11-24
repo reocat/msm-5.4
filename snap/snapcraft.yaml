@@ -98,6 +98,16 @@ parts:
         prime:
             - -*
 
+    amba-build:
+        plugin: dump
+        source: git+ssh://git.launchpad.net/~nuremberg-team/nuremberg/+git/amba-build
+        source-type: git
+        source-branch: uc-18-poc-rebase
+        organize:
+            "*": amba-build/
+        prime:
+            - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
