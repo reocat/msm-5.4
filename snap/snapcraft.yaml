@@ -25,6 +25,8 @@ parts:
         kdefconfig: [ "defconfig", "ambarella_cv2_defconfig" ]
         kernel-with-firmware: false
         kernel-image-target: Image
+        kernel-initrd-core-base: core20
+        kernel-initrd-flavour: lk
         kconfigs:
             - CONFIG_DEBUG_INFO=n
         override-build: |
