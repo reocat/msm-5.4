@@ -27,6 +27,10 @@ parts:
         kernel-image-target: Image
         kernel-initrd-core-base: core20
         kernel-initrd-flavour: lk
+        kernel-initrd-compression: xz
+        kernel-initrd-compression-options:
+            - "-9"
+            - "--check=crc32"
         kconfigs:
             - CONFIG_DEBUG_INFO=n
         override-build: |
