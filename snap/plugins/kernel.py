@@ -56,6 +56,13 @@ The following initrd specific options are provided by this plugin:
       (string; default: lz4)
       initrd compression to use; the only supported values now are 'lz4', 'xz', 'gz'.
 
+    - kernel-initrd-compression-options:
+      Optional list of parameters to be passed to compressor used for initrd
+      (array of string): defaults are
+        gz:  -7
+        lz4: -9 -l
+        xz:  -7
+
     - kernel-initrd-flavour
       Optional parameter(Default flavour is none). For uc16/18 supported flavour is 'fde'
 
@@ -98,7 +105,8 @@ from snapcraft.internal.errors import SnapcraftPluginCommandError
 
 logger = logging.getLogger(__name__)
 
-_compression_command = {"gz": "gzip -7", "lz4":"lz4 -l -9 ", "xz": "xz -7"}
+_compression_command = {"gz": "gzip", "lz4":"lz4", "xz": "xz"}
+_compressor_options = {"gz": "-7", "lz4": "-l -9", "xz": "-7" }
 _INITRD_BASE_URL = "https://people.canonical.com/~okubik/uc-initrds"
 _INITRD_URL  = "{base_url}/{snap_name}"
 _INITRD_SNAP_NAME = "uc-initrd"
@@ -219,7 +227,15 @@ class KernelPlugin(kbuild.KBuildPlugin):
         schema["properties"]["kernel-initrd-compression"] = {
             "type": "string",
             "default": "lz4",
-            "enum": ["lz4"],
+            "enum": ["lz4", "xz", "gz"],
+        }
+
+        schema["properties"]["kernel-initrd-compression-options"] = {
+            "type": "array",
+            "minitems": 1,
+            "uniqueItems": True,
+            "items": {"type": "string"},
+            "default": [],
         }
 
         schema["properties"]["kernel-initrd-flavour"] = {
@@ -255,6 +271,7 @@ class KernelPlugin(kbuild.KBuildPlugin):
             "kernel-initrd-modules",
             "kernel-initrd-firmware",
             "kernel-initrd-compression",
+            "kernel-initrd-compression-options",
             "kernel-initrd-flavour",
             "kernel-initrd-base-url",
             "kernel-initrd-overlay",
@@ -263,7 +280,19 @@ class KernelPlugin(kbuild.KBuildPlugin):
 
     @property
     def compression_cmd(self):
-        return _compression_command[self.options.kernel_initrd_compression]
+        compressor = _compression_command[self.options.kernel_initrd_compression]
+        options = ""
+        if self.options.kernel_initrd_compression_options:
+            for opt in self.options.kernel_initrd_compression_options:
+                options = "{} {}".format(options, opt)
+        else:
+            options = _compressor_options[self.options.kernel_initrd_compression]
+
+        cmd = "{} {}".format(compressor, options)
+        logger.info(
+            "Using initrd compressions command: {!r}".format(cmd)
+        )
+        return cmd
 
     def __init__(self, name, options, project):
 
