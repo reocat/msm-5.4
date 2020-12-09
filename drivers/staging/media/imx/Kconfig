@@ -66,3 +66,6 @@ config IMX8_MIPI_CSI2_SAM
 
 endmenu
 
+source "drivers/staging/media/imx/hdmirx/Kconfig"
+
+endif  #VIDEO_IMX_CAPTURE
