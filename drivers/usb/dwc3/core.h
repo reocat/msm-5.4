@@ -1116,6 +1116,7 @@ struct dwc3 {
 	u32			nr_scratch;
 	u32			u1u2;
 	u32			maximum_speed;
+	u32			gadget_max_speed;
 
 	/*
 	 * All 3.1 IP version constants are greater than the 3.0 IP
