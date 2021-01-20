@@ -1,13 +1,10 @@
 name: imx-kernel
-version: null
-version-script: |
-    . debian/debian.env
-    dpkg-parsechangelog -l $DEBIAN/changelog -S version
 summary: The Ubuntu iMX Linux kernel
 description: This Ubuntu Linux kernel for NXP iMX family of devices
 grade: stable
 confinement: strict
 type: kernel
+adopt-info: kernel
 
 architectures:
   - build-on: amd64
@@ -30,6 +27,8 @@ parts:
             snapcraftctl build
             mkdir -p ${SNAPCRAFT_PART_INSTALL}/lib
             ln -sf ../modules ${SNAPCRAFT_PART_INSTALL}/lib/modules
+            kernel_version=$(make kernelversion)
+            snapcraftctl set-version $(git describe --tags | cut -c 12-42)
         stage:
             - System.map-*
             - config-*
