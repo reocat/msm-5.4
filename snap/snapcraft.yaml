@@ -33,15 +33,26 @@ parts:
             snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
         organize:
             kernel.img: Image
-  firmware:
-    plugin: nil
-    stage-packages:
-      - linux-firmware
-    organize:
-      lib/firmware: firmware
-    prime:
-      - -usr
-      - -lib
+        override-prime: |
+            snapcraftctl prime
+            # Trim firmware
+            ${SNAPCRAFT_STAGE}/trim-firmware ${SNAPCRAFT_PRIME}
+
+    firmware:
+        plugin: dump
+        source: https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22
+        source-type: git
+        source-branch: main
+        stage-packages:
+            - linux-firmware
+            - wireless-regdb
+        organize:
+            lib/firmware: firmware
+        stage:
+            - -firmware/brcm/brcmfmac43455-sdio.bin
+            - -firmware/brcm/brcmfmac4356-pcie.bin
+        prime:
+            - firmware
 
 build-packages:
     - bison
