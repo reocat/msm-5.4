@@ -31,6 +31,25 @@ parts:
     prime:
       - -usr
       - -lib
-    build-packages:
-      - cpio
-      - libssl-dev
+
+build-packages:
+    - bison
+    - device-tree-compiler
+    - dpkg-dev
+    - flex
+    - initramfs-tools-core
+    - libfdt-dev
+    - libssl-dev
+    - python3-crypto
+    - python3-pycryptodome
+    - python3-pyelftools
+    - python3-serial
+    - u-boot-tools
+    - wget
+    - to armhf:
+        - binutils-arm-linux-gnueabi
+        - gcc-arm-linux-gnueabi
+        - libjson-c-dev:armhf
+    - to arm64:
+        - gcc-aarch64-linux-gnu
+        - libjson-c-dev:arm64
