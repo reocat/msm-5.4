@@ -31,6 +31,21 @@ parts:
     prime:
       - -usr
       - -lib
-    build-packages:
-      - cpio
-      - libssl-dev
+
+build-packages:
+    - android-tools-mkbootimg
+    - bison
+    - cpio
+    - dpkg-dev
+    - flex
+    - gettext
+    - libblkid-dev:${CRAFT_TARGET_ARCH}
+    - libcryptsetup-dev:${CRAFT_TARGET_ARCH}
+    - libdevmapper-dev:${CRAFT_TARGET_ARCH}
+    - libfdt-dev
+    - libssl-dev
+    - uuid-dev:${CRAFT_TARGET_ARCH}
+    - on amd64:
+      - gcc-aarch64-linux-gnu
+    - on arm64:
+      - gcc
