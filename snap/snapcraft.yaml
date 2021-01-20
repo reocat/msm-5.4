@@ -41,6 +41,7 @@ parts:
     firmware:
         plugin: nil
         stage-packages:
+            - wireless-regdb
             - linux-firmware
         override-build: |
             snapcraftctl build
