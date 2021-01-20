@@ -31,6 +31,27 @@ parts:
     prime:
       - -usr
       - -lib
-    build-packages:
-      - cpio
-      - libssl-dev
+
+build-packages:
+    - bison
+    - device-tree-compiler
+    - dpkg-dev
+    - flex
+    - initramfs-tools-core
+    - libfdt-dev
+    - libssl-dev
+    - lzop
+    - python3-crypto
+    - python3-pycryptodome
+    - python3-pyelftools
+    - python3-serial
+    - u-boot-tools
+    - wget
+    - libjson-c-dev
+    - to armhf:
+        - on armhf:
+            - binutils
+            - gcc
+    - else:
+        - binutils-${SNAPCRAFT_ARCH_TRIPLET}
+        - gcc-${SNAPCRAFT_ARCH_TRIPLET}
