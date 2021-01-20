@@ -31,6 +31,13 @@ parts:
     prime:
       - -usr
       - -lib
-    build-packages:
-      - cpio
-      - libssl-dev
+
+build-packages:
+    - android-tools-mkbootimg
+    - bison
+    - cpio
+    - dpkg-dev
+    - flex
+    - gcc-aarch64-linux-gnu
+    - libfdt-dev
+    - libssl-dev
