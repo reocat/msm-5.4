@@ -1,15 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0
 # Copyright (C) 2021 Canonical Ltd
 name: imx-kernel
-version: null
-version-script: |
-    . debian/debian.env
-    dpkg-parsechangelog -l $DEBIAN/changelog -S version
 summary: i.mx linux kernel
 description: The i.MX Ubuntu kernel package as a snap
+
 grade: stable
+build-base: core22
 confinement: strict
 type: kernel
+adopt-info: kernel
 
 architectures:
   - build-on: [amd64, arm64]
@@ -20,25 +19,42 @@ architectures:
 parts:
   kernel:
     plugin: kernel
-    source: .
-    source-type: git
-    kconfigflavour: generic
-    kconfigs:
-      - CONFIG_DEBUG_INFO=n
-    override-build: |
-      cp debian/scripts/retpoline-extract-one \
-        $SNAPCRAFT_PART_BUILD/scripts/ubuntu-retpoline-extract-one
-      snapcraftctl build
+    kernel-kdefconfig: [ "snappy_defconfig" ]
     kernel-with-firmware: false
+    kernel-image-target:
+      arm64: Image
+      armhf: zImage
+    kernel-initrd-compression: zstd
+    kernel-initrd-stage-firmware: true
+    override-build: |
+      craftctl default
+      craftctl set version=$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
+    organize:
+      kernel.img: Image
+    override-prime: |
+      craftctl default
+      # Trim firmware
+      ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
+      # make sure we have all ath10 firmware files
+      cp ${CRAFT_STAGE}/firmware/ath10k/QCA9377/hw1.0/* ${CRAFT_PRIME}/firmware/ath10k/QCA9377/hw1.0
+
   firmware:
-    plugin: nil
+    plugin: dump
+    source: https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22
+    source-type: git
+    source-branch: main
     stage-packages:
       - linux-firmware
+      - wireless-regdb
     organize:
       lib/firmware: firmware
+    stage:
+      - -firmware/brcm/brcmfmac43455-sdio.bin
+      - -firmware/brcm/brcmfmac43455-sdio.clm_blob
+      - -firmware/brcm/brcmfmac4356-pcie.bin
+      - -firmware/brcm/brcmfmac4356-pcie.clm_blob
     prime:
-      - -usr
-      - -lib
+      - firmware
 
 build-packages:
   - bison
