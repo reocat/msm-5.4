@@ -909,16 +909,18 @@ ssize_t aa_replace_profiles(struct aa_ns *policy_ns, struct aa_label *label,
 
 	mutex_lock_nested(&ns->lock, ns->level);
 	/* check for duplicate rawdata blobs: space and file dedup */
-	list_for_each_entry(rawdata_ent, &ns->rawdata_list, list) {
-		if (aa_rawdata_eq(rawdata_ent, udata)) {
-			struct aa_loaddata *tmp;
+	if (aa_g_export_binary) {
+		list_for_each_entry(rawdata_ent, &ns->rawdata_list, list) {
+			if (aa_rawdata_eq(rawdata_ent, udata)) {
+				struct aa_loaddata *tmp;
 
-			tmp = __aa_get_loaddata(rawdata_ent);
-			/* check we didn't fail the race */
-			if (tmp) {
-				aa_put_loaddata(udata);
-				udata = tmp;
-				break;
+				tmp = __aa_get_loaddata(rawdata_ent);
+				/* check we didn't fail the race */
+				if (tmp) {
+					aa_put_loaddata(udata);
+					udata = tmp;
+					break;
+				}
 			}
 		}
 	}
@@ -926,7 +928,8 @@ ssize_t aa_replace_profiles(struct aa_ns *policy_ns, struct aa_label *label,
 	list_for_each_entry(ent, &lh, list) {
 		struct aa_policy *policy;
 
-		ent->new->rawdata = aa_get_loaddata(udata);
+		if (aa_g_export_binary)
+			ent->new->rawdata = aa_get_loaddata(udata);
 		error = __lookup_replace(ns, ent->new->base.hname,
 					 !(mask & AA_MAY_REPLACE_POLICY),
 					 &ent->old, &info);
