@@ -18,7 +18,6 @@ void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 	struct brcmfmac_sdio_pd *sdio = &settings->bus.sdio;
 	struct device_node *root, *np = dev->of_node;
 	struct property *prop;
-	const char *cp = NULL;
 	int irq;
 	u32 irqf;
 	u32 val32;
@@ -28,7 +27,7 @@ void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 	root = of_find_node_by_path("/");
 	if (root) {
 		prop = of_find_property(root, "compatible", NULL);
-		cp = of_prop_next_string(prop, NULL);
+		settings->board_type = of_prop_next_string(prop, NULL);
 		of_node_put(root);
 	}
 
@@ -38,9 +37,6 @@ void brcmf_of_probe(struct device *dev, enum brcmf_bus_type bus_type,
 
 	if (of_property_read_u32(np, "brcm,drive-strength", &val32) == 0)
 		sdio->drive_strength = val32;
-
-	if (of_property_read_bool(np, "brcm,use_board_type"))
-		settings->board_type = cp;
 
 	sdio->broken_sg_support = of_property_read_bool(np,
 			"brcm,broken_sg_support");
