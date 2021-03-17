@@ -1315,4 +1315,16 @@ config TOUCHSCREEN_IQS5XX
 	  To compile this driver as a module, choose M here: the
 	  module will be called iqs5xx.
 
+config TOUCHSCREEN_SOLOMON_SSD254
+	tristate "SOLOMON SSD254x touchscreens"
+	depends on I2C
+	help
+	  Say Y here if you have a Solomon SSD254x touchscreen
+	  controller.
+
+	  If unsure, say N.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called solomon_ssd245x_ts.
+
 endif
