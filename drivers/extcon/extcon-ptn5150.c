@@ -11,10 +11,13 @@
 #include <linux/interrupt.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
+#include <linux/kthread.h>
 #include <linux/regmap.h>
 #include <linux/slab.h>
 #include <linux/extcon-provider.h>
 #include <linux/gpio/consumer.h>
+
+#define PTN5150_MAX_POLLING_PORT_NUM      2
 
 /* PTN5150 registers */
 enum ptn5150_reg {
@@ -127,7 +130,7 @@ static void ptn5150_irq_work(struct work_struct *work)
 			case PTN5150_DFP_ATTACHED:
 				extcon_set_state_sync(info->edev,
 						EXTCON_USB_HOST, false);
-				gpiod_set_value(info->vbus_gpiod, 0);
+				//gpiod_set_value(info->vbus_gpiod, 0);
 				extcon_set_state_sync(info->edev, EXTCON_USB,
 						true);
 				break;
@@ -137,10 +140,12 @@ static void ptn5150_irq_work(struct work_struct *work)
 				vbus = ((reg_data &
 					PTN5150_REG_CC_VBUS_DETECTION_MASK) >>
 					PTN5150_REG_CC_VBUS_DETECTION_SHIFT);
+				/*
 				if (vbus)
 					gpiod_set_value(info->vbus_gpiod, 0);
 				else
 					gpiod_set_value(info->vbus_gpiod, 1);
+					*/
 
 				extcon_set_state_sync(info->edev,
 						EXTCON_USB_HOST, true);
@@ -156,7 +161,7 @@ static void ptn5150_irq_work(struct work_struct *work)
 					EXTCON_USB_HOST, false);
 			extcon_set_state_sync(info->edev,
 					EXTCON_USB, false);
-			gpiod_set_value(info->vbus_gpiod, 0);
+			//gpiod_set_value(info->vbus_gpiod, 0);
 		}
 	}
 
@@ -221,6 +226,113 @@ static int ptn5150_init_dev_type(struct ptn5150_info *info)
 	return 0;
 }
 
+static int get_usbport_index(struct ptn5150_info *info, int *index)
+{
+    if(NULL == info->i2c)
+	return -EINVAL;
+
+    *index = (0x3d == info->i2c->addr) ? 0 : 1;
+    if(PTN5150_MAX_POLLING_PORT_NUM <= *index)
+	return -EINVAL;
+    return 0;
+}
+
+static void ptn5150_polling_work(struct ptn5150_info *info)
+{
+    int ret = 0;
+    static unsigned int last_port_status[PTN5150_MAX_POLLING_PORT_NUM] = {255, 255};
+    unsigned int cc_status = 0;
+    unsigned int int_status = 0;
+    unsigned int port_status = 0;
+    unsigned int vbus = 0;
+    unsigned int usbport_index = 0;
+
+    mutex_lock(&info->mutex);
+
+    ret = get_usbport_index(info, &usbport_index);
+    if (ret) {
+	dev_err(info->dev, "[ptn5150]--get usb port index fail %d\n", ret);
+	mutex_unlock(&info->mutex);
+	return;
+    }
+
+    ret = regmap_read(info->regmap, PTN5150_REG_INT_STATUS, &int_status);
+    if (ret) {
+	dev_err(info->dev, "[ptn5150]--failed to read INT STATUS %d\n", ret);
+	mutex_unlock(&info->mutex);
+	return;
+    }
+    
+    ret = regmap_read(info->regmap, PTN5150_REG_CC_STATUS, &cc_status);
+    if (ret) {
+        dev_err(info->dev, "[ptn5150]--failed to read CC STATUS %d\n", ret);
+        mutex_unlock(&info->mutex);
+        return;
+    }
+    port_status = ((cc_status & PTN5150_REG_CC_PORT_ATTACHMENT_MASK) >> PTN5150_REG_CC_PORT_ATTACHMENT_SHIFT);
+    if (int_status || (last_port_status[usbport_index] != port_status)) {
+	dev_info(info->dev, "[ptn5150]--current INT STATUS:%d, CC STATUS:%d, last:%d-%d\n", int_status, cc_status, usbport_index, last_port_status[usbport_index]);
+        last_port_status[usbport_index] = port_status;
+	if (port_status) {
+            switch (port_status) {
+            case PTN5150_DFP_ATTACHED:
+                extcon_set_state_sync(info->edev,EXTCON_USB_HOST, false);
+	        gpiod_set_value(info->vbus_gpiod, 0);
+	        extcon_set_state_sync(info->edev, EXTCON_USB, true);
+            break;
+	    case PTN5150_UFP_ATTACHED:
+	        extcon_set_state_sync(info->edev, EXTCON_USB, false);
+                vbus = ((cc_status & PTN5150_REG_CC_VBUS_DETECTION_MASK) >> PTN5150_REG_CC_VBUS_DETECTION_SHIFT);
+                if (vbus)
+                    gpiod_set_value(info->vbus_gpiod, 0);
+                else
+                    gpiod_set_value(info->vbus_gpiod, 1);
+
+                extcon_set_state_sync(info->edev, EXTCON_USB_HOST, true);
+	    break;
+	    default:
+                dev_err(info->dev,"Unknown Port status : %x\n",port_status);
+	    break;
+	    }
+        } else {
+            extcon_set_state_sync(info->edev,EXTCON_USB_HOST, false);
+            extcon_set_state_sync(info->edev,EXTCON_USB, false);
+            gpiod_set_value(info->vbus_gpiod, 0);
+	}
+    }
+
+    /* Clear interrupt. Read would clear the register */
+    ret = regmap_read(info->regmap, PTN5150_REG_INT_REG_STATUS,&int_status);
+    if (ret) {
+        dev_err(info->dev, "[ptn5150]--failed to read INT REG STATUS %d\n", ret);
+	mutex_unlock(&info->mutex);
+	return;
+    }
+    mutex_unlock(&info->mutex);
+}
+
+int ptn5150_polling_task(void *info)
+{
+    while(1)
+    {
+        ptn5150_polling_work(info);
+        msleep(1000);
+    }
+    return 0;
+}
+
+static int ptn5150_task_init(struct ptn5150_info *info)
+{
+    static int tasknum = 0;
+    char taskname[20] = {0};
+
+    sprintf(taskname, "khungtaskd%d", tasknum);
+
+    kthread_run(ptn5150_polling_task, info, taskname);
+    tasknum++;
+    return 0;
+}
+
 static int ptn5150_i2c_probe(struct i2c_client *i2c,
 				 const struct i2c_device_id *id)
 {
@@ -239,11 +351,13 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 
 	info->dev = &i2c->dev;
 	info->i2c = i2c;
+	/*
 	info->int_gpiod = devm_gpiod_get(&i2c->dev, "int", GPIOD_IN);
 	if (IS_ERR(info->int_gpiod)) {
 		dev_err(dev, "failed to get INT GPIO\n");
 		return PTR_ERR(info->int_gpiod);
 	}
+	*/
 	info->vbus_gpiod = devm_gpiod_get(&i2c->dev, "vbus", GPIOD_IN);
 	if (IS_ERR(info->vbus_gpiod)) {
 		dev_err(dev, "failed to get VBUS GPIO\n");
@@ -304,6 +418,7 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 	if (ret)
 		return -EINVAL;
 
+	ptn5150_task_init(info);
 	return 0;
 }
 

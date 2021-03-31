@@ -83,6 +83,7 @@
 		gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
+	        status = "disable";
 	};
 
 	reg_usdhc2_vmmc: regulator-usdhc2 {
@@ -106,19 +107,6 @@
 		regulator-always-on;
 	};
 
-	cbtl04gp {
-		compatible = "nxp,cbtl04gp";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_typec_mux>;
-		switch-gpios = <&gpio4 20 GPIO_ACTIVE_LOW>;
-		orientation-switch;
-
-		port {
-			usb3_data_ss: endpoint {
-				remote-endpoint = <&typec_con_ss>;
-			};
-		};
-	};
 
 	bt_sco_codec: bt_sco_codec {
 		#sound-dai-cells = <1>;
@@ -256,7 +244,8 @@
 &pwm2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm2>;
-	status = "okay";
+	//status = "okay";
+	status = "disable";
 };
 
 &pwm4 {
@@ -293,9 +282,9 @@
 		#address-cells = <1>;
 		#size-cells = <0>;
 
-		ethphy0: ethernet-phy@1 {
+		ethphy0: ethernet-phy@2 {
 			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <1>;
+			reg = <2>;
 			micrel,led-mode = <1>;
 		};
 	};
@@ -483,45 +472,6 @@
 		};
 	};
 
-	ptn5110: tcpc@50 {
-		compatible = "nxp,ptn5110";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_typec>;
-		reg = <0x50>;
-		interrupt-parent = <&gpio4>;
-		interrupts = <19 8>;
-
-		port {
-			typec_dr_sw: endpoint {
-				remote-endpoint = <&usb3_drd_sw>;
-			};
-		};
-
-		usb_con: connector {
-			compatible = "usb-c-connector";
-			label = "USB-C";
-			power-role = "dual";
-			data-role = "dual";
-			try-power-role = "sink";
-			source-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)>;
-			sink-pdos = <PDO_FIXED(5000, 3000, PDO_FIXED_USB_COMM)
-				     PDO_VAR(5000, 20000, 3000)>;
-			op-sink-microwatt = <15000000>;
-			self-powered;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@1 {
-					reg = <1>;
-					typec_con_ss: endpoint {
-						remote-endpoint = <&usb3_data_ss>;
-					};
-				};
-			};
-		};
-	};
 
 	ov5640_0: ov5640_mipi@3c {
 		compatible = "ovti,ov5640";
@@ -550,9 +500,9 @@
 		};
 	};
 
-	mcp7490n: mcp7490n@68 {
+	mcp7490n: mcp7490n@6f {
 		compatible = "microchip,mcp7940x";
-		reg = <0x68>;
+		reg = <0x6f>;
 		status = "okay";
 	};
 
@@ -605,6 +555,24 @@
 		clock-names = "mclk";
 		wlf,shared-lrclk;
 		SPKVDD1-supply = <&reg_audio_pwr>;
+	};
+
+	typec1_ptn5150: typec@3d {
+		compatible = "nxp,ptn5150";
+		reg = <0x3d>;
+                pinctrl-names = "default";
+	        pinctrl-0 = <&pinctrl_usb1_vbus>;
+		//connect-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+	};
+
+	typec2_ptn5150: typec@1d {
+		compatible = "nxp,ptn5150";
+		reg = <0x1d>;
+                pinctrl-names = "default";
+	        pinctrl-0 = <&pinctrl_usb2_vbus>;
+		//connect-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 	};
 };
 
@@ -846,7 +814,7 @@
 };
 
 &usb3_phy0 {
-	vbus-power-supply = <&ptn5110>;
+	//vbus-power-supply = <&typec1_ptn5150>;
 	fsl,phy-tx-vref-tune = <6>;
 	fsl,phy-tx-rise-tune = <0>;
 	fsl,phy-tx-preemp-amp-tune = <3>;
@@ -861,18 +829,14 @@
 };
 
 &usb_dwc3_0 {
+	//dr_mode = "peripheral";
 	dr_mode = "otg";
+	extcon = <&typec1_ptn5150>;
 	hnp-disable;
 	srp-disable;
 	adp-disable;
-	usb-role-switch;
+	//usb-role-switch;
 	status = "okay";
-
-	port {
-		usb3_drd_sw: endpoint {
-			remote-endpoint = <&typec_dr_sw>;
-		};
-	};
 };
 
 &usb3_phy1 {
@@ -885,8 +849,14 @@
 };
 
 &usb_dwc3_1 {
-	dr_mode = "host";
-	status = "okay";
+	//dr_mode = "peripheral";
+        dr_mode = "otg";
+	extcon = <&typec2_ptn5150>;
+        hnp-disable;
+        srp-disable;
+        adp-disable;
+        //usb-role-switch;
+        status = "okay";
 };
 
 &usdhc1 {
@@ -1183,6 +1153,11 @@
 	pinctrl_usb1_vbus: usb1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x19
+		>;
+	};
+	pinctrl_usb2_vbus: usb2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11	0x19
 		>;
 	};
 
