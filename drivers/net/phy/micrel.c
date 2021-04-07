@@ -648,6 +648,10 @@ err_force_master:
 	return result;
 }
 
+#define MII_KSZ9131_RX_DLL_CONTROL  0x4C
+#define MII_KSZ9131_TX_DLL_CONTROL  0x4D
+#define MII_KSZ9131_DLL_BYPASS_OFFSET    12
+#define MII_KSZ9131_DLL_BYPASS_MASK     0x1
 #define KSZ9131_SKEW_5BIT_MAX	2400
 #define KSZ9131_SKEW_4BIT_MAX	800
 #define KSZ9131_OFFSET		700
@@ -705,6 +709,28 @@ static int ksz9131_of_load_skew_values(struct phy_device *phydev,
 	return phy_write_mmd(phydev, 2, reg, newval);
 }
 
+static int ksz9131_of_load_dll_bypass_values(struct phy_device *phydev, struct device_node *of_node, u16 reg, char *field)
+{
+	int ofval = 0;
+	int ctl_val = 0;
+	int ret = 0;
+
+	ret = of_property_read_s32(of_node, field, &ofval);
+	if(ret)
+	{
+		printk("[KSZ9131--not need change dll bypass config!\n");
+		return 0;
+	}
+	ofval = ofval ? 1 : 0;
+	ctl_val = phy_read_mmd(phydev, 2, reg);
+	printk("[KSZ9131--old dll control config%d!\n", ctl_val);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((ofval & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	printk("[KSZ9131--new dll control config:%d!\n", ctl_val);
+
+	return phy_write_mmd(phydev, 2, reg, ctl_val);
+}
+
 static int ksz9131_config_init(struct phy_device *phydev)
 {
 	const struct device *dev = &phydev->mdio.dev;
@@ -719,9 +745,12 @@ static int ksz9131_config_init(struct phy_device *phydev)
 		"txd2-skew-psec", "txd3-skew-psec"
 	};
 	char *control_skews[2] = {"txen-skew-psec", "rxdv-skew-psec"};
+	char *tx_dll_bypass = "tx-dll-bypass";
+	char *rx_dll_bypass = "rx-dll-bypass";
 	const struct device *dev_walker;
 	int ret;
 
+	printk("[KSZ9131]--start init configure\n!");
 	dev_walker = &phydev->mdio.dev;
 	do {
 		of_node = dev_walker->of_node;
@@ -730,6 +759,8 @@ static int ksz9131_config_init(struct phy_device *phydev)
 
 	if (!of_node)
 		return 0;
+
+	printk("[KSZ9131]--start init configure:step 1\n!");
 
 	ret = ksz9131_of_load_skew_values(phydev, of_node,
 					  MII_KSZ9031RN_CLK_PAD_SKEW, 5,
@@ -752,6 +783,16 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	ret = ksz9131_of_load_skew_values(phydev, of_node,
 					  MII_KSZ9031RN_TX_DATA_PAD_SKEW, 4,
 					  tx_data_skews, 4);
+	if (ret < 0)
+		return ret;
+
+	printk("[KSZ9131]--start init configure:step 20\n!");
+	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_TX_DLL_CONTROL, tx_dll_bypass);
+	if (ret < 0)
+		return ret;
+
+	printk("[KSZ9131]--start init configure:step 21\n!");
+	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_RX_DLL_CONTROL, rx_dll_bypass);
 	if (ret < 0)
 		return ret;
 
