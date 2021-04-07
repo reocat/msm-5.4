@@ -286,6 +286,9 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <2>;
 			micrel,led-mode = <1>;
+                        eee-broken-100tx;
+                        eee-broken-1000t;
+			tx-dll-bypass = <0>;
 		};
 	};
 };
@@ -306,6 +309,9 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
 			micrel,led-mode = <1>;
+                        eee-broken-100tx;
+                        eee-broken-1000t;
+			tx-dll-bypass = <0>;
 		};
 	};
 };
