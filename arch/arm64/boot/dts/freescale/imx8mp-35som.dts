@@ -40,13 +40,13 @@
 
 		screen-vertical {
 			label = "ScreenVertical";
-			gpios = <&tca95392 1 GPIO_ACTIVE_HIGH>;
+			gpios = <&tca95392 1 GPIO_ACTIVE_LOW>;
 			default-state = "on";
 		};
 
 		screen-horizontal {
 			label = "ScreenHorizontal";
-			gpios = <&tca95392 2 GPIO_ACTIVE_LOW>;
+			gpios = <&tca95392 2 GPIO_ACTIVE_HIGH>;
 			default-state = "on";
 		};
 	};
@@ -71,6 +71,7 @@
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio4 27 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
+	        status = "disable";
 	};
 
 	reg_usb1_host_vbus: regulator-usb1-vbus {
@@ -466,19 +467,6 @@
 		};
 	};
 
-	lvds_bridge: lvds-to-hdmi-bridge@4c {
-		compatible = "ite,it6263";
-		reg = <0x4c>;
-		reset-gpios = <&gpio1 10 GPIO_ACTIVE_LOW>;
-
-		port {
-			it6263_in: endpoint {
-				remote-endpoint = <&lvds_out>;
-			};
-		};
-	};
-
-
 	ov5640_0: ov5640_mipi@3c {
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
@@ -580,6 +568,15 @@
 		//connect-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 		vbus-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 	};
+
+	tp: solomon@48 {
+		compatible = "solomon,ssd254x";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tp>;
+		reg = <0x48>;
+		gpios = <&gpio4 27 1>, /* interrupt */
+		<&tca95392 0 1>; /* Reset */
+	};
 };
 
 &i2c4 {
@@ -608,15 +605,6 @@
                 #gpio-cells = <2>;
                 gpio-controller;
         };
-
-	tp: solomon@48 {
-		compatible = "solomon,ssd254x";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_tp>;
-		reg = <0x48>;
-		gpios = <&gpio4 27 1>, /* interrupt */
-		<&tca95392 0 1>; /* Reset */
-	};
 };
 
 &irqsteer_hdmi {
@@ -677,7 +665,6 @@
 	status = "okay";
 
 	lvds-channel@0 {
-		fsl,data-mapping = "jeida";
 		fsl,data-width = <24>;
 		status = "okay";
 
@@ -685,7 +672,7 @@
 			reg = <1>;
 
 			lvds_out: endpoint {
-				remote-endpoint = <&it6263_in>;
+				remote-endpoint = <&panel_lvds_in>;
 			};
 		};
 	};
@@ -1318,7 +1305,7 @@
 
 	pinctrl_tp: tpgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27      0x16
+			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27      0x1c4
 		>;
 	};
 
@@ -1417,20 +1404,4 @@
 
 &dsp {
 	status = "okay";
-};
-
-/delete-node/ &lvds_bridge;
-
-&ldb {
-	fsl,dual-channel;
-	lvds-channel@0 {
-		fsl,data-mapping = "spwg";
-		/delete-node/ port@1;
-		port@1 {
-			reg = <1>;
-			lvds_out: endpoint {
-				remote-endpoint = <&panel_lvds_in>;
-			};
-		};
-	};
 };
