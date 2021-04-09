@@ -2854,7 +2854,6 @@ static const struct panel_desc tfc_s9700rtwv43tr_01b = {
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
 	.bus_flags = DRM_BUS_FLAG_DE_HIGH | DRM_BUS_FLAG_PIXDATA_POSEDGE,
 };
-
 static const struct display_timing tianma_tm070jdhg30_timing = {
 	.pixelclock = { 62600000, 68200000, 78100000 },
 	.hactive = { 1280, 1280, 1280 },
@@ -3142,6 +3141,37 @@ static const struct panel_desc arm_rtsm = {
 		.height = 300,
 	},
 	.bus_format = MEDIA_BUS_FMT_RGB888_1X24,
+};
+
+static const struct display_timing tianma_tm101dvhg04_timing = {
+	.pixelclock = { 50000000, 50000000, 50000000 },
+	.hactive = { 1024, 1024, 1024 },
+	.hfront_porch = { 10,10, 10 },
+	.hback_porch = { 300, 300, 300 },
+	.hsync_len = { 60, 60, 60 },
+	.vactive = { 600, 600, 600 },
+	.vfront_porch = { 12, 12, 12 },
+	.vback_porch = { 23, 23, 23 },
+	.vsync_len = { 10, 10, 10 },
+	.flags = DISPLAY_FLAGS_DE_HIGH,
+};
+
+static const struct panel_desc tianma_tm101dvhg04 = {
+	.timings = &tianma_tm101dvhg04_timing,
+	.num_timings = 1,
+	.bpc = 8,
+	.size = {
+		.width = 223,
+		.height = 125,
+	},
+	.delay = {
+		.prepare = 200,
+		.enable = 200,
+		.disable = 200,
+		.unprepare = 200,
+	},
+	.bus_format = MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+	.bus_flags = DRM_BUS_FLAG_DE_HIGH,
 };
 
 static const struct of_device_id platform_of_match[] = {
@@ -3475,6 +3505,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "winstar,wf35ltiacd",
 		.data = &winstar_wf35ltiacd,
+	}, {
+		.compatible = "tianma,tm101dvhg04",
+		.data = &tianma_tm101dvhg04,
 	}, {
 		/* sentinel */
 	}
