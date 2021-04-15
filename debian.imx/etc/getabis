@@ -1,0 +1,13 @@
+repo_list=(
+	"http://archive.ubuntu.com/ubuntu/pool/main/l/linux-imx"
+	"http://ports.ubuntu.com/ubuntu-ports/pool/main/l/linux-imx"
+	"http://archive.ubuntu.com/ubuntu/pool/universe/l/linux-imx"
+	"http://ports.ubuntu.com/ubuntu-ports/pool/universe/l/linux-imx"
+	"http://ppa.launchpad.net/canonical-kernel-team/ppa/ubuntu/pool/main/l/linux-imx"
+	"http://ppa.launchpad.net/canonical-kernel-team/unstable/ubuntu/pool/main/l/linux-imx"
+)
+
+package_prefixes linux-buildinfo
+
+getall armhf imx
+getall arm64 imx

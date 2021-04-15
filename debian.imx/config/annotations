@@ -1,0 +1,5 @@
+# Menu: HEADER
+# FORMAT: 3
+# ARCH: arm arm64
+
+include ../../debian.master/config/annotations
