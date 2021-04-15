@@ -271,6 +271,25 @@
 	};
 };
 
+&ecspi1 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	fsl,spi-num-chipselects = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs &pinctrl_ecspi1_int>;
+	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
+	status = "ok";
+
+	spisc161: spiex1@0 {
+		reg = <0>;
+		compatible = "nxp,sc16is752";
+		interrupt-parent = <&gpio4>;
+		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+                clock-frequency = <2000000>;
+		spi-max-frequency = <2000000>;
+	};
+};
+
 &eqos {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
@@ -289,7 +308,6 @@
 			micrel,led-mode = <1>;
                         eee-broken-100tx;
                         eee-broken-1000t;
-			tx-dll-bypass = <0>;
 		};
 	};
 };
@@ -312,7 +330,6 @@
 			micrel,led-mode = <1>;
                         eee-broken-100tx;
                         eee-broken-1000t;
-			tx-dll-bypass = <0>;
 		};
 	};
 };
@@ -803,7 +820,8 @@
 	assigned-clocks = <&clk IMX8MP_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
-	status = "okay";
+	//status = "okay";
+	status = "disable";
 };
 
 &usb3_phy0 {
@@ -935,6 +953,27 @@
 	pinctrl_ecspi2_cs: ecspi2cs {
 		fsl,pins = <
 			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x40000
+		>;
+	};
+
+
+	pinctrl_ecspi1: ecspi1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI1_SCLK__ECSPI1_SCLK		0x82
+			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI		0x82
+			MX8MP_IOMUXC_ECSPI1_MISO__ECSPI1_MISO		0x82
+		>;
+	};
+
+	pinctrl_ecspi1_cs: ecspi1cs {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x40000
+		>;
+	};
+
+	pinctrl_ecspi1_int: ecspi1int {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00		0x19
 		>;
 	};
 
