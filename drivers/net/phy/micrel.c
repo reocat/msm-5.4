@@ -709,6 +709,7 @@ static int ksz9131_of_load_skew_values(struct phy_device *phydev,
 	return phy_write_mmd(phydev, 2, reg, newval);
 }
 
+#if 0
 static int ksz9131_of_load_dll_bypass_values(struct phy_device *phydev, struct device_node *of_node, u16 reg, char *field)
 {
 	int ofval = 0;
@@ -730,6 +731,53 @@ static int ksz9131_of_load_dll_bypass_values(struct phy_device *phydev, struct d
 
 	return phy_write_mmd(phydev, 2, reg, ctl_val);
 }
+#endif
+
+static int ksz9131_config_rgmii_interface_delay(struct phy_device *phydev)
+{
+	int rxdly_bypass = 0;
+	int txdly_bypass = 1;
+	int ctl_val = 0;
+	int ret = 0;
+
+	switch (phydev->interface) {
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		rxdly_bypass = 0;
+		txdly_bypass = 0;
+	break;
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+		rxdly_bypass = 0;
+		txdly_bypass = 1;
+	break;
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+		rxdly_bypass = 1;
+		txdly_bypass = 0;
+	break;
+	default: /* the rest of the modes imply leaving delay as is. */
+		return 0;
+	}
+	
+	ctl_val = phy_read_mmd(phydev, 2, MII_KSZ9131_TX_DLL_CONTROL);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((txdly_bypass & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	ret = phy_write_mmd(phydev, 2, MII_KSZ9131_TX_DLL_CONTROL, ctl_val);
+	if (ret < 0) {
+		dev_err(&phydev->mdio.dev, "tx delay set failed\n");
+		return ret;
+	}
+
+	ctl_val = phy_read_mmd(phydev, 2, MII_KSZ9131_RX_DLL_CONTROL);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((rxdly_bypass & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	ret = phy_write_mmd(phydev, 2, MII_KSZ9131_RX_DLL_CONTROL, ctl_val);
+
+	if (ret < 0) {
+		dev_err(&phydev->mdio.dev, "rx delay set failed\n");
+		return ret;
+	}
+
+	return 0;
+}
 
 static int ksz9131_config_init(struct phy_device *phydev)
 {
@@ -750,7 +798,6 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	const struct device *dev_walker;
 	int ret;
 
-	printk("[KSZ9131]--start init configure\n!");
 	dev_walker = &phydev->mdio.dev;
 	do {
 		of_node = dev_walker->of_node;
@@ -759,8 +806,6 @@ static int ksz9131_config_init(struct phy_device *phydev)
 
 	if (!of_node)
 		return 0;
-
-	printk("[KSZ9131]--start init configure:step 1\n!");
 
 	ret = ksz9131_of_load_skew_values(phydev, of_node,
 					  MII_KSZ9031RN_CLK_PAD_SKEW, 5,
@@ -786,13 +831,16 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
-	printk("[KSZ9131]--start init configure:step 20\n!");
+#if 0
 	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_TX_DLL_CONTROL, tx_dll_bypass);
 	if (ret < 0)
 		return ret;
 
-	printk("[KSZ9131]--start init configure:step 21\n!");
 	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_RX_DLL_CONTROL, rx_dll_bypass);
+	if (ret < 0)
+		return ret;
+#endif
+	ret = ksz9131_config_rgmii_interface_delay(phydev);
 	if (ret < 0)
 		return ret;
 
