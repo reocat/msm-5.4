@@ -1,0 +1,5 @@
+linux-imx (5.4.0-1000.1) focal; urgency=medium
+
+  * Initial focal/imx packaging
+
+ -- Shrirang Bagul <shrirang.bagul@canonical.com>  Fri, 16 Apr 2021 00:50:22 +0800
