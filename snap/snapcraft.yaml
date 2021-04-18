@@ -54,6 +54,25 @@ parts:
         prime:
             - firmware
 
+    firmware-nxp:
+        after:
+            - kernel
+        plugin: dump
+        source: https://github.com/NXP/imx-firmware.git
+        source-type: git
+        source-tag: lf-5.15.32_2.0.0
+        organize:
+            'cyw-wifi-bt/1CX_CYW4356/*': firmware/brcm/
+            'cyw-wifi-bt/1FD_CYW4359/*': firmware/brcm/
+            'cyw-wifi-bt/1MW_CYW43455/*': firmware/brcm/
+            'brcm/': firmware/brcm/
+            'nxp/FwImage_8997/*': firmware/nxp/
+            'nxp/FwImage_8987/*': firmware/nxp/
+            'nxp/wifi_mod_para.conf': firmware/nxp/
+        stage:
+            - firmware/brcm
+            - firmware/nxp
+
 build-packages:
     - bison
     - device-tree-compiler
