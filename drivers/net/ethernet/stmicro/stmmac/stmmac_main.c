@@ -7430,6 +7430,8 @@ static void stmmac_reset_queues_param(struct stmmac_priv *priv)
 		tx_q->mss = 0;
 
 		netdev_tx_reset_queue(netdev_get_tx_queue(priv->dev, queue));
+
+		stmmac_clear_tx_descriptors(priv, queue);
 	}
 }
 
@@ -7490,7 +7492,6 @@ int stmmac_resume(struct device *dev)
 	stmmac_reset_queues_param(priv);
 
 	stmmac_free_tx_skbufs(priv);
-	stmmac_clear_descriptors(priv);
 
 	stmmac_hw_setup(ndev, false);
 	stmmac_init_coalesce(priv);
