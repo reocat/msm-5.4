@@ -249,13 +249,6 @@
 	status = "disable";
 };
 
-/* Beeper */
-&pwm3 {
-        pinctrl-names = "default";
-        pinctrl-0 = <&pinctrl_pwm3>;
-        status = "okay";
-};
-
 &pwm4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm4>;
@@ -942,12 +935,6 @@
 			MX8MP_IOMUXC_GPIO1_IO11__PWM2_OUT	0x116
 		>;
 	};
-
-        pinctrl_pwm3: pwm3grp {
-                fsl,pins = <
-                        MX8MP_IOMUXC_GPIO1_IO10__PWM3_OUT       0x116
-                >;
-        };
 
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
