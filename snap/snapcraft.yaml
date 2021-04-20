@@ -83,6 +83,65 @@ parts:
       - firmware/brcm
       - firmware/nxp
 
+  optee-os:
+    after:
+      - optee-uc-fde
+      - optee-keys
+    plugin: nil
+    source: https://source.codeaurora.org/external/imx/imx-optee-os.git
+    source-type: git
+    source-tag: rel_imx_5.4.70_2.3.2
+    source-depth: 1
+    override-build: |
+      # depending on architecture
+      # on arm64: we are building optee-os only to get build export dependency to build REE app
+      # on armhf: we are building optee-os to be included in FIT image
+      export CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-"
+      export CROSS_COMPILE_core="${CRAFT_ARCH_TRIPLET}-"
+      export ARCH="arm"
+      if [ "${CRAFT_TARGET_ARCH}" = "arm64" ]; then
+        export CROSS_COMPILE_ta_arm64="${CRAFT_ARCH_TRIPLET}-"
+        export CFG_ARM64_core="y"
+        export PLATFORM="vexpress-qemu_armv8a"
+        export CFG_USER_TA_TARGETS="ta_arm64"
+      elif [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+        export ARCH="arm"
+        export CROSS_COMPILE_ta_arm32="${CRAFT_ARCH_TRIPLET}-"
+        export PLATFORM="vexpress-qemu_virt"
+        export CFG_USER_TA_TARGETS="ta_arm32"
+        export CFG_NS_ENTRY_ADDR=0x82100000
+        export CFG_PAGEABLE_ADDR=0x86800000
+        export CFG_DT_ADDR=0x83000000
+        # 1GB DDR
+        # export CFG_DDR_SIZE=0x40000000
+        # 512MB DDR
+        export CFG_DDR_SIZE=0x20000000
+        CFG_TEE_RAM_VA_SIZE=0x00400000
+        export PLATFORM=imx
+        export PLATFORM_FLAVOR=mx6sxsabreauto
+        CFG_WERROR=y
+        # add optee-uc-fde TA
+        cp -r ${CRAFT_STAGE}/optee-uc-fde/ta/fde_key_handler ${CRAFT_PART_BUILD}/ta/
+      fi
+      export DEBUG=0
+      export CFG_TEE_CORE_DEBUG=n
+      export CFG_TEE_BENCHMARK=n
+      export TA_PUBLIC_KEY="${CRAFT_STAGE}/ta-keys/ta_public.pem"
+      make O=${CRAFT_PART_BUILD}/out -j$(nproc)
+      if [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+        # now build optee-os once more with added early TAs
+        make O=${CRAFT_PART_BUILD}/out -j$(nproc) \
+          CFG_EARLY_TA=y \
+          EARLY_TA_PATHS="out/ta/pkcs11/fd02c9da-306c-48c7-a49c-bbd827ae86ee.stripped.elf \
+                  out/ta/fde_key_handler/fd1b2a86-3668-11eb-adc1-0242ac120002.stripped.elf"
+
+        cp ${CRAFT_PART_BUILD}/out/core/tee-raw.bin \
+          ${CRAFT_PART_INSTALL}/tee.mx6sx.bin
+      fi
+      cp -r ${CRAFT_PART_BUILD}/out/export-ta_arm* ${CRAFT_PART_INSTALL}/export-ta_arm
+    prime:
+      - -*
+
 build-packages:
   - bison
   - device-tree-compiler
