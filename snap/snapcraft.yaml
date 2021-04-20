@@ -143,6 +143,29 @@ parts:
     prime:
       - -*
 
+  optee-client:
+    plugin: nil
+    source: https://github.com/OP-TEE/optee_client.git
+    source-type: git
+    source-tag: 3.19.0
+    build-environment:
+      - to armhf:
+        - ARCH: "arm"
+      - else:
+        - ARCH: "${CRAFT_TARGET_ARCH}"
+      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
+      - DEBUG: "0"
+      - CFG_TEE_CLIENT_LOAD_PATH: ""
+      - CFG_TA_TEST_PATH: "0"
+      - SBINDIR: "/usr/sbin"
+      - LIBDIR: "/usr/lib/${CRAFT_ARCH_TRIPLET}"
+      - DESTDIR: "${CRAFT_PART_INSTALL}"
+    override-build: |
+      make O=${CRAFT_PART_BUILD}/out -j$(nproc)
+      make install O=${CRAFT_PART_BUILD}/out
+    prime:
+      - usr/lib/*/lib*so*
+
 build-packages:
   - bison
   - device-tree-compiler
