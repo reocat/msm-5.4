@@ -6,7 +6,7 @@ description: The i.MX Ubuntu kernel package as a snap
 
 grade: stable
 build-base: core22
-confinement: strict
+confinement: devmode
 type: kernel
 adopt-info: kernel
 
@@ -15,6 +15,16 @@ architectures:
     build-for: arm64
   - build-on: [amd64, arm64, armhf]
     build-for: armhf
+
+# environment to run fde-setup hook
+environment:
+  LD_LIBRARY_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET}
+
+hooks:
+  fde-setup:
+    plugs:
+      - tee
+      - home
 
 parts:
   kernel:
