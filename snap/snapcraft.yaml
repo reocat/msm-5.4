@@ -57,6 +57,10 @@ parts:
       craftctl default
       # Trim firmware
       ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
+    prime:
+      - -initrd.img*
+      - -Image*
+      - -dtbs
 
   firmware:
     plugin: dump
@@ -214,6 +218,21 @@ parts:
       - usr/bin/fde-reveal-key
     prime:
       - meta/
+
+
+  fit-image:
+    after:
+      - kernel
+      - test-keys
+      - optee-os
+    plugin: nil
+    override-build: |
+      cp ${CRAFT_PROJECT_DIR}/kernel_*.its ${CRAFT_STAGE}
+      # include key dir in case there are keys available
+      mkimage \
+        -f ${CRAFT_STAGE}/kernel_${CRAFT_TARGET_ARCH}.its \
+        -r ${CRAFT_PART_INSTALL}/kernel.img \
+        -k ${CRAFT_STAGE}/signing-key
 
 build-packages:
   - bison
