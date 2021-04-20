@@ -19,6 +19,7 @@ architectures:
 parts:
     kernel:
         after:
+            - optee-uc-fde-client
             - qcacld
         plugin: x-kernel
         kdefconfig: [ "snappy_defconfig" ]
@@ -28,6 +29,9 @@ parts:
             armhf: zImage
         kernel-initrd-channel: beta
         kernel-initrd-compression: gz
+        kernel-initrd-addons:
+            - usr/bin/fde-reveal-key
+            - usr/lib/libteec.so*
         override-build: |
             snapcraftctl build
             snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
