@@ -193,6 +193,25 @@ parts:
         prime:
             - -*
 
+    optee-client:
+        plugin: make
+        source: https://github.com/OP-TEE/optee_client.git
+        source-type: git
+        source-tag: 3.17.0
+        source-depth: 1
+        make-parameters:
+            - ARCH="${SNAPCRAFT_TARGET_ARCH}"
+            - DEBUG=0
+            - CROSS_COMPILE="${SNAPCRAFT_ARCH_TRIPLET}-"
+            - CFG_TEE_CLIENT_LOAD_PATH=""
+            - CFG_TA_TEST_PATH=0
+            - CFG_TEE_SUPP_LOG_LEVEL=0
+            - SBINDIR=/usr/sbin
+            - LIBDIR=/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}
+        prime:
+            - usr/sbin
+            - usr/lib/*/lib*so*
+
 build-packages:
     - bison
     - device-tree-compiler
