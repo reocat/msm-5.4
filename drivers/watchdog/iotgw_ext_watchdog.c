@@ -19,15 +19,21 @@
 
 static int wdt_in_gpio;
 static int wdt_feed_interval = 10;
+
+#ifdef CONFIG_IOTGW_WATCHDOG_ENHANCE
 static struct regmap *wdt_regmap;
+#endif
+
 static bool wdtnowayout = WATCHDOG_NOWAYOUT;
 
+#ifdef CONFIG_IOTGW_WATCHDOG_ENHANCE
 static const struct regmap_config imx6_wdt_regmap_config = {
 	.reg_bits = 16,
 	.reg_stride = 2,
 	.val_bits = 16,
 	.max_register = 0x8,
 };
+#endif
 
 static int iotgw_ext_wdt_start(struct watchdog_device *wdog)
 {
@@ -49,6 +55,7 @@ static int iotgw_ext_wdt_ping(struct watchdog_device *wdog)
 	return 0;
 }
 
+#ifdef CONFIG_IOTGW_WATCHDOG_ENHANCE
 static int iotgw_wdt_restart(struct watchdog_device *wdog, unsigned long action,
 			    void *data)
 {
@@ -72,12 +79,15 @@ static int iotgw_wdt_restart(struct watchdog_device *wdog, unsigned long action,
 	return 0;
 
 }
+#endif
 
 static const struct watchdog_ops iotgw_ext_wdt_ops = {
 	.owner = THIS_MODULE,
 	.start = iotgw_ext_wdt_start,
 	.ping = iotgw_ext_wdt_ping,
+#ifdef CONFIG_IOTGW_WATCHDOG_ENHANCE
 	.restart = iotgw_wdt_restart,
+#endif
 };
 
 static const struct watchdog_info iotgw_ext_wdt_info = {
@@ -109,7 +119,7 @@ static struct watchdog_device iotgw_ext_wdt_dev = {
 	.info = &iotgw_ext_wdt_info,
 	.ops = &iotgw_ext_wdt_ops,
 	.min_timeout = 1,
-	.max_timeout = 10,
+	.max_timeout = 60,
 	.max_hw_heartbeat_ms = 128000,
 	.timeout = 5,
 };
@@ -150,6 +160,7 @@ static int __init iotgw_wdt_probe(struct platform_device *pdev)
 	dev_info(&pdev->dev, "Get wdt_feed_interval:%d \n",wdt_feed_interval);
 	iotgw_ext_wdt_dev.timeout = wdt_feed_interval*2;
 
+#ifdef CONFIG_IOTGW_WATCHDOG_ENHANCE
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "Can't get device resources \n");
@@ -165,7 +176,7 @@ static int __init iotgw_wdt_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Regmap init failed \n");
 		return PTR_ERR(wdt_regmap);
 	}
-
+#endif
 	watchdog_set_nowayout(&iotgw_ext_wdt_dev, wdtnowayout);
 	set_bit(WDOG_HW_RUNNING, &(iotgw_ext_wdt_dev.status));
 
@@ -210,7 +221,8 @@ static int __init iotgw_ext_wdt_init(void)
 {
 	return platform_driver_probe(&iotgw_wdt_driver, iotgw_wdt_probe);
 }
-module_init(iotgw_ext_wdt_init);
+//module_init(iotgw_ext_wdt_init);
+late_initcall(iotgw_ext_wdt_init);
 
 static void __exit iotgw_ext_wdt_exit(void)
 {
