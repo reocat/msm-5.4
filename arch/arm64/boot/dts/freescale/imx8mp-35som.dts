@@ -609,6 +609,13 @@
 		gpios = <&gpio4 27 1>, /* interrupt */
 		<&tca95392 0 1>; /* Reset */
 	};
+
+	/*	temperature sensor	*/
+	tmp75: tmp75@49 {
+		compatible = "ti,tmp75";
+		reg = <0x49>;
+		status = "okay";
+	};
 };
 
 &i2c4 {
