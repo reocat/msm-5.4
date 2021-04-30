@@ -255,7 +255,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pwm2>;
 	//status = "okay";
-	status = "disable";
+	status = "disabled";
 };
 
 &pwm4 {
@@ -283,10 +283,12 @@
 &ecspi1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	fsl,spi-num-chipselects = <1>;
+	fsl,spi-num-chipselects = <2>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs &pinctrl_ecspi1_int>;
-	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs0 &pinctrl_ecspi1_int0
+                     &pinctrl_ecspi1_int1 &pinctrl_ecspi1_cs1>;
+	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW
+                    &gpio1 1 GPIO_ACTIVE_LOW>;
 	status = "ok";
 
 	spisc161: spiex1@0 {
@@ -294,7 +296,15 @@
 		compatible = "nxp,sc16is752";
 		interrupt-parent = <&gpio4>;
 		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
-                clock-frequency = <2000000>;
+                clock-frequency = <14745600>;
+		spi-max-frequency = <2000000>;
+	};
+	spisc162: spiex2@1 {
+		reg = <1>;
+		compatible = "nxp,sc16is752";
+		interrupt-parent = <&gpio4>;
+		interrupts = <19 IRQ_TYPE_EDGE_FALLING>;
+                clock-frequency = <14745600>;
 		spi-max-frequency = <2000000>;
 	};
 };
@@ -843,8 +853,8 @@
 	assigned-clocks = <&clk IMX8MP_CLK_UART3>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
 	fsl,uart-has-rtscts;
-	//status = "okay";
-	status = "disable";
+	status = "okay";
+	//status = "disable";
 };
 
 &usb3_phy0 {
@@ -994,15 +1004,27 @@
 		>;
 	};
 
-	pinctrl_ecspi1_cs: ecspi1cs {
+	pinctrl_ecspi1_cs0: ecspi1cs0 {
 		fsl,pins = <
 			MX8MP_IOMUXC_ECSPI1_SS0__GPIO5_IO09		0x40000
 		>;
 	};
 
-	pinctrl_ecspi1_int: ecspi1int {
+	pinctrl_ecspi1_cs1: ecspi1cs1 {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01		0x19
+		>;
+	};
+
+	pinctrl_ecspi1_int0: ecspi1int0 {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00		0x19
+		>;
+	};
+
+	pinctrl_ecspi1_int1: ecspi1int1 {
+		fsl,pins = <
+                        MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19	        0x19
 		>;
 	};
 
@@ -1204,10 +1226,8 @@
 
 	pinctrl_uart3: uart3grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_ECSPI1_SCLK__UART3_DCE_RX		0x140
-			MX8MP_IOMUXC_ECSPI1_MOSI__UART3_DCE_TX		0x140
-			MX8MP_IOMUXC_ECSPI1_SS0__UART3_DCE_RTS		0x140
-			MX8MP_IOMUXC_ECSPI1_MISO__UART3_DCE_CTS		0x140
+			MX8MP_IOMUXC_SD1_DATA6__UART3_DCE_TX 	0x49
+			MX8MP_IOMUXC_SD1_DATA7__UART3_DCE_RX	0x49
 		>;
 	};
 
