@@ -222,6 +222,15 @@
 		reset-delay-us = <1000>;
 		#reset-cells = <0>;
 	};
+
+        iot_watchdog: wdogext {
+                pinctrl-names = "default";
+                pinctrl-0 = <&pinctrl_feeddog>;
+                compatible = "fsl,external_watchdog";
+                wdt-in = <&gpio1 0 GPIO_ACTIVE_LOW>;
+                wdt-feed-interval = <20>;
+                status = "okay";
+        };
 };
 
 &aud2htx {
@@ -964,6 +973,12 @@
 			MX8MP_IOMUXC_SAI5_RXFS__PWM4_OUT	0x116
 		>;
 	};
+
+        pinctrl_feeddog: feeddogpin {
+                fsl,pins = <
+                        MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00     0x16
+                >;
+        };
 
 	pinctrl_ecspi2: ecspi2grp {
 		fsl,pins = <
