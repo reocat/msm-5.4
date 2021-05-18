@@ -981,7 +981,6 @@
 				#index-cells = <1>;
 				reg = <0x32e50200 0x200>;
 			};
-
 		};
 
 		dma_apbh: dma-controller@33000000 {
