@@ -240,7 +240,8 @@
                 compatible = "fsl,external_watchdog";
                 wdt-in = <&gpio1 0 GPIO_ACTIVE_LOW>;
                 wdt-feed-interval = <20>;
-                status = "okay";
+                //status = "okay";
+                status = "disabled";
         };
 };
 
