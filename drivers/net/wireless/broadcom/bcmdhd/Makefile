@@ -275,8 +275,8 @@ BT_SDIO = 0
 SHAREDSDIO_BUF_IN_BT = 0
 
 EXTRA_CFLAGS += $(DHDCFLAGS) -DDHD_DEBUG
-EXTRA_CFLAGS += -DSRCBASE=\"$(src)\"
-EXTRA_CFLAGS += -I$(src)/include/ -I$(src)/
+EXTRA_CFLAGS += -DSRCBASE=\"$(srctree)/$(src)\"
+EXTRA_CFLAGS += -I$(srctree)/$(src)/include/ -I$(srctree)/$(src)/
 KBUILD_CFLAGS += -I$(LINUXDIR)/include -I$(shell pwd)
 
 DHDOFILES := dhd_pno.o dhd_common.o dhd_ip.o dhd_custom_gpio.o \
@@ -294,7 +294,7 @@ endif
 
 ifeq ($(BT_SDIO), 1)
 EXTRA_CFLAGS += -DBT_OVER_SDIO
-EXTRA_CFLAGS += -I$(src)/bt_tty_sdio/include/
+EXTRA_CFLAGS += -I$(srctree)/$(src)/bt_tty_sdio/include/
 ifeq ($(SHAREDSDIO_BUF_IN_BT), 1)
 EXTRA_CFLAGS += -DSSDIO_BUF_BT
 endif
