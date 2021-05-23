@@ -7,15 +7,19 @@ include ../../debian.master/config/annotations
 #
 # Policy overrides (unset/unreachable)
 #
-CONFIG_ACPI_CUSTOM_METHOD				policy<{'arm64': 'n'}>
-CONFIG_ATA_PIIX							policy<{'arm64': 'm', 'armhf': 'm'}
-CONFIG_DRM_HISI_HIBMC					policy<{'arm64': 'n'}>
-CONFIG_FW_LOADER_USER_HELPER_FALLBACK 	policy<{'arm64': '-', 'armhf': '-'}>
-CONFIG_GPIO_TWL4030						policy<{'arm64': '-'}>
-CONFIG_REGULATOR_TWL4030				policy<{'arm64': '-'}>
-CONFIG_REGULATOR_TPS65217				policy<{'arm64': 'm', 'armhf': 'm'}>
-CONFIG_SATA_HIGHBANK					policy<{'armhf': '-'}>
-CONFIG_SND_SOC_SOF_NOCODEC_SUPPORT		policy<{'arm64': '-'}>
-CONFIG_USB_EHCI_HCD_PLATFORM 			policy<{'arm64': 'm', 'armhf': 'm'}>
-CONFIG_VFIO								policy<{'arm64': '-', 'armhf': '-'}>
-CONFIG_VFIO_PCI							policy<{'arm64': '-', 'armhf': '-'}>
+CONFIG_ACPI_CUSTOM_METHOD               policy<{'arm64': 'n'}>
+CONFIG_ATA_PIIX                         policy<{'arm64': 'm', 'armhf': 'm'}
+CONFIG_DRM_BOCHS                        policy<{'arm64': 'n', 'armhf': 'n'}>
+CONFIG_DRM_HISI_HIBMC                   policy<{'arm64': 'n'}>
+CONFIG_FW_LOADER_USER_HELPER_FALLBACK   policy<{'arm64': '-', 'armhf': '-'}>
+CONFIG_GPIO_TWL4030                     policy<{'arm64': '-'}>
+CONFIG_MFD_TPS65217                     policy<{'armhf': 'm'}>
+CONFIG_MTD_DOCG3                        policy<{'arm64': 'n', 'armhf': 'n'}>
+CONFIG_REGULATOR_TWL4030                policy<{'arm64': '-'}>
+CONFIG_REGULATOR_TPS65217               policy<{'arm64': 'm', 'armhf': 'm'}>
+CONFIG_SAMPLE_TRACE_PRINTK              policy<{'arm64': '-', 'armhf': '-'}>
+CONFIG_SATA_HIGHBANK                    policy<{'armhf': '-'}>
+CONFIG_SND_SOC_SOF_NOCODEC_SUPPORT      policy<{'arm64': '-'}>
+CONFIG_USB_EHCI_HCD_PLATFORM            policy<{'arm64': 'm', 'armhf': 'm'}>
+CONFIG_VFIO                             policy<{'arm64': '-', 'armhf': '-'}>
+CONFIG_VFIO_PCI                         policy<{'arm64': '-', 'armhf': '-'}>
