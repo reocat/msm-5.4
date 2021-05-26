@@ -431,6 +431,18 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
 		.data_alignment = 8,
 	}, {
+		.code = MEDIA_BUS_FMT_SGBRG8_1X8,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
+	}, {
+		.code = MEDIA_BUS_FMT_SGRBG8_1X8,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
+	}, {
+		.code = MEDIA_BUS_FMT_SRGGB8_1X8,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
+	}, {
 		.code = MEDIA_BUS_FMT_SBGGR10_1X10,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
 		.data_alignment = 16,
@@ -460,6 +472,18 @@ static const struct csis_pix_format mipi_csis_formats[] = {
 		.data_alignment = 16,
 	}, {
 		.code = MEDIA_BUS_FMT_SRGGB12_1X12,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
+		.data_alignment = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_Y8_1X8,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW8,
+		.data_alignment = 8,
+	}, {
+		.code = MEDIA_BUS_FMT_Y10_1X10,
+		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW10,
+		.data_alignment = 16,
+	}, {
+		.code = MEDIA_BUS_FMT_Y12_1X12,
 		.fmt_reg = MIPI_CSIS_ISPCFG_FMT_RAW12,
 		.data_alignment = 16,
 	},
@@ -888,30 +912,24 @@ static void disp_mix_gasket_config(struct csi_state *state)
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_YUV422_8;
 		break;
 	case MEDIA_BUS_FMT_SBGGR8_1X8:
+	case MEDIA_BUS_FMT_SRGGB8_1X8:
+	case MEDIA_BUS_FMT_SGRBG8_1X8:
+	case MEDIA_BUS_FMT_SGBRG8_1X8:
+	case MEDIA_BUS_FMT_Y8_1X8:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW8;
 		break;
 	case MEDIA_BUS_FMT_SBGGR10_1X10:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
-		break;
 	case MEDIA_BUS_FMT_SGBRG10_1X10:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
-		break;
 	case MEDIA_BUS_FMT_SGRBG10_1X10:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
-		break;
 	case MEDIA_BUS_FMT_SRGGB10_1X10:
+	case MEDIA_BUS_FMT_Y10_1X10:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW10;
 		break;
 	case MEDIA_BUS_FMT_SBGGR12_1X12:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
-		break;
 	case MEDIA_BUS_FMT_SGBRG12_1X12:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
-		break;
 	case MEDIA_BUS_FMT_SGRBG12_1X12:
-		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
-		break;
 	case MEDIA_BUS_FMT_SRGGB12_1X12:
+	case MEDIA_BUS_FMT_Y12_1X12:
 		fmt_val = GASKET_0_CTRL_DATA_TYPE_RAW12;
 		break;
 	default:
@@ -1071,7 +1089,6 @@ static int mipi_csis_set_fmt(struct v4l2_subdev *mipi_sd,
 	}
 
 	format->pad = source_pad->index;
-	mf->code = MEDIA_BUS_FMT_UYVY8_2X8;
 	ret = v4l2_subdev_call(sen_sd, pad, set_fmt, NULL, format);
 	if (ret < 0) {
 		v4l2_err(&state->sd, "%s, set sensor format fail\n", __func__);
@@ -1083,6 +1100,8 @@ static int mipi_csis_set_fmt(struct v4l2_subdev *mipi_sd,
 		csis_fmt = &mipi_csis_formats[0];
 		mf->code = csis_fmt->code;
 	}
+
+	state->csis_fmt = csis_fmt;
 
 	return 0;
 }
@@ -1225,6 +1244,21 @@ static int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	struct csi_state *state = container_of(sd, struct csi_state, sd);
 
 	switch (fmt->format) {
+	case V4L2_PIX_FMT_SBGGR8:
+	    code = MEDIA_BUS_FMT_SBGGR8_1X8;
+	    break;
+	case V4L2_PIX_FMT_SGBRG8:
+	    code = MEDIA_BUS_FMT_SGBRG8_1X8;
+	    break;
+	case V4L2_PIX_FMT_SGRBG8:
+	    code = MEDIA_BUS_FMT_SGRBG8_1X8;
+	    break;
+	case V4L2_PIX_FMT_SRGGB8:
+	    code = MEDIA_BUS_FMT_SRGGB8_1X8;
+	    break;
+	case V4L2_PIX_FMT_GREY:
+	    code = MEDIA_BUS_FMT_Y8_1X8;
+	    break;
 	case V4L2_PIX_FMT_SBGGR10:
 	    code = MEDIA_BUS_FMT_SBGGR10_1X10;
 	    break;
@@ -1237,6 +1271,9 @@ static int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	case V4L2_PIX_FMT_SRGGB10:
 	    code = MEDIA_BUS_FMT_SRGGB10_1X10;
 	    break;
+	case V4L2_PIX_FMT_Y10:
+	    code = MEDIA_BUS_FMT_Y10_1X10;
+	    break;
 	case V4L2_PIX_FMT_SBGGR12:
 	    code = MEDIA_BUS_FMT_SBGGR12_1X12;
 	    break;
@@ -1248,6 +1285,9 @@ static int csis_s_fmt(struct v4l2_subdev *sd, struct csi_sam_format *fmt)
 	    break;
 	case V4L2_PIX_FMT_SRGGB12:
 	    code = MEDIA_BUS_FMT_SRGGB12_1X12;
+	    break;
+	case V4L2_PIX_FMT_Y12:
+	    code = MEDIA_BUS_FMT_Y12_1X12;
 	    break;
 	default:
 		return -EINVAL;
@@ -1401,11 +1441,7 @@ static irqreturn_t mipi_csis_irq_handler(int irq, void *dev_id)
 			if (!(status & state->events[i].mask))
 				continue;
 			state->events[i].counter++;
-			v4l2_dbg(2, debug, &state->sd, "%s: %d\n",
-				 state->events[i].name,
-				 state->events[i].counter);
 		}
-		v4l2_dbg(2, debug, &state->sd, "status: %08x\n", status);
 	}
 	spin_unlock_irqrestore(&state->slock, flags);
 
