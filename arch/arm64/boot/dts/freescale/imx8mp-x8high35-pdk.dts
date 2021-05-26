@@ -26,6 +26,14 @@
 		stdout-path = &uart2;
 	};
 
+	firmware {
+		optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+		};
+	};
+
+
 	leds {
 		compatible = "gpio-leds";
 
