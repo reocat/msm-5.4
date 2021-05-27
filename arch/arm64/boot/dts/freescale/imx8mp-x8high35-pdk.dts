@@ -190,6 +190,8 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <2>;
 			eee-broken-1000t;
+			eee-broken-100tx;
+			eee-broken-10gt;
 		};
 	};
 };

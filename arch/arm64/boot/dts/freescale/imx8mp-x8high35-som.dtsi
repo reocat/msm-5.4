@@ -49,6 +49,9 @@
 			compatible = "ethernet-phy-ieee802.3-c22";
 			reg = <1>;
 			eee-broken-1000t;
+			eee-broken-100tx;
+			eee-broken-10gt;
+			micrel,led-mode = <1>;
 			reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 		};
 	};
