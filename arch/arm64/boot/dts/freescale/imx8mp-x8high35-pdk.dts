@@ -371,7 +371,7 @@
 
 	gpio_exp_75: gpio@75 {
 		compatible = "ti,tca9539";
-		reg = <0x74>;
+		reg = <0x75>;
 		gpio-controller;
 		#gpio-cells = <2>;
 		interrupt-controller;
