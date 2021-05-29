@@ -146,7 +146,7 @@
 
 &ecspi1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs0
+	pinctrl-0 = <&pinctrl_ecspi1
 		&pinctrl_uart_exp1_int &pinctrl_uart_exp2_int>;
 	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>,
 		<&gpio5 9 GPIO_ACTIVE_HIGH>;
