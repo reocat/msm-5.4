@@ -108,6 +108,44 @@
 		};
 	};
 
+	reg_usb1_host_vbus: regulator-usb1-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb1_vbus>;
+		regulator-name = "usb1_host_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		status = "disabled";
+	};
+
+	reg_usb2_host_vbus: regulator-usb2-vbus {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb2_vbus>;
+		regulator-name = "usb1_host_vbus";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		status = "disabled";
+	};
+
+	reg_wifi_power: regulator-wifi-power {
+		compatible = "regulator-fixed";
+		regulator-name = "wifi_power";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		startup-delay-us = <10000>;
+		off-on-delay-us = <12000>;
+	};
+
 	reg_usdhc2_vmmc: regulator-usdhc2-vmmc {
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
@@ -231,16 +269,20 @@
 		reg = <0x48>;
 	};
 
-	typec_1: ptn5150@7a {
+	typec_1: ptn5150@3d {
 		compatible = "nxp,ptn5150";
-		reg = <0x7a>;
+		reg = <0x3d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb1_vbus>;
 		vbus-gpio = <&gpio1 11 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 
-	typec_2: ptn5150@3a {
+	typec_2: ptn5150@1d {
 		compatible = "nxp,ptn5150";
-		reg = <0x3a>;
+		reg = <0x1d>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb2_vbus>;
 		vbus-gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
@@ -405,6 +447,7 @@
 
 &usb3_phy0 {
 	status = "okay";
+	vbus-supply = <&reg_usb1_host_vbus>;
 };
 
 &usb3_0 {
@@ -412,8 +455,6 @@
 };
 
 &usb_dwc3_0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usb1_vbus>;
 	dr_mode = "otg";
 	status = "okay";
 
@@ -422,6 +463,7 @@
 
 &usb3_phy1 {
 	status = "okay";
+	vbus-supply = <&reg_usb2_host_vbus>;
 };
 
 &usb3_1 {
@@ -429,8 +471,6 @@
 };
 
 &usb_dwc3_1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_usb2_vbus>;
 	dr_mode = "host";
 	status = "okay";
 };
