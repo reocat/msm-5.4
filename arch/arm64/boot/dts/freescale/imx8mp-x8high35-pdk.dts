@@ -216,7 +216,6 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
 	phy-mode = "rgmii-id";
-	phy-reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 	phy-handle = <&ethphy1>;
 	status = "okay";
 
