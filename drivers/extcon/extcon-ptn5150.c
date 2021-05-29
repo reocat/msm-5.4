@@ -261,27 +261,33 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 	if (i2c->irq > 0) {
 		info->irq = i2c->irq;
 	} else {
-		info->int_gpiod = devm_gpiod_get(&i2c->dev, "int", GPIOD_IN);
+		info->int_gpiod = devm_gpiod_get_optional(&i2c->dev, "int", GPIOD_IN);
 		if (IS_ERR(info->int_gpiod)) {
 			dev_err(dev, "failed to get INT GPIO\n");
 			return PTR_ERR(info->int_gpiod);
 		}
 
-		info->irq = gpiod_to_irq(info->int_gpiod);
-		if (info->irq < 0) {
-			dev_err(dev, "failed to get INTB IRQ\n");
-			return info->irq;
+		if (info->int_gpiod > 0) {
+			info->irq = gpiod_to_irq(info->int_gpiod);
+			if (info->irq < 0) {
+				dev_err(dev, "failed to get INTB IRQ\n");
+				return info->irq;
+			}
 		}
 	}
 
-	ret = devm_request_threaded_irq(dev, info->irq, NULL,
-					ptn5150_irq_handler,
-					IRQF_TRIGGER_FALLING |
-					IRQF_ONESHOT,
-					i2c->name, info);
-	if (ret < 0) {
-		dev_err(dev, "failed to request handler for INTB IRQ\n");
-		return ret;
+	if (info->irq > 0) {
+		ret = devm_request_threaded_irq(dev, info->irq, NULL,
+						ptn5150_irq_handler,
+						IRQF_TRIGGER_FALLING |
+						IRQF_ONESHOT,
+						i2c->name, info);
+		if (ret < 0) {
+			dev_err(dev, "failed to request handler for INTB IRQ\n");
+			return ret;
+		}
+	} else {
+		dev_warn(dev, "No IRQ configured\n");
 	}
 
 	/* Allocate extcon device */
