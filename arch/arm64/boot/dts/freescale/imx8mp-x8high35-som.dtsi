@@ -68,7 +68,8 @@
 		reg = <0x25>;
 
 		pinctrl-0 = <&pinctrl_pmic>;
-		gpio_intr = <&gpio1 3 GPIO_ACTIVE_LOW>;
+		interrupt-parent = <&gpio1>;
+		interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
 
 		regulators {
 			#address-cells = <1>;
