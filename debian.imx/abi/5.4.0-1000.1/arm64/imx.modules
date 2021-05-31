@@ -378,7 +378,6 @@ bmp280-spi
 bnep
 bonding
 bpa10x
-bpfilter
 bpqether
 bq2415x_charger
 bq24190_charger
