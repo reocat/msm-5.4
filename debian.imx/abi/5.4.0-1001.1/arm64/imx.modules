@@ -287,8 +287,6 @@ atxp1
 aufs
 auo-pixcir-ts
 auth_rpcgss
-authenc
-authencesn
 autofs4
 ax25
 ax88179_178a
@@ -726,8 +724,6 @@ ebtable_broute
 ebtable_filter
 ebtable_nat
 ebtables
-ecc
-ecdh_generic
 echainiv
 echo
 ecrdsa_generic
@@ -1577,7 +1573,6 @@ libarc4
 libceph
 libcomposite
 libcrc32c
-libdes
 libfc
 libfcoe
 libiscsi

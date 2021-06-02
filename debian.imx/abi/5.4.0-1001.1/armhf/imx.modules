@@ -318,8 +318,6 @@ au8522_dig
 aufs
 auo-pixcir-ts
 auth_rpcgss
-authenc
-authencesn
 autofs4
 ax25
 ax88179_178a
@@ -859,8 +857,6 @@ ebtable_filter
 ebtable_nat
 ebtables
 ec100
-ecc
-ecdh_generic
 echainiv
 echo
 ecrdsa_generic
@@ -1779,7 +1775,6 @@ libarc4
 libceph
 libcomposite
 libcrc32c
-libdes
 libertas
 libertas_sdio
 libertas_spi
