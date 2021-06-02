@@ -517,7 +517,7 @@ static int fsl_sai_set_bclk(struct snd_soc_dai *dai, bool tx, u32 freq)
 		}
 	}
 
-	if (sai->verid.major >= 3 && sai->verid.minor >= 1) {
+	if (sai->soc_data->max_register >= FSL_SAI_MCTL) {
 		/* SAI is in master mode at this point, so enable MCLK */
 		regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
 				FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
@@ -1499,7 +1499,7 @@ static int fsl_sai_probe(struct platform_device *pdev)
 
 	/* Select MCLK direction */
 	if (of_find_property(np, "fsl,sai-mclk-direction-output", NULL) &&
-	    sai->verid.major >= 3 && sai->verid.minor >= 1) {
+	    sai->soc_data->max_register >= FSL_SAI_MCTL) {
 		regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
 				   FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
 	}
@@ -1587,6 +1587,7 @@ static const struct fsl_sai_soc_data fsl_sai_vf610_data = {
 	.dataline = 0x1,
 	.fifos = 1,
 	.flags = 0,
+	.max_register = FSL_SAI_RMR,
 };
 
 static const struct fsl_sai_soc_data fsl_sai_imx6sx_data = {
@@ -1598,6 +1599,7 @@ static const struct fsl_sai_soc_data fsl_sai_imx6sx_data = {
 	.dataline = 0x1,
 	.fifos = 1,
 	.flags = 0,
+	.max_register = FSL_SAI_RMR,
 };
 
 static const struct fsl_sai_soc_data fsl_sai_imx7ulp_data = {
@@ -1609,6 +1611,7 @@ static const struct fsl_sai_soc_data fsl_sai_imx7ulp_data = {
 	.flags = PMQOS_CPU_LATENCY,
 	.dataline = 0x3,
 	.fifos = 2,
+	.max_register = FSL_SAI_RMR,
 };
 
 static const struct fsl_sai_soc_data fsl_sai_imx8mq_data = {
@@ -1620,6 +1623,7 @@ static const struct fsl_sai_soc_data fsl_sai_imx8mq_data = {
 	.dataline = 0xff,
 	.fifos = 8,
 	.flags = 0,
+	.max_register = FSL_SAI_RMR,
 };
 
 static const struct fsl_sai_soc_data fsl_sai_imx8qm_data = {
@@ -1631,6 +1635,43 @@ static const struct fsl_sai_soc_data fsl_sai_imx8qm_data = {
 	.dataline = 0xf,
 	.fifos = 1,
 	.flags = 0,
+	.max_register = FSL_SAI_RMR,
+};
+
+static const struct fsl_sai_soc_data fsl_sai_imx8mm_data = {
+	.use_imx_pcm = true,
+	.use_edma = false,
+	.fifo_depth = 128,
+	.reg_offset = 8,
+	.mclk0_is_mclk1 = false,
+	.dataline = 0xff,
+	.fifos = 8,
+	.flags = 0,
+	.max_register = FSL_SAI_MCTL,
+};
+
+static const struct fsl_sai_soc_data fsl_sai_imx8mp_data = {
+	.use_imx_pcm = true,
+	.use_edma = false,
+	.fifo_depth = 128,
+	.reg_offset = 8,
+	.mclk0_is_mclk1 = false,
+	.dataline = 0xff,
+	.fifos = 8,
+	.flags = 0,
+	.max_register = FSL_SAI_MDIV,
+};
+
+static const struct fsl_sai_soc_data fsl_sai_imx8ulp_data = {
+	.use_imx_pcm = true,
+	.use_edma = true,
+	.fifo_depth = 16,
+	.reg_offset = 8,
+	.mclk0_is_mclk1 = false,
+	.dataline = 0xf,
+	.fifos = 4,
+	.flags = PMQOS_CPU_LATENCY,
+	.max_register = FSL_SAI_RTCAP,
 };
 
 static const struct of_device_id fsl_sai_ids[] = {
@@ -1639,7 +1680,10 @@ static const struct of_device_id fsl_sai_ids[] = {
 	{ .compatible = "fsl,imx6ul-sai", .data = &fsl_sai_imx6sx_data },
 	{ .compatible = "fsl,imx7ulp-sai", .data = &fsl_sai_imx7ulp_data },
 	{ .compatible = "fsl,imx8mq-sai", .data = &fsl_sai_imx8mq_data },
+	{ .compatible = "fsl,imx8mm-sai", .data = &fsl_sai_imx8mm_data },
+	{ .compatible = "fsl,imx8mp-sai", .data = &fsl_sai_imx8mp_data },
 	{ .compatible = "fsl,imx8qm-sai", .data = &fsl_sai_imx8qm_data },
+	{ .compatible = "fsl,imx8ulp-sai", .data = &fsl_sai_imx8ulp_data },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fsl_sai_ids);
