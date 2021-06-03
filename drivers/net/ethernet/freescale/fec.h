@@ -626,6 +626,28 @@ struct fec_enet_private {
 	int pps_enable;
 	unsigned int next_counter;
 
+#ifdef HAVE_KSZ_SWITCH
+        struct platform_device  *sw_pdev;
+	struct fec_enet_private *hw_priv;
+	struct phy_device       dummy_phy;
+	spinlock_t              tx_lock;
+	struct ksz_port         port;
+	int                     phy_addr;
+	u8                      state;
+	u32                     ready:1;
+	u32                     multi:1;
+	u32                     promisc:1;
+	u8                      opened;
+	u8                      hw_multi;
+	u8                      hw_promisc;
+	void                    *parent;
+	struct delayed_work     promisc_reset;
+	struct ksz_sw_sysfs     sysfs;
+#ifdef CONFIG_1588_PTP
+        struct ksz_ptp_sysfs    ptp_sysfs;
+#endif
+#endif
+
 	/* stop mode */
 	struct fec_enet_stop_mode lpm;
 #ifdef CONFIG_IMX_SCU_SOC
