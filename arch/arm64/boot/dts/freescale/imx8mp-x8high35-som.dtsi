@@ -31,21 +31,54 @@
 			default-state = "on";
 		};
 	};
+
+	a53_opp_table: opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <850000>;
+			opp-supported-hw = <0x8a0>, <0x7>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+
+		opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <950000>;
+			opp-supported-hw = <0xa0>, <0x7>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <1000000>;
+			opp-supported-hw = <0x20>, <0x3>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+		};
+	};
 };
 
 &A53_0 {
+	operating-points-v2 = <&a53_opp_table>;
 	cpu-supply = <&buck2_reg>;
 };
 
 &A53_1 {
+	operating-points-v2 = <&a53_opp_table>;
 	cpu-supply = <&buck2_reg>;
 };
 
 &A53_2 {
+	operating-points-v2 = <&a53_opp_table>;
 	cpu-supply = <&buck2_reg>;
 };
 
 &A53_3 {
+	operating-points-v2 = <&a53_opp_table>;
 	cpu-supply = <&buck2_reg>;
 };
 
