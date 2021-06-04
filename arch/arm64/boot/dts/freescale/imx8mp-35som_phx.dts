@@ -630,6 +630,13 @@
                 #gpio-cells = <2>;
                 gpio-controller;
         };
+
+	pca9505: gpio@20 {
+		compatible = "nxp,pca9505";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &irqsteer_hdmi {
