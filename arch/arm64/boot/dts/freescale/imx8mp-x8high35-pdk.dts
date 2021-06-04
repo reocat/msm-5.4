@@ -476,17 +476,15 @@
 };
 
 &usdhc1 {
-	assigned-clocks = <&clk IMX8MP_CLK_USDHC1>;
-	assigned-clock-rates = <400000000>;
 	pinctrl-names = "default", "state_100mhz", "state_200mhz";
 	pinctrl-0 = <&pinctrl_usdhc1>;
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
-	vmmc-supply = <&reg_v_3v3>;
+	vmmc-supply = <&reg_wifi_power>;
 	bus-width = <4>;
 	non-removable;
-	sd-uhs-ddr50;
 	keep-power-in-suspend;
+	enable-sdio-wakeup;
 	status = "okay";
 
 	wifi@1 {
