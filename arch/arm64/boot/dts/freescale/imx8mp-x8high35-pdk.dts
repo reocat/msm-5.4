@@ -187,7 +187,8 @@
 	pinctrl-0 = <&pinctrl_ecspi1
 		&pinctrl_uart_exp1_int &pinctrl_uart_exp2_int>;
 	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>,
-		<&gpio5 9 GPIO_ACTIVE_HIGH>;
+		<&gpio1 1 GPIO_ACTIVE_LOW>;
+	num-cs = <2>;
 	status = "okay";
 
 	#address-cells = <1>;
