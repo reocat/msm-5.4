@@ -582,7 +582,7 @@ static void __exit ssd254x_exit( void )
 {
 	i2c_del_driver(&ssd254x_i2c_drv);
 }
-module_init(ssd254x_init);
+late_initcall(ssd254x_init);
 module_exit(ssd254x_exit);
 
 MODULE_DESCRIPTION("ssd254x Touchscreen Driver");
