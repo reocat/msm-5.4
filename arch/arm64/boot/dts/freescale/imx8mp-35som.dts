@@ -49,6 +49,12 @@
 			gpios = <&tca95392 2 GPIO_ACTIVE_HIGH>;
 			default-state = "on";
 		};
+
+		csi-gpio {
+			label = "CSI_GPIO";
+			gpios = <&tca95392 11 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
 	};
 
 	reg_can1_stby: regulator-can1-stby {
@@ -107,6 +113,27 @@
 		enable-active-high;
 		regulator-always-on;
 	};
+
+        reg_2p8v: regulator-2p8v {
+                compatible = "regulator-fixed";
+                regulator-name = "imx219_vana";
+                regulator-min-microvolt = <2800000>;
+                regulator-max-microvolt = <2800000>;
+        };
+
+        reg_1p8v: regulator-1p8v {
+                compatible = "regulator-fixed";
+                regulator-name = "imx219_vdig";
+                regulator-min-microvolt = <1800000>;
+                regulator-max-microvolt = <1800000>;
+        };
+
+        reg_1p2v: regulator-1p2v {
+                compatible = "regulator-fixed";
+                regulator-name = "imx219_vddl";
+                regulator-min-microvolt = <1200000>;
+                regulator-max-microvolt = <1200000>;
+        };
 
         reg_wifi_pwr: regulator-wifi-pwr {
                 compatible = "regulator-fixed";
@@ -282,6 +309,7 @@
 	pinctrl-0 = <&pinctrl_pwm4>;
 	status = "okay";
 };
+
 
 &ecspi2 {
 	#address-cells = <1>;
@@ -503,6 +531,7 @@
 	};
 };
 
+
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -523,29 +552,29 @@
 		};
 	};
 
-	ov5640_0: ov5640_mipi@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi0_pwn>, <&pinctrl_csi0_rst>, <&pinctrl_csi_mclk>;
-		clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		clock-names = "xclk";
-		assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
-		assigned-clock-rates = <24000000>;
-		csi_id = <0>;
-		powerdown-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;
-		mclk = <24000000>;
-		mclk_source = <0>;
-		mipi_csi;
+        imx219: imx219_mipi@10 {
 		status = "okay";
+		compatible = "sony,imx219";
+		reg = <0x10>;
+		//rotation = <180>;
+                clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
+                clock-names = "xclk";
+                assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
+                assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+                assigned-clock-rates = <24000000>;
+
+		VANA-supply = <&reg_2p8v>;      /* 2.8v */
+		VDIG-supply = <&reg_1p8v>;   /* 1.8v */
+		VDDL-supply = <&reg_1p2v>;   /* 1.2v */
 
 		port {
-			ov5640_mipi_0_ep: endpoint {
+			imx219_0_ep: endpoint {
 				remote-endpoint = <&mipi_csi0_ep>;
 				data-lanes = <1 2>;
 				clock-lanes = <0>;
+				// TBD for below properties
+				clock-noncontinuous;
+				link-frequencies = /bits/ 64 <456000000>;
 			};
 		};
 	};
@@ -575,33 +604,6 @@
 		reg = <0x20>;
 		gpio-controller;
 		#gpio-cells = <2>;
-	};
-
-	ov5640_1: ov5640_mipi@3c {
-		compatible = "ovti,ov5640";
-		reg = <0x3c>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_csi0_pwn>, <&pinctrl_csi0_rst>, <&pinctrl_csi_mclk>;
-		clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		clock-names = "xclk";
-		assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO2>;
-		assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
-		assigned-clock-rates = <24000000>;
-		csi_id = <0>;
-		powerdown-gpios = <&gpio4 1 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio4 0 GPIO_ACTIVE_LOW>;
-		mclk = <24000000>;
-		mclk_source = <0>;
-		mipi_csi;
-		status = "disabled";
-
-		port {
-			ov5640_mipi_1_ep: endpoint {
-				remote-endpoint = <&mipi_csi1_ep>;
-				data-lanes = <1 2>;
-				clock-lanes = <0>;
-			};
-		};
 	};
 
 	codec: wm8960@1a {
@@ -684,7 +686,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_flexcan1>;
 	xceiver-supply = <&reg_can1_stby>;
-	status = "okay";
+	status = "disabled";
 };
 
 &flexcan2 {
@@ -1400,24 +1402,6 @@
 		>;
 	};
 
-	pinctrl_csi0_pwn: csi0_pwn_grp {
-		fsl,pins = <
-			MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x19
-		>;
-	};
-
-	pinctrl_csi0_rst: csi0_rst_grp {
-		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO06__GPIO1_IO06		0x19
-		>;
-	};
-
-	pinctrl_csi_mclk: csi_mclk_grp {
-		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO15__CCM_CLKO2	0x59
-		>;
-	};
-
 	pinctrl_tp: tpgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27      0x1c4
@@ -1467,24 +1451,7 @@
 	port@0 {
 		reg = <0>;
 		mipi_csi0_ep: endpoint {
-			remote-endpoint = <&ov5640_mipi_0_ep>;
-			data-lanes = <2>;
-			csis-hs-settle = <13>;
-			csis-clk-settle = <2>;
-			csis-wclk;
-		};
-	};
-};
-
-&mipi_csi_1 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	status = "disabled";
-
-	port@1 {
-		reg = <1>;
-		mipi_csi1_ep: endpoint {
-			remote-endpoint = <&ov5640_mipi_1_ep>;
+			remote-endpoint = <&imx219_0_ep>;
 			data-lanes = <2>;
 			csis-hs-settle = <13>;
 			csis-clk-settle = <2>;
@@ -1513,7 +1480,7 @@
 	status = "disabled";
 
 	cap_device {
-		status = "okay";
+		status = "disabled";
 	};
 };
 

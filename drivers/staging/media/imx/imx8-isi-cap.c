@@ -34,6 +34,126 @@
 
 struct mxc_isi_fmt mxc_isi_out_formats[] = {
 	{
+		.name		= "Y8-RAW",
+		.fourcc		= V4L2_PIX_FMT_GREY,
+		.depth		= { 8 },
+		.color		= MXC_ISI_OUT_FMT_RAW8,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_Y8_1X8,
+	}, {
+		.name		= "Y10-RAW",
+		.fourcc		= V4L2_PIX_FMT_Y10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_Y10_1X10,
+	}, {
+		.name		= "Y12-RAW",
+		.fourcc		= V4L2_PIX_FMT_Y12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_Y12_1X12,
+	}, {
+		.name		= "SBGGR8-RAW",
+		.fourcc		= V4L2_PIX_FMT_SBGGR8,
+		.depth		= { 8 },
+		.color		= MXC_ISI_OUT_FMT_RAW8,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SBGGR8_1X8,
+	}, {
+		.name		= "SGBRG8-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGBRG8,
+		.depth		= { 8 },
+		.color		= MXC_ISI_OUT_FMT_RAW8,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGBRG8_1X8,
+	}, {
+		.name		= "SGRBG8-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGRBG8,
+		.depth		= { 8 },
+		.color		= MXC_ISI_OUT_FMT_RAW8,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGRBG8_1X8,
+	}, {
+		.name		= "SRGGB8-RAW",
+		.fourcc		= V4L2_PIX_FMT_SRGGB8,
+		.depth		= { 8 },
+		.color		= MXC_ISI_OUT_FMT_RAW8,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SRGGB8_1X8,
+	}, {
+		.name		= "SBGGR10-RAW",
+		.fourcc		= V4L2_PIX_FMT_SBGGR10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SBGGR10_1X10,
+	}, {
+		.name		= "SGBRG10-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGBRG10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGBRG10_1X10,
+	}, {
+		.name		= "SGRBG10-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGRBG10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGRBG10_1X10,
+	}, {
+		.name		= "SRGGB10-RAW",
+		.fourcc		= V4L2_PIX_FMT_SRGGB10,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW10,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SRGGB10_1X10,
+	}, {
+		.name		= "SBGGR12-RAW",
+		.fourcc		= V4L2_PIX_FMT_SBGGR12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SBGGR12_1X12,
+	}, {
+		.name		= "SGBRG12-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGBRG12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGBRG12_1X12,
+	}, {
+		.name		= "SGRBG12-RAW",
+		.fourcc		= V4L2_PIX_FMT_SGRBG12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SGRBG12_1X12,
+	}, {
+		.name		= "SRGGB12-RAW",
+		.fourcc		= V4L2_PIX_FMT_SRGGB12,
+		.depth		= { 16 },
+		.color		= MXC_ISI_OUT_FMT_RAW12,
+		.memplanes	= 1,
+		.colplanes	= 1,
+		.mbus_code  = MEDIA_BUS_FMT_SRGGB12_1X12,
+	}, {
 		.name		= "RGB565",
 		.fourcc		= V4L2_PIX_FMT_RGB565,
 		.depth		= { 16 },
@@ -808,12 +928,38 @@ static int mxc_isi_cap_enum_fmt(struct file *file, void *priv,
 {
 	struct mxc_isi_cap_dev *isi_cap = video_drvdata(file);
 	struct mxc_isi_fmt *fmt;
+	struct v4l2_subdev_format src_fmt;
+	struct media_pad *source_pad;
+	struct v4l2_subdev *src_sd;
+	int ret;
 
 	dev_dbg(&isi_cap->pdev->dev, "%s\n", __func__);
-	if (f->index >= (int)ARRAY_SIZE(mxc_isi_out_formats))
+
+	if (f->index > 0)
 		return -EINVAL;
 
-	fmt = &mxc_isi_out_formats[f->index];
+	source_pad = mxc_isi_get_remote_source_pad(&isi_cap->sd);
+	if (!source_pad) {
+		v4l2_err(&isi_cap->sd,
+			 "%s, No remote pad found!\n", __func__);
+		return -EINVAL;
+	}
+
+	src_sd = mxc_get_remote_subdev(&isi_cap->sd, __func__);
+	if (!src_sd)
+		return -EINVAL;
+
+	memset(&src_fmt, 0, sizeof(src_fmt));
+
+	src_fmt.pad = source_pad->index;
+	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	ret = v4l2_subdev_call(src_sd, pad, get_fmt, NULL, &src_fmt);
+	if (ret < 0 && ret != -ENOIOCTLCMD) {
+		v4l2_err(&isi_cap->sd, "get remote fmt fail!\n");
+		return -EINVAL;
+	}
+
+	fmt = mxc_isi_find_format(NULL, &src_fmt.format.code, 0);
 	if (!fmt)
 		return -EINVAL;
 
@@ -903,7 +1049,7 @@ static int mxc_isi_source_fmt_init(struct mxc_isi_cap_dev *isi_cap)
 
 	src_fmt.pad = source_pad->index;
 	src_fmt.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-	src_fmt.format.code = MEDIA_BUS_FMT_UYVY8_2X8;
+	src_fmt.format.code = dst_f->fmt->mbus_code;
 	src_fmt.format.width = dst_f->width;
 	src_fmt.format.height = dst_f->height;
 	ret = v4l2_subdev_call(src_sd, pad, set_fmt, NULL, &src_fmt);
@@ -991,14 +1137,14 @@ static int mxc_isi_cap_s_fmt_mplane(struct file *file, void *priv,
 			pix->plane_fmt[i].bytesperline =
 					(pix->width * fmt->depth[i]) >> 3;
 
-		if (pix->plane_fmt[i].sizeimage == 0) {
-			if ((i == 1) && (pix->pixelformat == V4L2_PIX_FMT_NV12))
-				pix->plane_fmt[i].sizeimage =
-				  (pix->width * (pix->height >> 1) * fmt->depth[i] >> 3);
-			else
-				pix->plane_fmt[i].sizeimage =
-					(pix->width * pix->height * fmt->depth[i] >> 3);
-		}
+		if ((i == 1) && (pix->pixelformat == V4L2_PIX_FMT_NV12))
+			pix->plane_fmt[i].sizeimage =
+				(pix->width * (pix->height >> 1) *
+				 fmt->depth[i] >> 3);
+		else
+			pix->plane_fmt[i].sizeimage =
+				(pix->width * pix->height *
+				 fmt->depth[i] >> 3);
 	}
 
 	if (pix->num_planes > 1) {
@@ -1457,6 +1603,26 @@ static int mxc_isi_subdev_set_fmt(struct v4l2_subdev *sd,
 	mutex_lock(&isi_cap->lock);
 	/* update out put frame size and formate */
 	dst_f->fmt = &mxc_isi_out_formats[i];
+
+	if (dst_f->fmt->memplanes > 1) {
+		for (i = 0; i < dst_f->fmt->memplanes; i++) {
+			if ((i == 1) &&
+			    (dst_f->fmt->fourcc == V4L2_PIX_FMT_NV12))
+				dst_f->sizeimage[i] = (mf->width *
+						      (mf->height >> 1) *
+						      dst_f->fmt->depth[i] >> 3);
+			else
+				dst_f->sizeimage[i] = (mf->width *
+						      mf->height *
+						      dst_f->fmt->depth[i] >> 3);
+		}
+		dst_f->bytesperline[i] = (mf->width *
+					 dst_f->fmt->depth[i] >> 3);
+	} else {
+		dst_f->bytesperline[0] = mf->width * dst_f->fmt->depth[0] / 8;
+		dst_f->sizeimage[0]    = mf->height * dst_f->bytesperline[0];
+	}
+
 	set_frame_bounds(dst_f, mf->width, mf->height);
 	mutex_unlock(&isi_cap->lock);
 
@@ -1633,6 +1799,7 @@ static int mxc_isi_register_cap_device(struct mxc_isi_cap_dev *isi_cap,
 		goto err_ctrl_free;
 
 	vdev->ctrl_handler = &isi_cap->ctrls.handler;
+	v4l2_dev->ctrl_handler = &isi_cap->ctrls.handler;
 	v4l2_info(v4l2_dev, "Registered %s as /dev/%s\n",
 		  vdev->name, video_device_node_name(vdev));
 
