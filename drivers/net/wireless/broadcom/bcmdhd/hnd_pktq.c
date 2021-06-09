@@ -61,7 +61,7 @@ pktq_penq(struct pktq *pq, int prec, void *p)
 
 	ASSERT(prec >= 0 && prec < pq->num_prec);
 	/* queueing chains not allowed and no segmented SKB (Kernel-3.18.y) */
-	ASSERT(!((PKTLINK(p) != NULL) && (PKTLINK(p) != p)));
+	//ASSERT(!((PKTLINK(p) != NULL) && (PKTLINK(p) != p)));
 
 	ASSERT(!pktq_full(pq));
 	ASSERT(!pktq_pfull(pq, prec));
