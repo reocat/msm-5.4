@@ -58,7 +58,7 @@
 		pinctrl-0 = <&pinctrl_flexcan1_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio3 19 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -1042,8 +1042,8 @@
 
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SPDIF_RX__CAN1_RX          0x154
-			MX8MP_IOMUXC_SPDIF_TX__CAN1_TX          0x154
+			MX8MP_IOMUXC_SAI5_RXD2__CAN1_RX          0x154
+			MX8MP_IOMUXC_SAI5_RXD1__CAN1_TX          0x154
 		>;
 	};
 
@@ -1056,7 +1056,7 @@
 
 	pinctrl_flexcan1_reg: flexcan1reggrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05	0x154	/* CAN1_STBY */
+			MX8MP_IOMUXC_SAI5_RXFS__GPIO3_IO19	0x154	/* CAN1_STBY */
 		>;
 	};
 
