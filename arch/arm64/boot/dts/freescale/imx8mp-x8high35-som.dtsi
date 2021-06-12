@@ -312,22 +312,9 @@
 			MX8MP_IOMUXC_ECSPI1_MISO__ECSPI1_MISO	0x82
 			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI	0x82
 			MX8MP_IOMUXC_ECSPI1_SS0__ECSPI1_SS0	0x82
+			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	0x82
 		>;
 	};
-
-	pinctrl_ecspi1_cs0: ecspi1cs0grp {
-		fsl,pins = <
-			MX8MP_IOMUXC_ECSPI1_SS0__ECSPI1_SS0	0x82
-		>;
-	};
-
-	/*
-	pinctrl_ecspi1_cs1: ecspi1cs1grp {
-		fsl,pins = <
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00	0x19
-		>;
-	};
-	*/
 
 	pinctrl_uart_exp1_int: uartexp1grp {
 		fsl,pins = <
