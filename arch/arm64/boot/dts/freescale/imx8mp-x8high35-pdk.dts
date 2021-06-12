@@ -446,6 +446,13 @@
 	status = "okay";
 };
 
+&uart3 {
+	/* RS-232 port */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart3>;
+	status = "okay";
+};
+
 &usb3_phy0 {
 	status = "okay";
 	vbus-supply = <&reg_usb1_host_vbus>;
