@@ -251,9 +251,9 @@
 	pinctrl-0 = <&pinctrl_i2c2>;
 	status = "okay";
 
-	ext_crypto: extcrypto@c0 {
+	ext_crypto: extcrypto@60 {
 		compatible = "atmel,atecc508a";
-		reg = <0xc0>;
+		reg = <0x60>;
 	};
 };
 
