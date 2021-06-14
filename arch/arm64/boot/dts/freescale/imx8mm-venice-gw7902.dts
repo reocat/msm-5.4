@@ -776,12 +776,14 @@
 &usbotg1 {
 	dr_mode = "host";
 	vbus-supply = <&reg_usb1_vbus>;
+	power-domains = <&usb_otg1_pd>;
 	disable-over-current;
 	status = "okay";
 };
 
 &usbotg2 {
 	dr_mode = "host";
+	power-domains = <&usb_otg2_pd>;
 	disable-over-current;
 	status = "okay";
 };
