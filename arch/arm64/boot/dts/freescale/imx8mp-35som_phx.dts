@@ -577,13 +577,10 @@
 		SPKVDD1-supply = <&reg_audio_pwr>;
 	};
 
-	typec1_ptn5150: typec@3d {
+	typec_ptn5150: typec@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;
-                pinctrl-names = "default";
-	        pinctrl-0 = <&pinctrl_usb1_vbus>;
-		//connect-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
-		vbus-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&pca9505 19 GPIO_ACTIVE_HIGH>;
 	};
 
 	typec2_ptn5150: typec@1d {
@@ -865,7 +862,7 @@
 &usb_dwc3_0 {
 	//dr_mode = "peripheral";
 	dr_mode = "otg";
-	extcon = <&typec1_ptn5150>;
+	extcon = <&typec_ptn5150>;
 	hnp-disable;
 	srp-disable;
 	adp-disable;
