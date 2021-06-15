@@ -58,7 +58,7 @@
 		pinctrl-0 = <&pinctrl_flexcan1_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio3 19 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -518,6 +518,14 @@
 		status = "okay";
 	};
 
+	/* RTC */
+	pcf2129: pcf2129@51 {
+		compatible = "nxp,pcf2129";
+		reg = <0x51>;
+		interrupt-parent = <&pca9505>;
+		interrupts = <8 IRQ_TYPE_LEVEL_HIGH>;
+	};
+
 };
 
 &i2c3 {
@@ -569,13 +577,10 @@
 		SPKVDD1-supply = <&reg_audio_pwr>;
 	};
 
-	typec1_ptn5150: typec@3d {
+	typec_ptn5150: typec@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;
-                pinctrl-names = "default";
-	        pinctrl-0 = <&pinctrl_usb1_vbus>;
-		//connect-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
-		vbus-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&pca9505 19 GPIO_ACTIVE_HIGH>;
 	};
 
 	typec2_ptn5150: typec@1d {
@@ -630,6 +635,13 @@
                 #gpio-cells = <2>;
                 gpio-controller;
         };
+
+	pca9505: gpio@20 {
+		compatible = "nxp,pca9505";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &irqsteer_hdmi {
@@ -850,7 +862,7 @@
 &usb_dwc3_0 {
 	//dr_mode = "peripheral";
 	dr_mode = "otg";
-	extcon = <&typec1_ptn5150>;
+	extcon = <&typec_ptn5150>;
 	hnp-disable;
 	srp-disable;
 	adp-disable;
@@ -1027,8 +1039,8 @@
 
 	pinctrl_flexcan1: flexcan1grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SPDIF_RX__CAN1_RX          0x154
-			MX8MP_IOMUXC_SPDIF_TX__CAN1_TX          0x154
+			MX8MP_IOMUXC_SAI5_RXD2__CAN1_RX          0x154
+			MX8MP_IOMUXC_SAI5_RXD1__CAN1_TX          0x154
 		>;
 	};
 
@@ -1041,7 +1053,7 @@
 
 	pinctrl_flexcan1_reg: flexcan1reggrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05	0x154	/* CAN1_STBY */
+			MX8MP_IOMUXC_SAI5_RXFS__GPIO3_IO19	0x154	/* CAN1_STBY */
 		>;
 	};
 
