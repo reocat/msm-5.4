@@ -24,7 +24,7 @@
 	};
 
 	chosen {
-		stdout-path = &uart2;
+		stdout-path = &uart4;
 	};
 
 	leds {
@@ -830,6 +830,12 @@
 	status = "disable";
 };
 
+&uart4 {
+	/* console */
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_uart4>;
+	status = "okay";
+};
 &usb3_phy0 {
 	//vbus-power-supply = <&typec1_ptn5150>;
 	fsl,phy-tx-vref-tune = <6>;
@@ -1188,6 +1194,12 @@
 		>;
 	};
 
+	pinctrl_uart4: uart4grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_UART4_RXD__UART4_DCE_RX 	0x49
+			MX8MP_IOMUXC_UART4_TXD__UART4_DCE_TX	0x49
+		>;
+	};
 	pinctrl_usb1_vbus: usb1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x19
