@@ -975,7 +975,6 @@ gpio-max77620
 gpio-mb86s7x
 gpio-mc33880
 gpio-mockup
-gpio-pca953x
 gpio-pcf857x
 gpio-pisosr
 gpio-syscon
