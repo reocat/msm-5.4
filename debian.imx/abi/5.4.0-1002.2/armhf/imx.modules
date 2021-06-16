@@ -415,7 +415,6 @@ bonding
 bpa10x
 bpck
 bpck6
-bpfilter
 bpqether
 bq2415x_charger
 bq24190_charger
@@ -1488,7 +1487,6 @@ imx-mailbox
 imx-media-common
 imx-pcm-dma
 imx-sdma
-imx2_wdt
 imx6-media
 imx6-media-csi
 imx6-mipi-csi2
@@ -2632,7 +2630,6 @@ qm1d1c0042
 qmi_wwan
 qnx4
 qnx6
-qoriq-cpufreq
 qoriq_thermal
 qsemi
 qt1010
