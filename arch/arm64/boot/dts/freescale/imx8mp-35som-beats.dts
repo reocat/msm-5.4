@@ -24,7 +24,7 @@
 	};
 
 	chosen {
-		stdout-path = &uart2;
+		stdout-path = &uart4;
 	};
 
 	leds {
