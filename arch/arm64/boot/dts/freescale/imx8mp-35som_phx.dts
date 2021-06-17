@@ -892,12 +892,7 @@
 
 &usb_dwc3_1 {
 	//dr_mode = "peripheral";
-        dr_mode = "otg";
-	extcon = <&typec2_ptn5150>;
-        hnp-disable;
-        srp-disable;
-        adp-disable;
-        //usb-role-switch;
+        dr_mode = "host";
         status = "okay";
 };
 
