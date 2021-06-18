@@ -71,13 +71,11 @@ firmware:       brcm/brcmfmac4329-sdio.bin
 firmware:       brcm/brcmfmac4330-sdio.bin
 firmware:       brcm/brcmfmac4334-sdio.bin
 firmware:       brcm/brcmfmac43340-sdio.bin
-firmware:       brcm/brcmfmac43341-sdio.bin
 firmware:       brcm/brcmfmac4335-sdio.bin
 firmware:       brcm/brcmfmac43362-sdio.bin
 firmware:       brcm/brcmfmac4339-sdio.bin
 firmware:       brcm/brcmfmac43430-sdio.bin
 firmware:       brcm/brcmfmac43430a0-sdio.bin
-firmware:       brcm/brcmfmac43436-sdio.bin
 firmware:       brcm/brcmfmac43455-sdio.bin
 firmware:       brcm/brcmfmac43456-sdio.bin
 firmware:       brcm/brcmfmac4350-pcie.bin
@@ -198,6 +196,8 @@ firmware:       i1480-pre-phy-0.0.bin
 firmware:       i1480-usb-0.0.bin
 firmware:       i2400m-fw-usb-1.5.sbcf
 firmware:       i6050-fw-usb-1.5.sbcf
+firmware:       imx/sdma/sdma-imx6q.bin
+firmware:       imx/sdma/sdma-imx7d.bin
 firmware:       intel/ibt-11-5.ddc
 firmware:       intel/ibt-11-5.sfi
 firmware:       intel/ibt-12-16.ddc
