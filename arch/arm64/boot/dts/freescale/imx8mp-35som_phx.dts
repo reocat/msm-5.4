@@ -237,7 +237,7 @@
 
 	bt_reset: bt-reset {
 		compatible = "gpio-reset";
-		reset-gpios = <&gpio3 25 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpio2 7 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <1000>;
 		#reset-cells = <0>;
 	};
@@ -839,14 +839,11 @@
 	status = "okay";
 };
 
-&uart1 { /* BT */
+&uart1 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1
-			&pinctrl_bt>;
+	pinctrl-0 = <&pinctrl_uart1>;
 	assigned-clocks = <&clk IMX8MP_CLK_UART1>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
-	fsl,uart-has-rtscts;
-	resets = <&bt_reset>;
 	status = "okay";
 };
 
@@ -1390,7 +1387,7 @@
 
 	pinctrl_bt: btgrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25        0x19 
+			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07        0x19
 		>;
 	};
 };
