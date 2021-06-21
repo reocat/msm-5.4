@@ -116,6 +116,18 @@
                 regulator-always-on;
         };
 
+	reg_wifi_pwr: regulator-wifi-pwr {
+                compatible = "regulator-fixed";
+                regulator-name = "wifi-pwr";
+                regulator-min-microvolt = <3300000>;
+                regulator-max-microvolt = <3300000>;
+                gpio = <&gpio2 8 GPIO_ACTIVE_HIGH>;
+                enable-active-high;
+                regulator-always-on;
+                startup-delay-us = <10000>;
+                off-on-delay-us = <12000>;
+        };
+
 	bt_sco_codec: bt_sco_codec {
 		#sound-dai-cells = <1>;
 		compatible = "linux,bt-sco";
@@ -902,8 +914,8 @@
 	pinctrl-1 = <&pinctrl_usdhc1_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc1_200mhz>;
 	bus-width = <4>;
+        vmmc-supply = <&reg_wifi_pwr>;
 	non-removable;
-	no-1-8-v;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	status = "okay";
@@ -1227,7 +1239,7 @@
 			MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1	0x1d0
 			MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2	0x1d0
 			MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3	0x1d0
-			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24      0x19
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08      0x19
 		>;
 	};
 
@@ -1239,6 +1251,7 @@
 			MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1	0x1d4
 			MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2	0x1d4
 			MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3	0x1d4
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08      0x19
 		>;
 	};
 
@@ -1250,6 +1263,7 @@
 			MX8MP_IOMUXC_SD1_DATA1__USDHC1_DATA1	0x1d6
 			MX8MP_IOMUXC_SD1_DATA2__USDHC1_DATA2	0x1d6
 			MX8MP_IOMUXC_SD1_DATA3__USDHC1_DATA3	0x1d6
+			MX8MP_IOMUXC_SD1_DATA6__GPIO2_IO08      0x19
 		>;
 	};
 
