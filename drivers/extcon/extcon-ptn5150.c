@@ -57,6 +57,8 @@
 #define PTN5150_REG_INT_CABLE_DETACH_MASK	\
 	(0x1 << PTN5150_REG_CC_CABLE_DETACH_SHIFT)
 
+#define CABLE_ATTACH_TIMEOUT 1000
+
 struct ptn5150_info {
 	struct device *dev;
 	struct extcon_dev *edev;
@@ -65,6 +67,7 @@ struct ptn5150_info {
 	struct gpio_desc *int_gpiod;
 	struct gpio_desc *vbus_gpiod;
 	int irq;
+	struct timer_list timer;
 	struct work_struct irq_work;
 	struct mutex mutex;
 };
@@ -178,6 +181,17 @@ static irqreturn_t ptn5150_irq_handler(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void ptn5150_conn_poll(struct timer_list *t)
+{
+	struct ptn5150_info *info = from_timer(info, t , timer);
+	unsigned long flags;
+
+	schedule_work(&info->irq_work);
+
+	mod_timer(&info->timer,
+		jiffies + jiffies_to_msecs(CABLE_ATTACH_TIMEOUT));
+}
+
 static int ptn5150_init_dev_type(struct ptn5150_info *info)
 {
 	unsigned int reg_data, vendor_id, version_id;
@@ -249,6 +263,7 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 	mutex_init(&info->mutex);
 
 	INIT_WORK(&info->irq_work, ptn5150_irq_work);
+	timer_setup(&info->timer, ptn5150_conn_poll, 0);
 
 	info->regmap = devm_regmap_init_i2c(i2c, &ptn5150_regmap_config);
 	if (IS_ERR(info->regmap)) {
@@ -287,21 +302,24 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 			return ret;
 		}
 	} else {
-		dev_warn(dev, "No IRQ configured\n");
+		dev_warn(dev, "No IRQ configured, switch to polling\n");
+		mod_timer(&info->timer,
+			jiffies + jiffies_to_msecs(CABLE_ATTACH_TIMEOUT));
 	}
 
 	/* Allocate extcon device */
 	info->edev = devm_extcon_dev_allocate(info->dev, ptn5150_extcon_cable);
 	if (IS_ERR(info->edev)) {
 		dev_err(info->dev, "failed to allocate memory for extcon\n");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err_fail;
 	}
 
 	/* Register extcon device */
 	ret = devm_extcon_dev_register(info->dev, info->edev);
 	if (ret) {
 		dev_err(info->dev, "failed to register extcon device\n");
-		return ret;
+		goto err_fail;
 	}
 
 	extcon_set_property_capability(info->edev, EXTCON_USB,
@@ -313,8 +331,10 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 
 	/* Initialize PTN5150 device and print vendor id and version id */
 	ret = ptn5150_init_dev_type(info);
-	if (ret)
-		return -EINVAL;
+	if (ret) {
+		ret = -EINVAL;
+		goto err_fail;
+	}
 
 	/*
 	 * Update current extcon state if for example OTG connection was there
@@ -325,6 +345,10 @@ static int ptn5150_i2c_probe(struct i2c_client *i2c,
 	mutex_unlock(&info->mutex);
 
 	return 0;
+
+err_fail:
+	del_timer_sync(&info->timer);
+	return ret;
 }
 
 static const struct of_device_id ptn5150_dt_match[] = {
