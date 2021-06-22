@@ -116,8 +116,8 @@
                 gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
                 enable-active-high;
                 regulator-always-on;
-                startup-delay-us = <10000>;
-                off-on-delay-us = <12000>;
+                startup-delay-us = <100>;
+            //    off-on-delay-us = <12000>;
         };
 
 	bt_sco_codec: bt_sco_codec {
@@ -908,10 +908,11 @@
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
-	vmmc-supply = <&reg_wifi_pwr>;
+//	vmmc-supply = <&reg_wifi_pwr>;
 	no-1-8-v;
-    bus-width = <4>;
-	non-removable;
+   // bus-width = <4>;
+	max-frequency = <30000000>;
+    non-removable;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
 	status = "okay";
