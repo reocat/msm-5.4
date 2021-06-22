@@ -909,7 +909,8 @@
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
 	vmmc-supply = <&reg_wifi_pwr>;
-	bus-width = <4>;
+	no-1-8-v;
+    bus-width = <4>;
 	non-removable;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
