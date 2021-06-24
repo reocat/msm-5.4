@@ -183,7 +183,7 @@ reg_wifi_pwr: regulator-wifi-pwr {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
-	status = "disabled";
+	status = "okay";
 
 	pmic: pca9450@25 {
 		reg = <0x25>;
@@ -524,11 +524,11 @@ reg_wifi_pwr: regulator-wifi-pwr {
 	pinctrl-0 = <&pinctrl_usdhc2>;
 	pinctrl-1 = <&pinctrl_usdhc2_100mhz>;
 	pinctrl-2 = <&pinctrl_usdhc2_200mhz>;
-//	vmmc-supply = <&reg_wifi_pwr>;
+	vmmc-supply = <&reg_wifi_pwr>;
 //	no-1-8-v;
-   only-1-8-v;
+//   only-1-8-v;
      bus-width = <4>;
-	max-frequency = <30000000>;
+//	max-frequency = <50000000>;
     non-removable;
 	keep-power-in-suspend;
 	enable-sdio-wakeup;
