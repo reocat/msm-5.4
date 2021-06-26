@@ -1325,7 +1325,6 @@ imx7-mipi-csis
 imx7d_adc
 imx7ulp_wdt
 imx8mm_thermal
-imx_rproc
 imx_sc_thermal
 imx_sc_wdt
 imx_thermal
@@ -2339,8 +2338,6 @@ qcom-spmi-adc5
 qcom-spmi-iadc
 qcom-spmi-vadc
 qcom-vadc-common
-qcom_glink_native
-qcom_glink_rpm
 qcserial
 qemu_fw_cfg
 qinfo_probe
@@ -2560,8 +2557,6 @@ rose
 rotary_encoder
 rpcrdma
 rpcsec_gss_krb5
-rpmsg_char
-rpmsg_core
 rpr0521
 rsxx
 rt5033
@@ -3362,7 +3357,6 @@ virtio_console
 virtio_crypto
 virtio_input
 virtio_net
-virtio_rpmsg_bus
 virtio_scsi
 virtual
 visor
