@@ -1508,7 +1508,6 @@ imx7-mipi-csis
 imx7d_adc
 imx7ulp_wdt
 imx8mm_thermal
-imx_rproc
 imx_sc_thermal
 imx_sc_wdt
 imx_thermal
