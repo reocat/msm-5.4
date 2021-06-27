@@ -2223,9 +2223,6 @@ nct6683
 nct6775
 nct7802
 nct7904
-nd_blk
-nd_btt
-nd_pmem
 net1080
 net2272
 net_failover
