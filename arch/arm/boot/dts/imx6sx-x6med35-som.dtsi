@@ -15,6 +15,22 @@
 		linux,usable-memory = <0x80000000 0x1ff00000>;
 	};
 
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		m4_reserved {
+			reg = <0x9ff00000 0xf0000>;
+			no-map;
+		};
+
+		rpmsg_reserved {
+			reg = <0x9ff00000 0x10000>;
+			no-map;
+		};
+	};
+
 	reg_vdd_3v3: regulator-vdd-3v3 {
 		compatible = "regulator-fixed";
 		regulator-always-on;
