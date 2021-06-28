@@ -595,7 +595,6 @@ cpia2
 cpufreq_conservative
 cpufreq_powersave
 cpufreq_userspace
-cqhci
 cramfs
 crc-itu-t
 crc32-arm-ce
@@ -3069,9 +3068,7 @@ scsi_transport_srp
 sctp
 sctp_diag
 sdhci-cadence
-sdhci-esdhc-imx
 sdhci-of-dwcmshc
-sdhci-of-esdhc
 sdhci_f_sdh30
 sdio_uart
 seed
