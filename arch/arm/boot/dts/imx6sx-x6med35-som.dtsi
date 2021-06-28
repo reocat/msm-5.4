@@ -46,6 +46,13 @@
 		regulator-min-microvolt = <1800000>;
 		regulator-max-microvolt = <1800000>;
 	};
+
+	rpmsg: rpmsg {
+		compatible = "fsl,imx6sx-rpmsg";
+		vdev-nums = <1>;
+		reg = <0xbff00000 0x10000>;
+		status = "okay";
+	};
 };
 
 &i2c2 {
