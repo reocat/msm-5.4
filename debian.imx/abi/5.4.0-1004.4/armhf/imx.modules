@@ -535,10 +535,6 @@ clip
 clk-cdce706
 clk-cdce925
 clk-cs2000-cp
-clk-imx8mm
-clk-imx8mn
-clk-imx8mp
-clk-imx8mq
 clk-max77686
 clk-max9485
 clk-palmas
@@ -1491,7 +1487,6 @@ imon
 imon_raw
 impa7
 ims-pcu
-imx-cpufreq-dt
 imx-dma
 imx-ipu-v3
 imx-mailbox
