@@ -2900,8 +2900,6 @@ speakup_txprt
 speedtch
 spi-bitbang
 spi-dln2
-spi-fsl-lpspi
-spi-fsl-qspi
 spi-gpio
 spi-imx
 spi-lm70llp
