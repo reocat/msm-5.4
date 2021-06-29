@@ -270,6 +270,12 @@
 			>;
 		};
 
+		pinctrl_usb_cc: usbccgrp {
+			fsl,pins = <
+				MX6SX_PAD_LCD1_DATA22__GPIO3_IO_23	0x10b0
+			>;
+		};
+
 		pinctrl_usb_vbus: usbvbusgrp {
 			fsl,pins = <
 				MX6SX_PAD_QSPI1A_DATA2__GPIO4_IO_18	0x10b0

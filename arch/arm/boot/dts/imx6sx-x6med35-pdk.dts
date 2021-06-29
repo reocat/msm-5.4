@@ -213,7 +213,7 @@
 		compatible = "nxp,ptn5150";
 		reg = <0x1d>;
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_usb_vbus>;
+		pinctrl-0 = <&pinctrl_usb_vbus &pinctrl_usb_cc>;
 		interrupt-parent = <&gpio3>;
 		int-gpio = <23 GPIO_ACTIVE_LOW>;
 		vbus-gpio = <&gpio1 11 GPIO_ACTIVE_HIGH>;
