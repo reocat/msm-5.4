@@ -254,7 +254,7 @@
 &qspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_qspi2>;
-	status = "okay";
+	status = "disabled";
 
 	flash0: w25q128@0 {
 		#address-cells = <1>;
