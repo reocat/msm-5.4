@@ -49,6 +49,14 @@
 		regulator-max-microvolt = <1800000>;
 	};
 
+	reg_vdd_1v38: regulator-vdd-1v38 {
+		compatible = "regulator-fixed";
+		regulator-always-on;
+		regulator-name = "vdd_1v38";
+		regulator-min-microvolt = <1380000>;
+		regulator-max-microvolt = <1380000>;
+	};
+
 	rpmsg: rpmsg {
 		compatible = "fsl,imx6sx-rpmsg";
 		vdev-nums = <1>;
@@ -67,6 +75,22 @@
 		compatible = "atmel,atecc508a";
 		reg = <0x60>;
 	};
+};
+
+&reg_vdd1p1 {
+	vin-supply = <&reg_vdd_3v3>;
+};
+
+&reg_vdd2p5 {
+	vin-supply = <&reg_vdd_3v3>;
+};
+
+&reg_arm {
+	vin-supply = <&reg_vdd_1v38>;
+};
+
+&reg_soc {
+	vin-supply = <&reg_vdd_1v38>;
 };
 
 &usdhc4 {
