@@ -14,6 +14,8 @@
 	aliases {
 		rtc0 = &rtc;
 		rtc1 = &snvs_rtc;
+		watchdog0 = &rtc;
+		watchdog1 = &wdog1;
 	};
 
 	beeper {
