@@ -558,6 +558,14 @@
 	vbus-supply = <&reg_usb1_vbus>;
 	disable-over-current;
 	status = "okay";
+
+	/delete-property/power-domains;
+	/delete-property/assigned-clocks;
+	/delete-property/assigned-clock-parents;
+	assigned-clocks = <&clk IMX8MN_CLK_USB_BUS>,
+		<&clk IMX8MN_CLK_USB_CORE_REF>;
+	assigned-clock-parents = <&clk IMX8MN_SYS_PLL2_500M>,
+		<&clk IMX8MN_SYS_PLL1_100M>;
 };
 
 /* SDIO WiFi */
