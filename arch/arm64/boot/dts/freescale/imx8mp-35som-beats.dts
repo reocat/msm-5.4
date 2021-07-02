@@ -40,6 +40,12 @@
 	};
 
 
+    clk20m: oscillator-0 {
+        compatible = "fixed-clock";
+        #clock-cells = <0>;
+        clock-frequency = <24000000>;
+        clock-output-names = "clk20m";                                                                                                                  };
+
 
 /*
 	reg_audio_pwr: regulator-audio-pwr {
@@ -112,27 +118,66 @@ reg_wifi_pwr: regulator-wifi-pwr {
 
 
 
-
-
 &ecspi1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
 	fsl,spi-num-chipselects = <1>;
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs &pinctrl_ecspi1_int>;
+	pinctrl-0 = <&pinctrl_ecspi1 &pinctrl_ecspi1_cs &pinctrl_ecspi1_int0>;
 	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
-	status = "ok";
+	status = "okay";
 
-	spisc161: spiex1@0 {
-		reg = <0>;
-		compatible = "nxp,sc16is752";
-		interrupt-parent = <&gpio4>;
-		interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
-                clock-frequency = <2000000>;
-		spi-max-frequency = <2000000>;
-	};
+       //  spidev1: spi@0 {
+         sc16is750: sc16is750@0 {
+     //               compatible = "rohm,dh2228fv";
+                      compatible = "nxp,sc16is752";
+                     reg = <0>;
+                    interrupt-parent = <&gpio4>;
+          interrupts = <0 IRQ_TYPE_EDGE_FALLING>;
+                 clock-frequency = <24000000>;
+          spi-max-frequency = <2000000>;
+
+
+ //                clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
+//                    assigned-clock-parents = <&clk IMX8MP_SYS_PLL1_80M>;
+                };
 };
 
+
+&ecspi2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	fsl,spi-num-chipselects = <1>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2 &pinctrl_ecspi2_cs &pinctrl_ecspi2_int0>;
+	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;
+	status = "okay";
+
+     sc16is750_1: sc16is750@0 {
+//               compatible = "rohm,dh2228fv";
+                    compatible = "nxp,sc16is752";
+                    reg = <0>;
+                    interrupt-parent = <&gpio4>;
+                    interrupts = <19 IRQ_TYPE_EDGE_FALLING>;
+                    clock-frequency = <24000000>;
+                    spi-max-frequency = <2000000>;
+     };
+
+
+/*
+         spidev2: spi@0 {
+                    reg = <0>;
+                    compatible = "rohm,dh2228fv";
+                    clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
+                    assigned-clocks = <&clk IMX8MP_CLK_IPP_DO_CLKO1>;
+                    assigned-clock-parents = <&clk IMX8MP_CLK_24M>;
+                    assigned-clock-rates = <24000000>;
+
+                    spi-max-frequency = <50000>;
+                };
+*/
+
+};
 
 &eqos {
 	pinctrl-names = "default";
@@ -370,6 +415,13 @@ reg_wifi_pwr: regulator-wifi-pwr {
 		reg = <0x48>;
 		gpios = <&gpio4 27 1>, /* interrupt */
 		<&tca95392 0 1>; /* Reset */
+	}
+
+	/*	temperature sensor	*/
+	tmp75: tmp75@49 {
+		compatible = "ti,tmp75";
+		reg = <0x49>;
+		status = "okay";
 	};
 };
 
@@ -589,6 +641,13 @@ reg_wifi_pwr: regulator-wifi-pwr {
 	};
 
 
+    pinctrl_ecspi2_int0: ecsp21int0 {
+        fsl,pins = <
+            MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19          0x19
+        >;
+    };
+
+
 	pinctrl_ecspi1: ecspi1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_ECSPI1_SCLK__ECSPI1_SCLK		0x82
@@ -603,11 +662,13 @@ reg_wifi_pwr: regulator-wifi-pwr {
 		>;
 	};
 
-	pinctrl_ecspi1_int: ecspi1int {
-		fsl,pins = <
-			MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00		0x19
-		>;
-	};
+    pinctrl_ecspi1_int0: ecspi1int0 {
+        fsl,pins = <
+        MX8MP_IOMUXC_SAI1_RXFS__GPIO4_IO00      0x19
+        >;
+    };
+
+
 
 	pinctrl_eqos: eqosgrp {
 		fsl,pins = <
@@ -947,11 +1008,6 @@ reg_wifi_pwr: regulator-wifi-pwr {
 		>;
 	};
 
-	pinctrl_tp: tpgrp {
-		fsl,pins = <
-			MX8MP_IOMUXC_SAI2_MCLK__GPIO4_IO27      0x1c4
-		>;
-	};
 
 	pinctrl_bt: btgrp {
 		fsl,pins = <
