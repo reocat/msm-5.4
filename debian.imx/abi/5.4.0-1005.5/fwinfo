@@ -197,7 +197,6 @@ firmware:       i1480-usb-0.0.bin
 firmware:       i2400m-fw-usb-1.5.sbcf
 firmware:       i6050-fw-usb-1.5.sbcf
 firmware:       imx/sdma/sdma-imx6q.bin
-firmware:       imx/sdma/sdma-imx7d.bin
 firmware:       intel/ibt-11-5.ddc
 firmware:       intel/ibt-11-5.sfi
 firmware:       intel/ibt-12-16.ddc
