@@ -49,6 +49,7 @@ ifneq ($(DEB_HOST_ARCH),$(DEB_BUILD_ARCH))
 	do_dkms_nvidia_server=false
 	do_dkms_vbox=false
 	do_dkms_wireguard=false
+	ignore_bpfilter=true
 endif
 
 # Are any of the kernel signing options enabled.
@@ -118,6 +119,10 @@ endif
 
 ifeq ($(do_dkms_wireguard),false)
 	do_wireguard_disable:=$(shell for m in $$(cat $(DROOT)/wireguard-modules.ignore); do grep -qxF $$m $(prev_abidir)/../modules.ignore 2>/dev/null || echo $$m >> $(prev_abidir)/../modules.ignore; done)
+endif
+
+ifeq ($(ignore_bpfilter),true)
+	ignore_bpfilter:=$(shell for m in $$(cat $(DROOT)/bpfilter-modules.ignore); do grep -qxF $$m $(prev_abidir)/../modules.ignore 2>/dev/null || echo $$m >> $(prev_abidir)/../modules.ignore; done)
 endif
 
 # Either tools package needs the common source preparation
