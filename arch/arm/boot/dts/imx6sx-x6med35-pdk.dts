@@ -168,6 +168,9 @@
 	phy-handle = <&ethphy0>;
 	phy-reset-gpios = <&gpio2 4 GPIO_ACTIVE_LOW>;
 	phy-reset-duration = <20>;
+	nvmem-cells = <&eth_mac1>;
+	nvmem-cell-names = "mac-address";
+	nvmem_macaddr_swap;
 	status = "okay";
 
 	mdio {
@@ -189,6 +192,9 @@
 	phy-handle = <&ethphy1>;
 	phy-reset-gpios = <&gpio2 2 GPIO_ACTIVE_LOW>;
 	phy-reset-duration = <20>;
+	nvmem-cells = <&eth_mac2>;
+	nvmem-cell-names = "mac-address";
+	nvmem_macaddr_swap;
 	status = "okay";
 
 	mdio {
@@ -263,6 +269,16 @@
 		vcc-supply = <&reg_vdd_3v3>;
 		gpio-controller;
 		#gpio-cells = <2>;
+	};
+};
+
+&ocotp {
+	eth_mac1: mac-address@88 {
+		reg = <0x88 6>;
+	};
+
+	eth_mac2: mac-address@8c {
+		reg = <0x8c 6>;
 	};
 };
 
