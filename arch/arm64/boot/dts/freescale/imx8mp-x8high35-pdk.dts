@@ -219,6 +219,9 @@
 	phy-mode = "rgmii-id";
 	phy-reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
 	phy-handle = <&ethphy1>;
+	nvmem-cells = <&eth_mac2>;
+	nvmem-cell-names = "mac-address";
+	nvmem_macaddr_swap;
 	status = "okay";
 
 	mdio {
@@ -749,6 +752,11 @@
 	};
 };
 
+&ocotp {
+	eth_mac2: mac-address@94 {
+		reg = <0x94 6>;
+	};
+};
 
 &pwm3 {
 	pinctrl-names = "default";
