@@ -4688,7 +4688,6 @@ EXPORT_SYMBOL	 vmlinux 0x38a71b7e	pci_free_resource_list
 EXPORT_SYMBOL	 vmlinux 0x38a9f7c5	in6addr_loopback
 EXPORT_SYMBOL	 vmlinux 0x38e46431	mempool_exit
 EXPORT_SYMBOL	 vmlinux 0x38e5bcce	max8925_reg_read
-EXPORT_SYMBOL	 vmlinux 0x391113c2	cpufreq_global_kobject
 EXPORT_SYMBOL	 vmlinux 0x3915050a	dev_get_by_index
 EXPORT_SYMBOL	 vmlinux 0x3923a377	rproc_boot
 EXPORT_SYMBOL	 vmlinux 0x392a3aea	of_find_property
