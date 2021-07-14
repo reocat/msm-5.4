@@ -19,7 +19,7 @@
 
 	beeper {
 		compatible = "pwm-beeper";
-		pwms = <&pwm3>;
+		pwms = <&pwm3 0 5000000 0>;
 	};
 
 	chosen {
