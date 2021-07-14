@@ -4707,7 +4707,6 @@ EXPORT_SYMBOL	 vmlinux 0x191b6e72	scsi_report_device_reset
 EXPORT_SYMBOL	 vmlinux 0x191bfcec	inode_dio_wait
 EXPORT_SYMBOL	 vmlinux 0x193448ac	arp_create
 EXPORT_SYMBOL	 vmlinux 0x19415547	ipv6_chk_addr_and_flags
-EXPORT_SYMBOL	 vmlinux 0x19467556	cpufreq_global_kobject
 EXPORT_SYMBOL	 vmlinux 0x194b3df7	__tracepoint_kmem_cache_free
 EXPORT_SYMBOL	 vmlinux 0x195ab47a	vlan_filter_drop_vids
 EXPORT_SYMBOL	 vmlinux 0x195d4ac9	memory_read_from_io_buffer
