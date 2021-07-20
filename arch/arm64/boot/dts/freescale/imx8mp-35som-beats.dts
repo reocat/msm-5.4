@@ -7,7 +7,7 @@
 
 #include <dt-bindings/usb/pd.h>
 #include "imx8mp-common.dtsi"
-
+#include <dt-bindings/leds/leds-pca955x.h>
 / {
 	model = "NXP i.MX8MPlus EVK board";
 	compatible = "fsl,imx8mp-evk", "fsl,imx8mp";
@@ -24,7 +24,7 @@
 	};
 
 	chosen {
-		stdout-path = &uart1;
+		stdout-path = &uart2;
 	};
 
 
@@ -216,6 +216,47 @@ reg_wifi_pwr: regulator-wifi-pwr {
 };
 
 
+
+
+
+&flexspi {
+    pinctrl-names = "default";
+   // fsl,spi-num-chipselects = <2>;
+    pinctrl-0 = <&pinctrl_flexspi0>;
+    status = "okay";
+
+    flash: w25q128@0 {
+    #address-cells = <1>;
+    #size-cells = <1>;
+    compatible ="mb85rq4ml", "jedec,spi-nor";
+    spi-max-frequency = <200000>;
+    reg = <0>;
+    status = "okay";
+    };
+};
+
+
+
+/*
+&flexspi {
+
+    pinctrl-names = "default";
+    pinctrl-0 = <&pinctrl_flexspi0>;
+    status = "okay";
+
+    spidev@0 {
+    compatible = "atmel,at25";
+    spi-max-frequency = <10000000>;
+    reg = <0>;
+    pagesize = <256>;
+    size = <524288>;
+    address-width = <24>;
+
+    };
+
+};
+
+*/
 &i2c1 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -423,26 +464,194 @@ reg_wifi_pwr: regulator-wifi-pwr {
         pinctrl-0 = <&pinctrl_i2c4>;
         status = "okay";
 
-        tca6408: tca6408@21 {
-                compatible = "ti,tca6408";
-                reg = <0x21>;
-                #gpio-cells = <2>;
-                gpio-controller;
-        };
+        pca9552: pca9552@60 {
+	    compatible = "nxp,pca9552";
+	    #address-cells = <1>;
+        #size-cells = <0>;
+	    reg = <0x60>;
 
-        tca95391: tca9539@74 {
-                compatible = "ti,tca9539";
-                reg = <0x74>;
-                #gpio-cells = <2>;
-                gpio-controller;
-        };
+	    led@0 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <0>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@1 {
+		    label = "green:power";
+		    reg = <1>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@2 {
+		    label = "pca9552:yellow";
+		    reg = <2>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@3 {
+		    label = "pca9552:white";
+		    reg = <3>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
 
-        tca95392: tca9539@75 {
-                compatible = "ti,tca9539";
-                reg = <0x75>;
-                #gpio-cells = <2>;
-                gpio-controller;
-        };
+	    led@4 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <4>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@5 {
+		    label = "green:power";
+		    reg = <5>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@6 {
+		    label = "pca9552:yellow";
+		    reg = <6>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@7 {
+		    label = "pca9552:white";
+		    reg = <7>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+
+	    led@8 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <8>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@9 {
+		    label = "green:power";
+		    reg = <9>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@10 {
+		    label = "pca9552:yellow";
+	    	reg = <10>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@11 {
+		    label = "pca9552:white";
+		    reg = <11>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@12 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <12>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@13 {
+		    label = "green:power";
+		    reg = <13>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@14 {
+		    label = "pca9552:yellow";
+		    reg = <14>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@15 {
+		    label = "pca9552:white";
+		    reg = <15>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+    };
+
+
+        pca9552_1: pca9552_1@61 {
+	        compatible = "nxp,pca9552";
+	        #address-cells = <1>;
+        #size-cells = <0>;
+	    reg = <0x61>;
+
+	    led@0 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <0>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@1 {
+		    label = "green:power";
+		    reg = <1>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@2 {
+		    label = "pca9552:yellow";
+		    reg = <2>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@3 {
+		    label = "pca9552:white";
+		    reg = <3>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+
+	    led@4 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <4>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@5 {
+		    label = "green:power";
+		    reg = <5>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@6 {
+		    label = "pca9552:yellow";
+		    reg = <6>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@7 {
+		    label = "pca9552:white";
+		    reg = <7>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+
+	    led@8 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <8>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@9 {
+		    label = "green:power";
+		    reg = <9>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@10 {
+		    label = "pca9552:yellow";
+		    reg = <10>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@11 {
+		    label = "pca9552:white";
+		    reg = <11>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@12 {
+		    label = "red:power";
+		    linux,default-trigger = "default-on";
+		    reg = <12>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@13 {
+		    label = "green:power";
+		    reg = <13>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@14 {
+		    label = "pca9552:yellow";
+		    reg = <14>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+	    led@15 {
+		    label = "pca9552:white";
+		    reg = <15>;
+		    type = <PCA955X_TYPE_LED>;
+	    };
+    };
 };
 
 &i2c6 {
@@ -454,6 +663,11 @@ reg_wifi_pwr: regulator-wifi-pwr {
         rtc: rtc@d0 {
             compatible = "st,m41t83";
             reg = <0xd0>;
+	}
+        
+        rtc: rtc@68 {
+            compatible = "st,m41t83";       
+            reg = <0x68>;
         };
 };
 
@@ -510,7 +724,7 @@ reg_wifi_pwr: regulator-wifi-pwr {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
     fsl,dte-mode;
-    rts-gpios = <&gpio5 4 0>;
+  //  rts-gpios = <&gpio5 4 0>;
 	status = "okay";
 };
 
@@ -787,8 +1001,8 @@ reg_wifi_pwr: regulator-wifi-pwr {
 
 	pinctrl_i2c4: i2c4grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_I2C4_SCL__I2C4_SCL			0x400001c3
-			MX8MP_IOMUXC_I2C4_SDA__I2C4_SDA			0x400001c3
+			MX8MP_IOMUXC_SD1_DATA2__I2C4_SCL        0x400001c3
+			MX8MP_IOMUXC_SD1_DATA3__I2C4_SDA        0x400001c3
 		>;
 	};
 
@@ -805,14 +1019,6 @@ reg_wifi_pwr: regulator-wifi-pwr {
 	pinctrl_mipi_dsi_en: mipi_dsi_en {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08	0x16
-		>;
-	};
-
-	pinctrl_pcie: pciegrp {
-		fsl,pins = <
-			MX8MP_IOMUXC_I2C4_SCL__PCIE_CLKREQ_B		0x61 /* open drain, pull up */
-			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
-			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
 		>;
 	};
 
@@ -855,7 +1061,7 @@ reg_wifi_pwr: regulator-wifi-pwr {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI3_TXC__UART2_DTE_RX 	0x49
 			MX8MP_IOMUXC_SAI3_TXFS__UART2_DTE_TX	0x49
-		    MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04       0x19
+		   // MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04       0x19
         >;
 	};
 
