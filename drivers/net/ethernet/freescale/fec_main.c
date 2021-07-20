@@ -2667,7 +2667,7 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	struct phy_device *phy_dev = NULL;
 	char mdio_bus_id[MII_BUS_ID_SIZE];
 	char phy_name[MII_BUS_ID_SIZE + 3];
-	int phy_id;
+	int phy_id, phy_read;
 	int dev_id = fep->dev_id;
 
 #ifdef HAVE_KSZ_SWITCH
@@ -2707,6 +2707,61 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 			 PHY_ID_FMT, mdio_bus_id, phy_id);
 		phy_dev = phy_connect(ndev, phy_name, &fec_enet_adjust_link,
 				      fep->phy_interface);
+	}
+
+	// Configuring Phy's at boot time
+
+	for (phy_id = 0; (phy_id < PHY_MAX_ADDR); phy_id++) {
+		if (mdiobus_is_registered_device(fep->mii_bus, phy_id)) {
+
+		// Readind device ID at 0x03 register
+		phy_read = fep->mii_bus->read(fep->mii_bus, phy_id, 03);
+
+		printk("mdio device found at address: %d with phy_read=0x%x", phy_id, phy_read);
+
+			//SMI-I line phy
+			//if((dev_id == 0))  {
+			if(phy_id==0x7) {
+				// DP83869 configuration here
+				phy_read = fep->mii_bus->read(fep->mii_bus, phy_id, 03);
+				printk("DP83869 configuration\n");
+				// Media Convertor Mode setting
+				phy_read = fep->mii_bus->read(fep->mii_bus, phy_id, 0x1EC);
+				phy_read = (phy_read & 0xfffe );
+				fep->mii_bus->write(fep->mii_bus, phy_id, 0x1EC, phy_read);
+
+				//set 100M fixed, no autonegotioan
+				phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0000, 0x1140);
+				phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0010, 0x5048);
+			}
+
+			if(phy_id==0xf) {
+                                // DP83869 configuration here
+                                phy_read = fep->mii_bus->read(fep->mii_bus, phy_id, 03);
+                                printk("DP83869 configuration\n");
+                                // Media Convertor Mode setting
+                                phy_read = fep->mii_bus->read(fep->mii_bus, phy_id, 0x1EC);
+                                phy_read = (phy_read & 0xfffe );
+                                fep->mii_bus->write(fep->mii_bus, phy_id, 0x1EC, phy_read);
+
+                                //set 100M fixed, no autonegotioan
+                                phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0000, 0x1140);
+                                phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0010, 0x5048);
+			}
+
+			//ADIN1200 .. TODO: define macro for phy address
+			if(phy_id==0x8) {
+				printk("Setting 0x8 ADIN1200 to 10MBPS\n");
+				phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0, 0x100);
+					// TODO: check for success
+			}
+			if(phy_id==0xc) {
+				printk("Setting 0xc ADIN1200 to 10MBPS\n");
+				phy_read = fep->mii_bus->write(fep->mii_bus, phy_id, 0x0, 0x100);
+					// TODO: check for success
+			}
+			//}
+		}
 	}
 
 	if (IS_ERR(phy_dev)) {
