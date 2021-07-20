@@ -549,6 +549,12 @@
 		interrupts = <8 IRQ_TYPE_LEVEL_HIGH>;
 	};
 
+	tca6416_nw: gpio@20 {
+		compatible = "ti,tca6416";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
 };
 
 &i2c3 {
