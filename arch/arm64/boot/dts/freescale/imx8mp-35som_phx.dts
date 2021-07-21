@@ -343,6 +343,11 @@
 	fsl,magic-packet;
 	status = "okay";
 
+        fixed-link {
+                speed = <1000>;
+                full-duplex;
+        };
+
 	mdio {
 		#address-cells = <1>;
 		#size-cells = <0>;
@@ -671,6 +676,57 @@
 		gpio-controller;
 		#gpio-cells = <2>;
 	};
+
+       ksz9477: ksz9477@5f {
+               compatible = "microchip,ksz9477";
+               reg = <0x5f>;
+               phy-mode = "rgmii-txid";
+
+               interrupt-parent = <&gpio4>;
+               interrupts = <3 IRQ_TYPE_LEVEL_LOW>;
+               status = "okay";
+               ports {
+                       #address-cells = <1>;
+                       #size-cells = <0>;
+                       port@0 {
+                               reg = <0>;
+                               label = "lan1";
+                       };
+                       port@1 {
+                               reg = <1>;
+                               label = "lan2";
+                       };
+                       port@2 {
+                               reg = <2>;
+                               label = "lan3";
+                       };
+                       port@3 {
+                               reg = <3>;
+                               label = "lan4";
+                       };
+                       port@4 {
+                               reg = <4>;
+                               label = "lan5";
+                       };
+                       port@5 {
+                               reg = <5>;
+                                label = "cpu";
+                                ethernet = <&fec>;
+                                fixed-link {
+                                       speed = <1000>;
+                                        full-duplex;
+                                };
+                       };
+                       port@6 {
+                              reg = <6>;
+                               label = "lan6";
+                               fixed-link {
+                                      speed = <1000>;
+                                       full-duplex;
+                               };
+                       };
+               };
+       };
 };
 
 &irqsteer_hdmi {
@@ -1055,6 +1111,7 @@
 			MX8MP_IOMUXC_SAI1_TXD4__ENET1_RGMII_TX_CTL	0x1f
 			MX8MP_IOMUXC_SAI1_TXD5__ENET1_RGMII_TXC		0x1f
 			MX8MP_IOMUXC_SAI1_RXD0__GPIO4_IO02		0x19
+			MX8MP_IOMUXC_SAI1_RXD1__GPIO4_IO03		0x19 /* ksz9477 switch INT */
 		>;
 	};
 
