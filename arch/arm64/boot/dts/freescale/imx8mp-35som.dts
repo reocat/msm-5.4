@@ -784,9 +784,9 @@
 &pcie{
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_pcie>;
-	disable-gpio = <&gpio2 6 GPIO_ACTIVE_LOW>;
-	reset-gpio = <&gpio2 7 GPIO_ACTIVE_LOW>;
-	ext_osc = <1>;
+	disable-gpio = <&gpio4 20 GPIO_ACTIVE_LOW>;
+	reset-gpio = <&gpio4 18 GPIO_ACTIVE_LOW>;
+	ext_osc = <0>;
 	clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
 		 <&clk IMX8MP_CLK_PCIE_AUX>,
 		 <&clk IMX8MP_CLK_PCIE_PHY>,
@@ -816,7 +816,7 @@
 };
 
 &pcie_phy{
-	ext_osc = <1>;
+	ext_osc = <0>;
 	status = "okay";
 };
 
@@ -1177,9 +1177,8 @@
 
 	pinctrl_pcie: pciegrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_I2C4_SCL__PCIE_CLKREQ_B		0x61 /* open drain, pull up */
-			MX8MP_IOMUXC_SD1_DATA4__GPIO2_IO06		0x41
-			MX8MP_IOMUXC_SD1_DATA5__GPIO2_IO07		0x41
+			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20		0x41
+			MX8MP_IOMUXC_SAI1_TXD6__GPIO4_IO18		0x41
 		>;
 	};
 
@@ -1192,12 +1191,6 @@
 	pinctrl_typec: typec1grp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI1_TXD7__GPIO4_IO19	0x1c4
-		>;
-	};
-
-	pinctrl_typec_mux: typec1muxgrp {
-		fsl,pins = <
-			MX8MP_IOMUXC_SAI1_MCLK__GPIO4_IO20	0x16
 		>;
 	};
 
