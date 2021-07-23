@@ -650,12 +650,14 @@ err_force_master:
 
 #define MII_KSZ9131_RX_DLL_CONTROL  0x4C
 #define MII_KSZ9131_TX_DLL_CONTROL  0x4D
+#define MII_KSZ9131_PCS_LOOP_CONTROL  0x11
 #define MII_KSZ9131_DLL_BYPASS_OFFSET    12
 #define MII_KSZ9131_DLL_BYPASS_MASK     0x1
 #define KSZ9131_SKEW_5BIT_MAX	2400
 #define KSZ9131_SKEW_4BIT_MAX	800
 #define KSZ9131_OFFSET		700
 #define KSZ9131_STEP		100
+#define KSZ9131_ENABLE_10BT_PREAMBLE		0x4
 
 static int ksz9131_of_load_skew_values(struct phy_device *phydev,
 				       struct device_node *of_node,
@@ -779,6 +781,26 @@ static int ksz9131_config_rgmii_interface_delay(struct phy_device *phydev)
 	return 0;
 }
 
+static int ksz9131_enable_10bt_preamble(struct phy_device *phydev)
+{
+    int ret = 0;
+    int regVal = 0;
+
+    ret = phy_read(phydev, MII_KSZ9131_PCS_LOOP_CONTROL);
+    if(ret < 0) {
+        dev_err(&phydev->mdio.dev, "get pcs loop reg value failed\n");
+	return ret;
+    }
+    regVal = (ret | KSZ9131_ENABLE_10BT_PREAMBLE);
+    ret = phy_write(phydev, MII_KSZ9131_PCS_LOOP_CONTROL, regVal);
+    if(ret < 0) {
+        dev_err(&phydev->mdio.dev, "set pcs loop reg value failed\n");
+	return ret;
+    }
+
+    return ret;
+}
+
 static int ksz9131_config_init(struct phy_device *phydev)
 {
 	const struct device *dev = &phydev->mdio.dev;
@@ -844,7 +866,11 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
-	return 0;
+	if (of_property_read_bool(of_node, "enable-10bt-preamble"))
+	{
+             ret = ksz9131_enable_10bt_preamble(phydev);
+	}
+	return ret;
 }
 
 #define KSZ8873MLL_GLOBAL_CONTROL_4	0x06
