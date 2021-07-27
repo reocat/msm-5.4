@@ -275,19 +275,32 @@
 };
 
 &ecspi2 {
-	#address-cells = <1>;
-	#size-cells = <0>;
-	fsl,spi-num-chipselects = <1>;
 	pinctrl-names = "default";
+	fsl,spi-num-chipselects = <3>;
 	pinctrl-0 = <&pinctrl_ecspi2 &pinctrl_ecspi2_cs>;
-	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpio5 1 GPIO_ACTIVE_LOW>,<&gpio3 20 GPIO_ACTIVE_LOW>;
 	status = "okay";
+
+	mr25h40: mram@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "mr25h40", "jedec,spi-nor";
+		reg = <0 0x00000000 0x00080000>;
+		spi-max-frequency = <50000000>;
+
+		partition@0 {
+			label = "mram";
+			reg = <0x00000000 0x00080000>;
+		};
+	};
 
 	/* The actual chip is a ADC102S022, 10bit 8-channel. Driver is for a 12-bit,
 	so the two MSBs will be 0 */
-	adc1025022: adc@0 {
+	adc1025022: adc@1 {
+		#address-cells = <1>;
+		#size-cells = <0>;
 		compatible = "ti,adc128s052";
-		reg = <0>;
+		reg = <1>;
 		vref-supply = <&reg_adc_vref_3v3>;
 		spi-max-frequency = <1000000>;
 		status = "okay";
@@ -1049,7 +1062,9 @@
 
 	pinctrl_ecspi2_cs: ecspi2cs {
 		fsl,pins = <
-			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13		0x40000
+			MX8MP_IOMUXC_ECSPI2_SS0__ECSPI2_SS0             0x40000 /* cs0 */
+			MX8MP_IOMUXC_SAI3_TXD__GPIO5_IO01               0x40000 /* cs1 */
+			MX8MP_IOMUXC_SAI5_RXC__GPIO3_IO20               0x40000 /* cs2 */
 		>;
 	};
 
