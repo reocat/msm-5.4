@@ -5,6 +5,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
+#include <dt-bindings/input/linux-event-codes.h>
 #include "imx6sx-x6med35-som.dtsi"
 
 / {
@@ -25,6 +26,24 @@
 
 	chosen {
 		stdout-path = &uart1;
+	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		s1 {
+			label = "s1";
+			linux,code = <KEY_ESC>;
+			wakeup-source;
+			gpios = <&gpio1 11 GPIO_PULL_UP>;
+		};
+
+		s2 {
+			label = "s2";
+			linux,code = <KEY_SPACE>;
+			wakeup-source;
+			gpios = <&gpio4 12 GPIO_PULL_UP>;
+		};
 	};
 
 	leds {
