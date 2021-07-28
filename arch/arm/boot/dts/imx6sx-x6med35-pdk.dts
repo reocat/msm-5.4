@@ -209,6 +209,22 @@
 	};
 };
 
+&gpio2 {
+	rs232_uart_sel {
+		gpios = <15 GPIO_ACTIVE_LOW>;
+		output-low;
+		line-name = "rs232_uart_sel";
+	};
+};
+
+&gpio4 {
+	rs485_cm_port_uart_sel {
+		gpios = <9 GPIO_ACTIVE_LOW>;
+		output-low;
+		line-name = "rs485_cm_port_uart_sel";
+	};
+};
+
 &i2c1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c1>;
