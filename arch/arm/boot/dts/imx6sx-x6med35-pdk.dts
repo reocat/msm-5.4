@@ -384,6 +384,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
 	rts-gpios = <&gpio2 0 GPIO_ACTIVE_LOW>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
@@ -392,6 +393,7 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart5>;
 	rts-gpios = <&gpio2 17 GPIO_ACTIVE_LOW>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 };
 
