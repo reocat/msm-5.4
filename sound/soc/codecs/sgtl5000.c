@@ -1596,25 +1596,6 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		goto disable_regs;
 	}
 
-	sgtl5000->mclk = devm_clk_get(&client->dev, NULL);
-	if (IS_ERR(sgtl5000->mclk)) {
-		ret = PTR_ERR(sgtl5000->mclk);
-		/* Defer the probe to see if the clk will be provided later */
-		if (ret == -ENOENT)
-			ret = -EPROBE_DEFER;
-
-		if (ret != -EPROBE_DEFER)
-			dev_err(&client->dev, "Failed to get mclock: %d\n",
-				ret);
-		goto disable_regs;
-	}
-
-	ret = clk_prepare_enable(sgtl5000->mclk);
-	if (ret) {
-		dev_err(&client->dev, "Error enabling clock %d\n", ret);
-		goto disable_regs;
-	}
-
 	/* Need 8 clocks before I2C accesses */
 	udelay(1);
 
@@ -1622,7 +1603,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ID, &reg);
 	if (ret) {
 		dev_err(&client->dev, "Error reading chip id %d\n", ret);
-		goto disable_clk;
+		goto disable_regs;
 	}
 
 	if (((reg & SGTL5000_PARTID_MASK) >> SGTL5000_PARTID_SHIFT) !=
@@ -1630,7 +1611,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 		dev_err(&client->dev,
 			"Device with ID register %x is not a sgtl5000\n", reg);
 		ret = -ENODEV;
-		goto disable_clk;
+		goto disable_regs;
 	}
 
 	rev = (reg & SGTL5000_REVID_MASK) >> SGTL5000_REVID_SHIFT;
@@ -1651,7 +1632,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	if (ret) {
 		dev_err(&client->dev,
 			"Error %d muting outputs via CHIP_ANA_CTRL\n", ret);
-		goto disable_clk;
+		goto disable_regs;
 	}
 
 	/*
@@ -1664,7 +1645,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	ret = regmap_read(sgtl5000->regmap, SGTL5000_CHIP_ANA_POWER, &value);
 	if (ret) {
 		dev_err(&client->dev, "Failed to read ANA_POWER: %d\n", ret);
-		goto disable_clk;
+		goto disable_regs;
 	}
 	if (value & SGTL5000_VAG_POWERUP) {
 		ret = regmap_update_bits(sgtl5000->regmap,
@@ -1673,7 +1654,7 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 					 0);
 		if (ret) {
 			dev_err(&client->dev, "Error %d disabling VAG\n", ret);
-			goto disable_clk;
+			goto disable_regs;
 		}
 
 		msleep(SGTL5000_VAG_POWERDOWN_DELAY);
@@ -1770,12 +1751,9 @@ static int sgtl5000_i2c_probe(struct i2c_client *client,
 	ret = devm_snd_soc_register_component(&client->dev,
 			&sgtl5000_driver, &sgtl5000_dai, 1);
 	if (ret)
-		goto disable_clk;
+		goto disable_regs;
 
 	return 0;
-
-disable_clk:
-	clk_disable_unprepare(sgtl5000->mclk);
 
 disable_regs:
 	regulator_bulk_disable(sgtl5000->num_supplies, sgtl5000->supplies);
@@ -1788,7 +1766,6 @@ static int sgtl5000_i2c_remove(struct i2c_client *client)
 {
 	struct sgtl5000_priv *sgtl5000 = i2c_get_clientdata(client);
 
-	clk_disable_unprepare(sgtl5000->mclk);
 	regulator_bulk_disable(sgtl5000->num_supplies, sgtl5000->supplies);
 	regulator_bulk_free(sgtl5000->num_supplies, sgtl5000->supplies);
 

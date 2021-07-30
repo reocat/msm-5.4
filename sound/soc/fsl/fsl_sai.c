@@ -1543,6 +1543,13 @@ static int fsl_sai_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "fail to create sys group\n");
 	}
 
+	clk_prepare_enable(sai->bus_clk);
+	clk_prepare_enable(sai->mclk_clk[1]);
+	regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
+		FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
+	regmap_update_bits(sai->regmap, FSL_SAI_TCSR(8),
+		FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
+
 	pm_runtime_put_sync(&pdev->dev);
 
 	sai->dma_params_rx.chan_name = "rx";
@@ -1638,11 +1645,13 @@ static int fsl_sai_runtime_resume(struct device *dev)
 	regcache_cache_only(sai->regmap, false);
 	regcache_mark_dirty(sai->regmap);
 
+	/*
 	regmap_write(sai->regmap, FSL_SAI_TCSR(offset), FSL_SAI_CSR_SR);
 	regmap_write(sai->regmap, FSL_SAI_RCSR(offset), FSL_SAI_CSR_SR);
 	usleep_range(1000, 2000);
 	regmap_write(sai->regmap, FSL_SAI_TCSR(offset), 0);
 	regmap_write(sai->regmap, FSL_SAI_RCSR(offset), 0);
+	*/
 
 	ret = regcache_sync(sai->regmap);
 	if (ret)

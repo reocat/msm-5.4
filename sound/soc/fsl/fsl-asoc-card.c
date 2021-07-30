@@ -512,8 +512,14 @@ static int fsl_asoc_card_probe(struct platform_device *pdev)
 	}
 
 	codec_np = of_parse_phandle(np, "audio-codec", 0);
-	if (codec_np)
+	if (codec_np) {
 		codec_dev = of_find_i2c_device_by_node(codec_np);
+		if (!codec_dev) {
+			dev_err(&pdev->dev, "failed to find codec platform device, defferring probe\n");
+			ret = -EPROBE_DEFER;
+			goto fail;
+		}
+	}
 	else
 		codec_dev = NULL;
 
