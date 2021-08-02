@@ -2849,7 +2849,6 @@ snd-soc-fsl-ssi
 snd-soc-hdmi-codec
 snd-soc-imx-audmix
 snd-soc-imx-audmux
-snd-soc-imx-es8328
 snd-soc-imx-sgtl5000
 snd-soc-imx-spdif
 snd-soc-max98357a

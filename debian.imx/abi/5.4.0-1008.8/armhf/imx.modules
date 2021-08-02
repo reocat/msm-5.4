@@ -3242,7 +3242,6 @@ snd-soc-es8316
 snd-soc-es8328
 snd-soc-es8328-i2c
 snd-soc-es8328-spi
-snd-soc-eukrea-tlv320
 snd-soc-fsl-asoc-card
 snd-soc-fsl-asrc
 snd-soc-fsl-audmix
@@ -3251,16 +3250,12 @@ snd-soc-fsl-micfil
 snd-soc-fsl-sai
 snd-soc-fsl-spdif
 snd-soc-fsl-ssi
-snd-soc-fsl-utils
 snd-soc-gtm601
 snd-soc-hdmi-codec
 snd-soc-imx-audmix
 snd-soc-imx-audmux
-snd-soc-imx-es8328
-snd-soc-imx-mc13783
 snd-soc-imx-sgtl5000
 snd-soc-imx-spdif
-snd-soc-imx-ssi
 snd-soc-inno-rk3036
 snd-soc-max9759
 snd-soc-max98088
@@ -3270,7 +3265,6 @@ snd-soc-max98504
 snd-soc-max9860
 snd-soc-max9867
 snd-soc-max98927
-snd-soc-mc13783
 snd-soc-msm8916-analog
 snd-soc-msm8916-digital
 snd-soc-mt6351
