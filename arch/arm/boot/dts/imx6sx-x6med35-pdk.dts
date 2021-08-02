@@ -6,6 +6,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
 #include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/sound/fsl-imx-audmux.h>
 #include "imx6sx-x6med35-som.dtsi"
 
 / {
@@ -167,25 +168,29 @@
 		regulator-always-on;
 	};
 
-	/*
 	sound {
-		compatible = "fsl,imx6sx-x6med35som-nau8822", "fsl,imx-audio-nau8822";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_hp>;
-		model = "wm8962-audio";
-		ssi-controller = <&ssi2>;
-		audio-codec = <&codec>;
-		audio-routing =
-			"Headphone Jack", "HPOUTL",
-			"Headphone Jack", "HPOUTR",
-			"Ext Spk", "SPKOUTL",
-			"Ext Spk", "SPKOUTR",
-			"AMIC", "MICBIAS",
-			"IN3R", "AMIC";
-		mux-int-port = <2>;
-		mux-ext-port = <3>;
+		compatible = "simple-audio-card";
+		simple-audio-card,name = "x6med35-audio";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,bitclock-master = <&sound_codec>;
+		simple-audio-card,frame-master = <&sound_codec>;
+		simple-audio-card,widgets =
+						"AMIC", "Ext Spk";
+		simple-audio-card,routing =
+						"Ext Spk", "LSPK",
+						"Ext Spk", "RSPK",
+					    "RMICP", "AMIC",
+					    "RMICN", "AMIC",
+					    "AMIC", "Mic Bias";
+
+		sound_cpu: simple-audio-card,cpu {
+			sound-dai = <&ssi2>;
+		};
+
+		sound_codec: simple-audio-card,codec {
+			sound-dai = <&codec>;
+		};
 	};
-	*/
 };
 
 &anatop {
@@ -196,6 +201,26 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_audmux>;
 	status = "okay";
+
+	ssi2 {
+		fsl,audmux-port = <1>;
+		fsl,port-config = <
+			(IMX_AUDMUX_V2_PTCR_SYN |
+			IMX_AUDMUX_V2_PTCR_TFSDIR |
+			IMX_AUDMUX_V2_PTCR_TFSEL(2) |
+			IMX_AUDMUX_V2_PTCR_TCLKDIR |
+			IMX_AUDMUX_V2_PTCR_TCSEL(2))
+			IMX_AUDMUX_V2_PDCR_RXDSEL(2)
+		>;
+	};
+
+	aud3 {
+		fsl,audmux-port = <2>;
+		fsl,port-config = <
+			IMX_AUDMUX_V2_PTCR_SYN
+			IMX_AUDMUX_V2_PDCR_RXDSEL(1)
+		>;
+	};
 };
 
 &csi1 {
@@ -288,6 +313,7 @@
 		compatible = "nuvoton,nau8822";
 		reg = <0x1a>;
 		clocks = <&clks IMX6SX_CLK_AUDIO>;
+		#sound-dai-cells = <0>;
 	};
 };
 
