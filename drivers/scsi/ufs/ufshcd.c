@@ -25,7 +25,6 @@
 #include "ufs_bsg.h"
 #include "ufshcd-crypto.h"
 #include <asm/unaligned.h>
-#include "../sd.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ufs.h>
@@ -390,7 +389,7 @@ static void ufshcd_add_command_trace(struct ufs_hba *hba, unsigned int tag,
 	/* trace UPIU also */
 	ufshcd_add_cmd_upiu_trace(hba, tag, str_t);
 	opcode = cmd->cmnd[0];
-	lba = sectors_to_logical(cmd->device, blk_rq_pos(cmd->request));
+	lba = scsi_get_lba(cmd);
 
 	if (opcode == READ_10 || opcode == WRITE_10) {
 		/*
@@ -9627,6 +9626,7 @@ int ufshcd_init(struct ufs_hba *hba, void __iomem *mmio_base, unsigned int irq)
 	async_schedule(ufshcd_async_scan, hba);
 	ufs_sysfs_add_nodes(hba->dev);
 
+	device_enable_async_suspend(dev);
 	return 0;
 
 free_tmf_queue:
