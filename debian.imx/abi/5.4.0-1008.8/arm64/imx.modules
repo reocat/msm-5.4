@@ -179,12 +179,6 @@ adxl372_i2c
 adxl372_spi
 adxrs450
 aegis128
-aes-arm64
-aes-ce-blk
-aes-ce-ccm
-aes-ce-cipher
-aes-neon-blk
-aes-neon-bs
 aes_ti
 af_alg
 af_key
@@ -552,9 +546,7 @@ crc64
 crc7
 crc8
 crct10dif-ce
-cryptd
 crypto_engine
-crypto_simd
 crypto_user
 cryptoloop
 cs3308
@@ -637,7 +629,6 @@ dm-bio-prison
 dm-bufio
 dm-cache
 dm-cache-smq
-dm-crypt
 dm-delay
 dm-era
 dm-flakey
@@ -791,7 +782,6 @@ esp4
 esp4_offload
 esp6
 esp6_offload
-essiv
 et1011c
 ethoc
 etnaviv
@@ -938,7 +928,6 @@ geneve
 genwqe_card
 gf2k
 gfs2
-ghash-ce
 gigaset
 gl518sm
 gl520sm
@@ -2747,10 +2736,7 @@ sfp
 sgp30
 sh_veu
 sha1-ce
-sha2-ce
-sha256-arm64
 sha3_generic
-sha512-arm64
 shiftfs
 sht15
 sht21
