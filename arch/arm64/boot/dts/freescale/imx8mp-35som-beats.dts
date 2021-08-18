@@ -441,14 +441,6 @@ reg_wifi_pwr: regulator-wifi-pwr {
 		vbus-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 	};
 
-	tp: solomon@48 {
-		compatible = "solomon,ssd254x";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_tp>;
-		reg = <0x48>;
-		gpios = <&gpio4 27 1>, /* interrupt */
-		<&tca95392 0 1>; /* Reset */
-	}
 
 	/*	temperature sensor	*/
 	tmp75: tmp75@49 {
@@ -659,11 +651,6 @@ reg_wifi_pwr: regulator-wifi-pwr {
         pinctrl-names = "default";
         pinctrl-0 = <&pinctrl_i2c6>;
         status = "okay";
-
-        rtc: rtc@d0 {
-            compatible = "st,m41t83";
-            reg = <0xd0>;
-	}
         
         rtc: rtc@68 {
             compatible = "st,m41t83";       
