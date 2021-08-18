@@ -813,8 +813,18 @@
 };
 
 &usb_dwc3_1 {
-	dr_mode = "host";
-	status = "okay";
+        dr_mode = "otg";
+        hnp-disable;
+        srp-disable;
+        adp-disable;
+        usb-role-switch;
+        status = "okay";
+
+        port {
+                usb3_1_drd_sw: endpoint {
+                        remote-endpoint = <&typec_dr_sw>;
+                };
+        };
 };
 
 &usdhc1 {
