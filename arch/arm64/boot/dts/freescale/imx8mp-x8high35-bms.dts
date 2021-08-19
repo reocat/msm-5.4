@@ -25,6 +25,14 @@
 		#size-cells = <2>;
 		ranges;
 
+		linux,cma {
+			compatible = "shared-dma-pool";
+			reusable;
+			size = <0x0 0x8000000>;
+			alloc-ranges = <0x0 0x40000000 0x0 0xc0000000>;
+			linux,cma-default;
+		};
+
 		rpmsg_reserved: rpmsg@55800000 {
 			no-map;
 			reg = <0x0 0x55800000 0x0 0x800000>;
