@@ -1683,8 +1683,29 @@ static int spi_imx_probe(struct platform_device *pdev)
 		u32 num_cs;
 
 		if (!of_property_read_u32(np, "num-cs", &num_cs))
+		{
 			master->num_chipselect = num_cs;
+		}
 		/* If not preset, default value of 1 is used */
+
+		if (num_cs) {
+			master->cs_gpios = devm_kcalloc(&master->dev,master->num_chipselect, sizeof(int),GFP_KERNEL);
+			if (!master->cs_gpios)
+				return -ENOMEM;
+
+			for (i = 0; i < master->num_chipselect; i++)
+			{
+				int cs_gpio = of_get_named_gpio(np, "cs-gpios", i);
+				if (!gpio_is_valid(cs_gpio) && mxc_platform_info)
+				{
+					cs_gpio = mxc_platform_info->chipselect[i];
+				}
+
+				master->cs_gpios[i] = cs_gpio;
+				if (!gpio_is_valid(cs_gpio))
+					continue;
+			}
+		}
 	}
 
 	spi_imx->bitbang.chipselect = spi_imx_chipselect;
@@ -1790,6 +1811,11 @@ static int spi_imx_probe(struct platform_device *pdev)
 				dev_err(&pdev->dev, "Can't get CS GPIO %i\n",
 					master->cs_gpios[i]);
 				goto out_spi_bitbang;
+			}
+
+			if (gpio_is_valid(master->cs_gpios[i])) 
+			{
+				gpio_direction_output(master->cs_gpios[i],1);
 			}
 		}
 	}
