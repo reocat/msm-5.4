@@ -130,7 +130,7 @@
 
 	hub_reset: usb-reset {
 		compatible = "gpio-reset";
-		reset-gpios = <&pca9505 27 1>a
+		reset-gpios = <&pca9505 27 1>;
 		#reset-cells = <0>;
 		default-state = "off";
 	};
