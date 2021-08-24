@@ -410,7 +410,7 @@
 		compatible = "nxp,pcf2129";
 		reg = <0x51>;
 		interrupt-parent = <&pca9505>;
-		interrupts = <8 IRQ_TYPE_EDGE_FALLING>;
+		interrupts = <7 IRQ_TYPE_EDGE_FALLING>;
 	};
 
 	tca6416_nw: gpio@20 {
@@ -437,7 +437,7 @@
 	typec_ptn5150: typec@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;
-		vbus-gpios = <&pca9505 19 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&pca9505 18 GPIO_ACTIVE_HIGH>;
 		status = "okay";
 	};
 
