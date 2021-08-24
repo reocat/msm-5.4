@@ -417,7 +417,7 @@ static int ssd254x_probe(struct i2c_client *i2c, const struct i2c_device_id *id)
 		gpio_set_value_cansleep(pdata->gpio_reset, 1);
 		msleep(100);
 
-		gpio_export(pdata->gpio_reset, 0);
+		//gpio_export(pdata->gpio_reset, 0);
 	} else {
         printk(KERN_INFO "Could not obtain GPIO for Fusion reset\n");
 		dev_warn(&i2c->dev, "Could not obtain GPIO for Fusion reset\n");
