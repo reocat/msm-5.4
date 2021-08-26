@@ -278,16 +278,16 @@ static void ptn5150_polling_work(struct ptn5150_info *info)
             switch (port_status) {
             case PTN5150_DFP_ATTACHED:
                 extcon_set_state_sync(info->edev,EXTCON_USB_HOST, false);
-	        gpiod_set_value(info->vbus_gpiod, 0);
+                gpiod_direction_output(info->vbus_gpiod, 0);
 	        extcon_set_state_sync(info->edev, EXTCON_USB, true);
             break;
 	    case PTN5150_UFP_ATTACHED:
 	        extcon_set_state_sync(info->edev, EXTCON_USB, false);
                 vbus = ((cc_status & PTN5150_REG_CC_VBUS_DETECTION_MASK) >> PTN5150_REG_CC_VBUS_DETECTION_SHIFT);
                 if (vbus)
-                    gpiod_set_value(info->vbus_gpiod, 0);
+                    gpiod_direction_output(info->vbus_gpiod, 0);
                 else
-                    gpiod_set_value(info->vbus_gpiod, 1);
+                    gpiod_direction_output(info->vbus_gpiod, 1);
 
                 extcon_set_state_sync(info->edev, EXTCON_USB_HOST, true);
 	    break;
