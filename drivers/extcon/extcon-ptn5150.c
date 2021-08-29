@@ -269,6 +269,7 @@ static void ptn5150_polling_work(struct ptn5150_info *info)
         mutex_unlock(&info->mutex);
         return;
     }
+
     port_status = ((cc_status & PTN5150_REG_CC_PORT_ATTACHMENT_MASK) >> PTN5150_REG_CC_PORT_ATTACHMENT_SHIFT);
     if (int_status || (last_port_status[usbport_index] != port_status)) {
 	dev_info(info->dev, "[ptn5150]--current INT STATUS:%d, CC STATUS:%d, last:%d-%d\n", int_status, cc_status, usbport_index, last_port_status[usbport_index]);
@@ -277,16 +278,16 @@ static void ptn5150_polling_work(struct ptn5150_info *info)
             switch (port_status) {
             case PTN5150_DFP_ATTACHED:
                 extcon_set_state_sync(info->edev,EXTCON_USB_HOST, false);
-	        gpiod_set_value(info->vbus_gpiod, 0);
+                gpiod_direction_output(info->vbus_gpiod, 0);
 	        extcon_set_state_sync(info->edev, EXTCON_USB, true);
             break;
 	    case PTN5150_UFP_ATTACHED:
 	        extcon_set_state_sync(info->edev, EXTCON_USB, false);
                 vbus = ((cc_status & PTN5150_REG_CC_VBUS_DETECTION_MASK) >> PTN5150_REG_CC_VBUS_DETECTION_SHIFT);
                 if (vbus)
-                    gpiod_set_value(info->vbus_gpiod, 0);
+                    gpiod_direction_output(info->vbus_gpiod, 0);
                 else
-                    gpiod_set_value(info->vbus_gpiod, 1);
+                    gpiod_direction_output(info->vbus_gpiod, 1);
 
                 extcon_set_state_sync(info->edev, EXTCON_USB_HOST, true);
 	    break;
@@ -297,7 +298,7 @@ static void ptn5150_polling_work(struct ptn5150_info *info)
         } else {
             extcon_set_state_sync(info->edev,EXTCON_USB_HOST, false);
             extcon_set_state_sync(info->edev,EXTCON_USB, false);
-            gpiod_set_value(info->vbus_gpiod, 0);
+	    gpiod_direction_output(info->vbus_gpiod, 0);
 	}
     }
 
@@ -447,7 +448,7 @@ static int __init ptn5150_i2c_init(void)
 {
 	return i2c_add_driver(&ptn5150_i2c_driver);
 }
-subsys_initcall(ptn5150_i2c_init);
+late_initcall(ptn5150_i2c_init);
 
 MODULE_DESCRIPTION("NXP PTN5150 CC logic Extcon driver");
 MODULE_AUTHOR("Vijai Kumar K <vijaikumar.kanagarajan@gmail.com>");
