@@ -517,6 +517,7 @@ cmdlinepart
 cmtp
 cobra
 coda
+coda-vpu
 colibri-vf50-ts
 comedi
 comedi_8255
@@ -1307,6 +1308,7 @@ ims-pcu
 imx-cpufreq-dt
 imx-media-common
 imx-pcm-dma
+imx-pxp
 imx6q-cpufreq
 imx6ul_tsc
 imx7-media-csi
@@ -1504,6 +1506,7 @@ ks8842
 ks8851
 ks8851_mll
 ksz9477
+ksz9477_i2c
 ksz9477_spi
 ksz_common
 kvaser_pci
@@ -2163,6 +2166,7 @@ orangefs
 oti6858
 otm3225a
 ov2640
+ov5640
 ov7251
 ov7640
 overlay
@@ -2835,9 +2839,11 @@ snd-soc-fsl-ssi
 snd-soc-hdmi-codec
 snd-soc-imx-audmix
 snd-soc-imx-audmux
+snd-soc-imx-es8328
 snd-soc-imx-sgtl5000
 snd-soc-imx-spdif
 snd-soc-max98357a
+snd-soc-nau8822
 snd-soc-sgtl5000
 snd-soc-simple-amplifier
 snd-soc-simple-card

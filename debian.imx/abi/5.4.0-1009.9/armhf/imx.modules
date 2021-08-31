@@ -569,6 +569,7 @@ cmdlinepart
 cmtp
 cobra
 coda
+coda-vpu
 colibri-vf50-ts
 comedi
 comedi_8255
@@ -1485,7 +1486,9 @@ imx-ipu-v3
 imx-mailbox
 imx-media-common
 imx-pcm-dma
+imx-pxp
 imx-sdma
+imx-vdoa
 imx6-media
 imx6-media-csi
 imx6-mipi-csi2
@@ -1696,6 +1699,7 @@ ks8842
 ks8851
 ks8851_mll
 ksz9477
+ksz9477_i2c
 ksz9477_spi
 ksz_common
 ktti
@@ -2432,6 +2436,7 @@ orangefs
 oti6858
 otm3225a
 ov2640
+ov5640
 ov7251
 ov7640
 overlay
