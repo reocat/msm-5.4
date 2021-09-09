@@ -96,6 +96,8 @@ struct phylink_mac_ops {
 	void (*mac_link_up)(struct phylink_config *config, unsigned int mode,
 			    phy_interface_t interface,
 			    struct phy_device *phy);
+	void (*mac_pcs_get_state)(struct phylink_config *config,
+                                  struct phylink_link_state *state);
 };
 
 #if 0 /* For kernel-doc purposes only. */
