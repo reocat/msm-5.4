@@ -742,10 +742,10 @@ static u64 calculate_bandwidth(u32 size, u32 interval, u32 frames)
 
 static u64 get_stream_age(struct mrp_port_info *info)
 {
-	struct timespec ts;
+	struct timespec64 ts;
 	u64 age;
 
-	ts = ktime_to_timespec(ktime_get_real());
+	ts = ktime_to_timespec64(ktime_get_real());
 	age = ts.tv_sec;
 	age *= 1000000000;
 	age += ts.tv_nsec;
@@ -1482,7 +1482,7 @@ dbg_msg(" %s %x %x"NL, __func__, ports, *tx_ports);
 		}
 		*tx_ports = 0;
 	} else {
-		uint uninitialized_var(q);
+		uint q;
 		int cnt = 0;
 
 		for (n = 0; n <= mrp->ports; n++) {
@@ -1779,10 +1779,10 @@ dbg_msg(" %s %d=%x:%d"NL, __func__, port, new_decl, vlan->id);
 	}
 #ifdef DEBUG_MVRP
 #ifdef DEBUG
-if (dbg_mrp_vlan)
-	mrp_show_node(&mrp->vlan_list, show_vlan_info);
+	if (dbg_mrp_vlan)
+		mrp_show_node(&mrp->vlan_list, show_vlan_info);
 	if (mrp->vlan_list.cnt > 4) {
-if (dbg_mrp_vlan)
+		if (dbg_mrp_vlan)
 dbg_msg(" stop dbg vlan"NL);
 		dbg_mrp_vlan = 0;
 	}
@@ -1793,8 +1793,7 @@ dbg_msg(" stop dbg vlan"NL);
 
 #if 1
 	if (mrp->rx_ports) {
-
-if (mrp->rx_ports != sw->rx_ports[0])
+		if (mrp->rx_ports != sw->rx_ports[0])
 dbg_msg(" rx: %x %x"NL, mrp->rx_ports, sw->rx_ports[0]);
 	}
 #endif
@@ -8370,6 +8369,8 @@ static int sysfs_mrp_port_write(struct ksz_sw *sw, int proc_num, uint n,
 			num = (info->speed * 1000) - 1;
 		num *= 100;
 		num /= info->speed;
+
+	/* fallthrough */
 	case PROC_SET_TC_ADMIN_IDLE_SLOPE:
 		if (num >= 0 && num < 100000) {
 			mrp_set_slope(mrp, port, index, info, num);

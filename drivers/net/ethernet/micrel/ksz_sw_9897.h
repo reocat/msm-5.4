@@ -1,7 +1,7 @@
 /**
  * Microchip KSZ9897 switch common header
  *
- * Copyright (c) 2015-2020 Microchip Technology Inc.
+ * Copyright (c) 2015-2021 Microchip Technology Inc.
  *	Tristram Ha <Tristram.Ha@microchip.com>
  *
  * Copyright (c) 2013-2015 Micrel, Inc.
@@ -52,6 +52,10 @@ struct ksz_vlan_table;
 
 #define NUM_OF_VID			4094
 #define NUM_OF_MSTI			8
+
+#ifdef CONFIG_PHYLINK
+#include <linux/phylink.h>
+#endif
 
 #include "ksz_sw_api.h"
 #ifdef CONFIG_KSZ_MSTP
@@ -201,10 +205,6 @@ struct ksz_acl_table {
 	u16 cnt;
 	u8 tcp_flag_mask;
 	u8 tcp_flag;
-#if 0
-	u8 ip6_addr[16];
-	u8 ip6_mask[16];
-#endif
 	u32 mode:2;
 	u32 enable:2;
 	u32 src:1;
@@ -440,7 +440,6 @@ enum {
  */
 struct ksz_port_info {
 	phy_interface_t interface;
-	struct phy_device *phydev;
 	uint state;
 	uint tx_rate;
 	u8 duplex;
@@ -457,7 +456,6 @@ struct ksz_port_info {
 	u8 own_duplex;
 	u16 own_speed;
 	u8 phy_id;
-	u32 report:1;
 	u32 phy:1;
 	u32 fiber:1;
 
@@ -524,22 +522,21 @@ struct ksz_sw_reg_ops {
 
 struct ksz_sw_net_ops {
 	void (*setup_special)(struct ksz_sw *sw, int *port_cnt,
-		int *mib_port_cnt, int *dev_cnt);
+		int *mib_port_cnt, int *dev_cnt,
+		const void *ops);
 	void (*setup_mdiobus)(struct ksz_sw *sw, void *bus);
 	int (*setup_dev)(struct ksz_sw *sw, struct net_device *dev,
 		char *dev_name, struct ksz_port *port, int i, uint port_cnt,
 		uint mib_port_cnt);
 	void (*leave_dev)(struct ksz_sw *sw);
-	u8 (*get_state)(struct net_device *dev);
-	void (*set_state)(struct net_device *dev, u8 state);
-	struct ksz_port *(*get_priv_port)(struct net_device *dev);
 	int (*get_ready)(struct net_device *dev);
 
 	void (*start)(struct ksz_sw *sw, u8 *addr);
 	int (*stop)(struct ksz_sw *sw, int complete);
-	int (*open_dev)(struct ksz_sw *sw, struct net_device *dev, u8 *addr);
+	int (*open_dev)(struct ksz_sw *sw, struct net_device *dev,
+		struct ksz_port *port, u8 *addr);
 	void (*open_port)(struct ksz_sw *sw, struct net_device *dev,
-		struct ksz_port *port, u8 *state);
+		struct ksz_port *port);
 	void (*close_port)(struct ksz_sw *sw, struct net_device *dev,
 		struct ksz_port *port);
 	void (*open)(struct ksz_sw *sw);
@@ -756,7 +753,6 @@ struct phy_priv {
 #define HSR_REDBOX			BIT(26)
 #define DSA_SUPPORT			BIT(28)
 #define DIFF_MAC_ADDR			BIT(29)
-#define QW_HW				BIT(30)
 #define PTP_HW				BIT(31)
 
 /* Software overrides. */
@@ -855,10 +851,12 @@ struct ksz_sw {
 	int intr_using;
 
 	struct ksz_sw_info *info;
-	struct ksz_port_info port_info[SWITCH_PORT_NUM];
+	struct ksz_port_info port_info[TOTAL_PORT_NUM];
 	struct net_device *main_dev;
+	struct ksz_port *main_port;
 	struct net_device *netdev[TOTAL_PORT_NUM];
 	struct ksz_port *netport[TOTAL_PORT_NUM];
+	struct device_node *devnode[TOTAL_PORT_NUM];
 	struct phy_device phy_map[TOTAL_PORT_NUM + 1];
 	struct phy_device *phy[TOTAL_PORT_NUM + 1];
 	struct phy_priv phydata[TOTAL_PORT_NUM + 1];
@@ -877,6 +875,10 @@ struct ksz_sw {
 	struct ksz_timer_info *monitor_timer_info;
 	struct ksz_counter_info *counter;
 	struct delayed_work *link_read;
+
+#ifdef CONFIG_PHYLINK
+	const struct phylink_mac_ops *phylink_ops;
+#endif
 
 	const struct ksz_sw_ops *ops;
 	const struct ksz_sw_reg_ops *reg;
@@ -937,8 +939,6 @@ struct ksz_sw {
 	uint features;
 	uint overrides;
 
-	struct napi_struct *napi;
-
 	int multi_dev;
 	int stp;
 	int fast_aging;
@@ -992,17 +992,27 @@ struct ksz_port {
 	u8 duplex;
 	u16 speed;
 	u8 force_link;
+	u8 state;
+	uint iba_ready:1;
+	uint need_mac:1;
+	uint ready:1;
+	uint report:1;
 	u16 link_ports;
 	u16 live_ports;
 
 	struct ksz_port_info *linked;
 
+	struct ksz_sw *sw;
+
+	struct work_struct link_update;
 	struct net_device *netdev;
 	struct phy_device *phydev;
-	struct ksz_sw *sw;
-	struct work_struct link_update;
+	struct device_node *dn;
+#ifdef CONFIG_PHYLINK
 	struct phylink *pl;
-	u32    ready:1;
+	struct phylink_config pl_config;
+	struct phylink_link_state pl_state;
+#endif
 };
 
 static inline void sw_update_csum(struct ksz_sw *sw)

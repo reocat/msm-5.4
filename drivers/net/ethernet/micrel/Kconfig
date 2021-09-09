@@ -17,43 +17,6 @@ config NET_VENDOR_MICREL
 
 if NET_VENDOR_MICREL
 
-config KS8842
-	tristate "Micrel KSZ8841/42 with generic bus interface"
-	depends on HAS_IOMEM && DMA_ENGINE
-	---help---
-	  This platform driver is for KSZ8841(1-port) / KS8842(2-port)
-	  ethernet switch chip (managed, VLAN, QoS) from Micrel or
-	  Timberdale(FPGA).
-
-config KS8851
-	tristate "Micrel KS8851 SPI"
-	depends on SPI
-	select MII
-	select CRC32
-	select EEPROM_93CX6
-	---help---
-	  SPI driver for Micrel KS8851 SPI attached network chip.
-
-config KS8851_MLL
-	tristate "Micrel KS8851 MLL"
-	depends on HAS_IOMEM
-	select MII
-	---help---
-	  This platform driver is for Micrel KS8851 Address/data bus
-	  multiplexed network chip.
-
-config KSZ884X_PCI
-	tristate "Micrel KSZ8841/2 PCI"
-	depends on PCI
-	select MII
-	select CRC32
-	---help---
-	  This PCI driver is for Micrel KSZ8841/KSZ8842 PCI Ethernet chip.
-
-	  To compile this driver as a module, choose M here. The module
-	  will be called ksz884x.
-
-
 config KSZ_PTP
 	bool "1588 PTP support"
 	depends on KSZ8462_HLI || HAVE_KSZ8463 || HAVE_KSZ9897
@@ -70,7 +33,7 @@ config KSZ_STP
 
 menuconfig KSZ_SWITCHES
 	tristate "Drivers for Microchip KSZ switches"
-	---help---
+	help
 	  Supports Microchip KSZ switches.
 
 if KSZ_SWITCHES
@@ -78,6 +41,10 @@ if KSZ_SWITCHES
 comment "Microchip KSZ switch device drivers"
 
 config KSZ_SWITCH
+	bool
+	default n
+
+config KSZ_SMI
 	bool
 	default n
 
@@ -94,15 +61,23 @@ config I2C_KSZ9897
 	tristate "I2C driver for Microchip KSZ9897 switch"
 	select KSZ_SWITCH
 	select HAVE_KSZ9897
-	---help---
+	help
 	  Supports the Microchip KSZ9897 switch in I2C mode.
 
 config SPI_KSZ9897
 	tristate "SPI driver for Microchip KSZ9897 switch"
 	select KSZ_SWITCH
 	select HAVE_KSZ9897
-	---help---
+	help
 	  Supports the Microchip KSZ9897 switch in SPI mode.
+
+config KSZ9897_EMBEDDED
+	bool "Microchip KSZ9897 switch support in network controller"
+	depends on I2C_KSZ9897 = n && SPI_KSZ9897 = n
+	select KSZ_SWITCH_EMBEDDED
+	select HAVE_KSZ9897
+	help
+	  Supports the Microchip KSZ9897 switch used within a network controller.
 
 config IBA_KSZ9897
 	bool "IBA driver for Microchip KSZ9897 switch"
@@ -110,7 +85,7 @@ config IBA_KSZ9897
 	select KSZ_SWITCH_EMBEDDED
 	select KSZ_IBA
 	select HAVE_KSZ9897
-	---help---
+	help
 	  Supports the Microchip KSZ9897 switch in IBA mode.
 
 config KSZ_IBA
@@ -129,7 +104,7 @@ config KSZ_AVB
 
 config KSZ_MRP
 	bool "MRP support"
-	depends on KSZ_SWITCH
+	depends on KSZ_SWITCH && HAVE_KSZ9897
 	default y if (HAVE_KSZ9897)
 	help
 	  Enable MRP support.
@@ -140,6 +115,16 @@ config KSZ_MSRP
 	default y
 	help
 	  Enable MSRP support.
+
+config KSZ_MSTP
+	bool "MSTP support"
+	depends on HAVE_KSZ9897
+	select KSZ_STP
+	select CRYPTO_HMAC
+	select CRYPTO_MD5
+	default n
+	help
+	  Enable MSTP support.
 
 config KSZ_DLR
 	bool "DLR support"
@@ -156,4 +141,5 @@ config KSZ_HSR
 	  Enable HSR support.
 
 endif
+
 endif # NET_VENDOR_MICREL
