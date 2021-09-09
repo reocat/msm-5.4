@@ -8,12 +8,9 @@
 #include <linux/of_graph.h>
 #include <linux/pm_runtime.h>
 #include <linux/slab.h>
-#include <drm/drm_bridge_connector.h>
-#include <drm/drm_device.h>
 #include <drm/drm_modeset_helper.h>
 
 #include "dcss-dev.h"
-#include "dcss-kms.h"
 
 static void dcss_clocks_enable(struct dcss_dev *dcss)
 {
@@ -250,13 +247,9 @@ void dcss_dev_destroy(struct dcss_dev *dcss)
 int dcss_dev_suspend(struct device *dev)
 {
 	struct dcss_dev *dcss = dcss_drv_dev_to_dcss(dev);
-	struct drm_device *ddev = dcss_drv_dev_to_drm(dev);
-	struct dcss_kms_dev *kms = container_of(ddev, struct dcss_kms_dev, base);
 	int ret;
 
-	drm_bridge_connector_disable_hpd(kms->connector);
-
-	drm_mode_config_helper_suspend(ddev);
+	drm_mode_config_helper_suspend(dcss_drv_dev_to_drm(dev));
 
 	if (pm_runtime_suspended(dev))
 		return 0;
@@ -273,11 +266,9 @@ int dcss_dev_suspend(struct device *dev)
 int dcss_dev_resume(struct device *dev)
 {
 	struct dcss_dev *dcss = dcss_drv_dev_to_dcss(dev);
-	struct drm_device *ddev = dcss_drv_dev_to_drm(dev);
-	struct dcss_kms_dev *kms = container_of(ddev, struct dcss_kms_dev, base);
 
 	if (pm_runtime_suspended(dev)) {
-		drm_mode_config_helper_resume(ddev);
+		drm_mode_config_helper_resume(dcss_drv_dev_to_drm(dev));
 		return 0;
 	}
 
@@ -287,9 +278,7 @@ int dcss_dev_resume(struct device *dev)
 
 	dcss_ctxld_resume(dcss->ctxld);
 
-	drm_mode_config_helper_resume(ddev);
-
-	drm_bridge_connector_enable_hpd(kms->connector);
+	drm_mode_config_helper_resume(dcss_drv_dev_to_drm(dev));
 
 	return 0;
 }
