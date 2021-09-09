@@ -1001,6 +1001,8 @@ struct ksz_port {
 	struct phy_device *phydev;
 	struct ksz_sw *sw;
 	struct work_struct link_update;
+	struct phylink *pl;
+	u32    ready:1;
 };
 
 static inline void sw_update_csum(struct ksz_sw *sw)
