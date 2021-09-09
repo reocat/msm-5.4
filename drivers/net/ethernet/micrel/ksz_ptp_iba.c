@@ -1213,7 +1213,7 @@ static void ptp_start_iba(struct ptp_info *ptp, int init)
 	struct ksz_iba_info *info = &sw->info->iba;
 	u32 data[3];
 	u16 ctrl;
-	struct timespec ts;
+	struct timespec64 ts;
 	struct ptp_utime t;
 
 	if (!ptp->version) {
@@ -1256,7 +1256,7 @@ static void ptp_start_iba(struct ptp_info *ptp, int init)
 	ptp_tx_intr_enable(ptp);
 	ptp->ops->release(ptp);
 
-	ts = ktime_to_timespec(ktime_get_real());
+	ts = ktime_to_timespec64(ktime_get_real());
 	t.sec = ts.tv_sec;
 	t.nsec = ts.tv_nsec;
 	ptp->ops->acquire(ptp);
