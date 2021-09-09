@@ -258,7 +258,7 @@ static int fec_enet_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 	return 0;
 }
 
-static int sw_device_seen;
+static int sw_device_seen = 1;
 
 #if !defined(CONFIG_KSZ_IBA_ONLY)
 static struct ksz_sw *check_avail_switch(struct net_device *netdev, int id)
