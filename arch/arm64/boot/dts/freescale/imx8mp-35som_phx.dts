@@ -146,12 +146,14 @@
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio2 10 1>;
 		#reset-cells = <0>;
+		default-state = "off";
 	};
 
 	ksz9477_reset: ksz9897-reset {
 		compatible = "gpio-reset";
 		reset-gpios = <&gpio4 2 1>;
 		#reset-cells = <0>;
+		default-state = "off";
 	};
 };
 
@@ -219,8 +221,7 @@
 &eqos {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
-	phy-mode = "rgmii-txid";
-	phy-handle = <&ethphy0>;
+	phy-mode = "rgmii-id";
 	resets = <&ksz9897_reset>;
 	status = "okay";
 
@@ -228,20 +229,6 @@
                 speed = <1000>;
                 full-duplex;
         };
-
-	mdio {
-		compatible = "snps,dwmac-mdio";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		ethphy0: ethernet-phy@2 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <2>;
-			micrel,led-mode = <1>;
-                        eee-broken-100tx;
-                        eee-broken-1000t;
-		};
-	};
 };
 
 &fec {
@@ -460,6 +447,57 @@
                compatible = "ti,tmp75";
                reg = <0x4f>;
                status = "okay";
+       };
+
+       ksz9897: ksz9897@5f {
+               compatible = "microchip,ksz9897";
+               reg = <0x5f>;
+               phy-mode = "rgmii-txid";
+
+               interrupt-parent = <&gpio2>;
+               interrupts = <11 IRQ_TYPE_LEVEL_LOW>;
+               status = "okay";
+               ports {
+                       #address-cells = <1>;
+                       #size-cells = <0>;
+                       port@0 {
+                               reg = <0>;
+                               label = "lan1";
+                       };
+                       port@1 {
+                               reg = <1>;
+                               label = "lan2";
+                       };
+                       port@2 {
+                               reg = <2>;
+                               label = "lan3";
+                       };
+                       port@3 {
+                               reg = <3>;
+                               label = "lan4";
+                       };
+                       port@4 {
+                               reg = <4>;
+                               label = "lan5";
+                       };
+                       port@5 {
+                               reg = <5>;
+                               label = "cpu";
+                               ethernet = <&eqos>;
+                               fixed-link {
+                                      speed = <1000>;
+                                      full-duplex;
+                               };
+                       };
+                       port@6 {
+                              reg = <6>;
+                              label = "lan6";
+                              fixed-link {
+                                     speed = <1000>;
+                                     full-duplex;
+                              };
+                       };
+               };
        };
 
 };
