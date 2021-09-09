@@ -2422,7 +2422,7 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 			napi_enable(&fep->napi);
 		}
 #ifdef HAVE_KSZ_SWITCH
-		fep->ready = netif_running(ndev);
+		fep->port.ready = netif_running(ndev);
 #endif
 	} else {
 		if (fep->link) {
@@ -3893,33 +3893,12 @@ static int fec_enet_alloc_buffers(struct net_device *ndev)
 static void priv_adjust_link(struct net_device *dev)
 {}
 
-static u8 get_priv_state(struct net_device *dev)
-{
-	struct fec_enet_private *priv = netdev_priv(dev);
-
-	return priv->state;
-}  /* get_priv_state */
-
-static void set_priv_state(struct net_device *dev, u8 state)
-{
-	struct fec_enet_private *priv = netdev_priv(dev);
-
-	priv->state = state;
-}  /* set_priv_state */
-
-static struct ksz_port *get_priv_port(struct net_device *dev)
-{
-	struct fec_enet_private *priv = netdev_priv(dev);
-
-	return &priv->port;
-}  /* get_priv_port */
-
 #if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
 static int get_net_ready(struct net_device *dev)
 {
 	struct fec_enet_private *priv = netdev_priv(dev);
 
-	return priv->hw_priv->ready;
+	return priv->hw_priv->port.ready;
 }  /* get_net_ready */
 #endif
 
@@ -4116,7 +4095,7 @@ fec_enet_open(struct net_device *ndev)
 			int rx_mode = 0;
 
 			/* Need to wait for adjust_link to start operation. */
-			fep->ready = false;
+			fep->port.ready = false;
 			fep->hw_multi = 0;
 			fep->hw_promisc = 0;
 
@@ -4124,7 +4103,7 @@ fec_enet_open(struct net_device *ndev)
 			/* Clear MIB counters for debugging. */
 			memset(&fep->ethtool_stats, 0, FEC_STATS_SIZE);
 #endif
-			rx_mode = sw->net_ops->open_dev(sw, ndev,
+			rx_mode = sw->net_ops->open_dev(sw, ndev, &pfep->port,
 				ndev->dev_addr);
 			if (rx_mode & 1) {
 				fep->hw_multi = 1;
@@ -4138,7 +4117,7 @@ fec_enet_open(struct net_device *ndev)
 		}
 
 skip_hw:
-		sw->net_ops->open_port(sw, pndev, &pfep->port, &pfep->state);
+		sw->net_ops->open_port(sw, pndev, &pfep->port);
 		fep->opened++;
 	}
 #endif
@@ -4224,7 +4203,7 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	/* Reset ready indication. */
-	fep->ready = false;
+	fep->port.ready = false;
 
 	if (!sw_is_switch(sw))
 #endif
@@ -4771,13 +4750,11 @@ static void prep_sw_first(struct ksz_sw *sw, int *port_count,
 	*mib_port_count = 1;
 	*dev_count = 1;
 	dev_name[0] = '\0';
-	sw->net_ops->get_state = get_priv_state;
-	sw->net_ops->set_state = set_priv_state;
-	sw->net_ops->get_priv_port = get_priv_port;
 #if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
 	sw->net_ops->get_ready = get_net_ready;
 #endif
-	sw->net_ops->setup_special(sw, port_count, mib_port_count, dev_count);
+	sw->net_ops->setup_special(sw, port_count, mib_port_count, dev_count,
+				   NULL);
 	sw_update_csum(sw);
 }  /* prep_sw_first */
 
@@ -4876,10 +4853,6 @@ static int fec_enet_sw_init(struct fec_enet_private *fep)
 
 		fep->hw_priv = hw_priv;
 		fep->phy_interface = hw_priv->phy_interface;
-		dev->phydev = &fep->dummy_phy;
-		dev->phydev->duplex = 1;
-		dev->phydev->speed = SPEED_1000;
-		dev->phydev->autoneg = 1;
 
 		spin_lock_init(&fep->tx_lock);
 
