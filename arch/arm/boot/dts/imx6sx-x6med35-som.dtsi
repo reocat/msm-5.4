@@ -15,7 +15,6 @@
 		linux,usable-memory = <0x80000000 0x1ff00000>;
 	};
 
-	/*
 	reserved-memory {
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -31,7 +30,6 @@
 			no-map;
 		};
 	};
-	*/
 
 	reg_vdd_3v3: regulator-vdd-3v3 {
 		compatible = "regulator-fixed";
@@ -61,7 +59,7 @@
 		compatible = "fsl,imx6sx-rpmsg";
 		vdev-nums = <1>;
 		reg = <0xbff00000 0x10000>;
-		status = "disabled";
+		status = "okay";
 	};
 };
 
