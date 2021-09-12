@@ -175,7 +175,8 @@
 		simple-audio-card,bitclock-master = <&sound_codec>;
 		simple-audio-card,frame-master = <&sound_codec>;
 		simple-audio-card,widgets =
-						"AMIC", "Ext Spk";
+						"Microphone", "AMIC",
+						"Speaker", "Ext Spk";
 		simple-audio-card,routing =
 						"Ext Spk", "LSPK",
 						"Ext Spk", "RSPK",
