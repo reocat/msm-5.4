@@ -423,6 +423,8 @@
 		#size-cells = <1>;
 		compatible = "winbond,w25q128", "jedec,spi-nor";
 		spi-max-frequency = <15625000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <4>;
 		reg = <0>;
 	};
 };
