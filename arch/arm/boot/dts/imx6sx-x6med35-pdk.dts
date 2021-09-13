@@ -414,6 +414,10 @@
 	status = "okay";
 };
 
+&pxp {
+	status = "okay";
+};
+
 &qspi2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_qspi2>;
