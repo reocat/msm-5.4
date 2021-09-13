@@ -31,19 +31,21 @@
 
 	gpio-keys {
 		compatible = "gpio-keys";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_gpiokeys>;
 
 		s1 {
 			label = "s1";
+			gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_ESC>;
 			wakeup-source;
-			gpios = <&gpio1 11 GPIO_PULL_UP>;
 		};
 
 		s2 {
 			label = "s2";
+			gpios = <&gpio4 12 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_SPACE>;
 			wakeup-source;
-			gpios = <&gpio4 12 GPIO_PULL_UP>;
 		};
 	};
 
@@ -658,6 +660,13 @@
 			fsl,pins = <
 				MX6SX_PAD_QSPI1B_SS1_B__CAN2_RX		0x1b020
 				MX6SX_PAD_QSPI1A_DQS__CAN2_TX		0x1b020
+			>;
+		};
+
+		pinctrl_gpiokeys: gpiokeysgrp {
+			fsl,pins = <
+				MX6SX_PAD_GPIO1_IO11__GPIO1_IO_11		0xf000
+				MX6SX_PAD_NAND_RE_B__GPIO4_IO_12		0xf000
 			>;
 		};
 
