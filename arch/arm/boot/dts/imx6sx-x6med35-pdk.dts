@@ -51,42 +51,42 @@
 		compatible = "gpio-leds";
 
 		dl1 {
-			color = <LED_COLOR_ID_YELLOW>;
+			label = "yellow:dl1";
 			gpios = <&led_expander 0 GPIO_ACTIVE_LOW>;
 		};
 
 		dl2 {
-			color = <LED_COLOR_ID_BLUE>;
+			label = "blue:dl2";
 			gpios = <&led_expander 1 GPIO_ACTIVE_LOW>;
 		};
 
 		dl3 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl3";
 			gpios = <&led_expander 2 GPIO_ACTIVE_LOW>;
 		};
 
 		dl4 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl4";
 			gpios = <&led_expander 3 GPIO_ACTIVE_LOW>;
 		};
 
 		dl5 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl5";
 			gpios = <&led_expander 4 GPIO_ACTIVE_LOW>;
 		};
 
 		dl6 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl6";
 			gpios = <&led_expander 5 GPIO_ACTIVE_LOW>;
 		};
 
 		dl7 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl7";
 			gpios = <&led_expander 6 GPIO_ACTIVE_LOW>;
 		};
 
 		dl8 {
-			color = <LED_COLOR_ID_GREEN>;
+			label = "green:dl8";
 			gpios = <&led_expander 7 GPIO_ACTIVE_LOW>;
 		};
 	};
