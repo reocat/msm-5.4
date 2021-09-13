@@ -363,10 +363,10 @@
 	};
 };
 
-&i2c2 {
+&i2c4 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_i2c4>;
-	clock-frequency = <1000000>;
+	clock-frequency = <400000>;
 	status = "okay";
 
 	ov5640: camera@3c {
