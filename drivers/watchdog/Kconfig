@@ -708,6 +708,13 @@ config IMX2_WDT
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx2_wdt.
 
+config IOTGW_EXT_WDT
+	tristate "IOTGW External Watchdog"
+	depends on ARCH_MXC || ARCH_LAYERSCAPE
+	help
+	  This is the driver for the hardware external watchdog
+	  on the IOTGW boards and controlled by GPIO.
+
 config IMX_SC_WDT
 	tristate "IMX SC Watchdog"
 	depends on HAVE_ARM_SMCCC

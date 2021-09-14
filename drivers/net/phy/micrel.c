@@ -648,10 +648,16 @@ err_force_master:
 	return result;
 }
 
+#define MII_KSZ9131_RX_DLL_CONTROL  0x4C
+#define MII_KSZ9131_TX_DLL_CONTROL  0x4D
+#define MII_KSZ9131_PCS_LOOP_CONTROL  0x11
+#define MII_KSZ9131_DLL_BYPASS_OFFSET    12
+#define MII_KSZ9131_DLL_BYPASS_MASK     0x1
 #define KSZ9131_SKEW_5BIT_MAX	2400
 #define KSZ9131_SKEW_4BIT_MAX	800
 #define KSZ9131_OFFSET		700
 #define KSZ9131_STEP		100
+#define KSZ9131_ENABLE_10BT_PREAMBLE		0x4
 
 static int ksz9131_of_load_skew_values(struct phy_device *phydev,
 				       struct device_node *of_node,
@@ -705,6 +711,96 @@ static int ksz9131_of_load_skew_values(struct phy_device *phydev,
 	return phy_write_mmd(phydev, 2, reg, newval);
 }
 
+#if 0
+static int ksz9131_of_load_dll_bypass_values(struct phy_device *phydev, struct device_node *of_node, u16 reg, char *field)
+{
+	int ofval = 0;
+	int ctl_val = 0;
+	int ret = 0;
+
+	ret = of_property_read_s32(of_node, field, &ofval);
+	if(ret)
+	{
+		printk("[KSZ9131--not need change dll bypass config!\n");
+		return 0;
+	}
+	ofval = ofval ? 1 : 0;
+	ctl_val = phy_read_mmd(phydev, 2, reg);
+	printk("[KSZ9131--old dll control config%d!\n", ctl_val);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((ofval & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	printk("[KSZ9131--new dll control config:%d!\n", ctl_val);
+
+	return phy_write_mmd(phydev, 2, reg, ctl_val);
+}
+#endif
+
+static int ksz9131_config_rgmii_interface_delay(struct phy_device *phydev)
+{
+	int rxdly_bypass = 0;
+	int txdly_bypass = 1;
+	int ctl_val = 0;
+	int ret = 0;
+
+	switch (phydev->interface) {
+	case PHY_INTERFACE_MODE_RGMII_ID:
+		rxdly_bypass = 0;
+		txdly_bypass = 0;
+	break;
+	case PHY_INTERFACE_MODE_RGMII_RXID:
+		rxdly_bypass = 0;
+		txdly_bypass = 1;
+	break;
+	case PHY_INTERFACE_MODE_RGMII_TXID:
+		rxdly_bypass = 1;
+		txdly_bypass = 0;
+	break;
+	default: /* the rest of the modes imply leaving delay as is. */
+		return 0;
+	}
+	
+	ctl_val = phy_read_mmd(phydev, 2, MII_KSZ9131_TX_DLL_CONTROL);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((txdly_bypass & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	ret = phy_write_mmd(phydev, 2, MII_KSZ9131_TX_DLL_CONTROL, ctl_val);
+	if (ret < 0) {
+		dev_err(&phydev->mdio.dev, "tx delay set failed\n");
+		return ret;
+	}
+
+	ctl_val = phy_read_mmd(phydev, 2, MII_KSZ9131_RX_DLL_CONTROL);
+	ctl_val &= (~(MII_KSZ9131_DLL_BYPASS_MASK << MII_KSZ9131_DLL_BYPASS_OFFSET));
+	ctl_val |= ((rxdly_bypass & MII_KSZ9131_DLL_BYPASS_MASK) << MII_KSZ9131_DLL_BYPASS_OFFSET);
+	ret = phy_write_mmd(phydev, 2, MII_KSZ9131_RX_DLL_CONTROL, ctl_val);
+
+	if (ret < 0) {
+		dev_err(&phydev->mdio.dev, "rx delay set failed\n");
+		return ret;
+	}
+
+	return 0;
+}
+
+static int ksz9131_enable_10bt_preamble(struct phy_device *phydev)
+{
+    int ret = 0;
+    int regVal = 0;
+
+    ret = phy_read(phydev, MII_KSZ9131_PCS_LOOP_CONTROL);
+    if(ret < 0) {
+        dev_err(&phydev->mdio.dev, "get pcs loop reg value failed\n");
+	return ret;
+    }
+    regVal = (ret | KSZ9131_ENABLE_10BT_PREAMBLE);
+    ret = phy_write(phydev, MII_KSZ9131_PCS_LOOP_CONTROL, regVal);
+    if(ret < 0) {
+        dev_err(&phydev->mdio.dev, "set pcs loop reg value failed\n");
+	return ret;
+    }
+
+    return ret;
+}
+
 static int ksz9131_config_init(struct phy_device *phydev)
 {
 	const struct device *dev = &phydev->mdio.dev;
@@ -719,6 +815,8 @@ static int ksz9131_config_init(struct phy_device *phydev)
 		"txd2-skew-psec", "txd3-skew-psec"
 	};
 	char *control_skews[2] = {"txen-skew-psec", "rxdv-skew-psec"};
+	char *tx_dll_bypass = "tx-dll-bypass";
+	char *rx_dll_bypass = "rx-dll-bypass";
 	const struct device *dev_walker;
 	int ret;
 
@@ -755,7 +853,24 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
-	return 0;
+#if 0
+	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_TX_DLL_CONTROL, tx_dll_bypass);
+	if (ret < 0)
+		return ret;
+
+	ret = ksz9131_of_load_dll_bypass_values(phydev, of_node, MII_KSZ9131_RX_DLL_CONTROL, rx_dll_bypass);
+	if (ret < 0)
+		return ret;
+#endif
+	ret = ksz9131_config_rgmii_interface_delay(phydev);
+	if (ret < 0)
+		return ret;
+
+	if (of_property_read_bool(of_node, "enable-10bt-preamble"))
+	{
+             ret = ksz9131_enable_10bt_preamble(phydev);
+	}
+	return ret;
 }
 
 #define KSZ8873MLL_GLOBAL_CONTROL_4	0x06
