@@ -230,6 +230,9 @@
 	compatible = "fsl,imx6s-csi";
 	status = "okay";
 
+	/delete-property/clock-names;
+	clock-names = "disp-axi", "csi_mclk", "disp_dcic";
+
 	port {
 		csi1_ep: endpoint {
 			remote-endpoint = <&ov5640_ep>;
