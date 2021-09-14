@@ -1484,18 +1484,12 @@ ims-pcu
 imx-dma
 imx-ipu-v3
 imx-mailbox
-imx-media-common
 imx-pcm-dma
 imx-pxp
 imx-sdma
 imx-vdoa
-imx6-media
-imx6-media-csi
-imx6-mipi-csi2
 imx6q-cpufreq
 imx6ul_tsc
-imx7-media-csi
-imx7-mipi-csis
 imx7d_adc
 imx7ulp_wdt
 imx8mm_thermal
@@ -2436,7 +2430,6 @@ orangefs
 oti6858
 otm3225a
 ov2640
-ov5640
 ov7251
 ov7640
 overlay
