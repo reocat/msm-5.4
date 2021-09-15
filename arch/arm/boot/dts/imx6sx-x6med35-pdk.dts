@@ -227,7 +227,7 @@
 };
 
 &csi1 {
-	compatible = "fsl,imx6ul-csi";
+	compatible = "fsl,imx6s-csi";
 	status = "okay";
 
 	port {
