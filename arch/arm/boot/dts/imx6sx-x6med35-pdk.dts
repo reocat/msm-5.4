@@ -377,12 +377,15 @@
 		pinctrl-0 = <&pinctrl_ov5640>;
 		reg = <0x3c>;
 		clocks = <&clks IMX6SX_CLK_CSI>;
-		clock-names = "xclk";
+		clock-names = "csi_mclk";
 		DOVDD-supply = <&reg_cam_1v8>; /* 1.8v */
 		AVDD-supply = <&reg_cam_2v8>;  /* 2.8v */
 		DVDD-supply = <&reg_cam_1v8>;  /* 1.8v */
-		powerdown-gpios = <&gpio3 18 GPIO_ACTIVE_HIGH>;
-		reset-gpios = <&gpio3 17 GPIO_ACTIVE_LOW>;
+		pwn-gpios = <&gpio3 18 GPIO_ACTIVE_HIGH>;
+		rst-gpios = <&gpio3 17 GPIO_ACTIVE_LOW>;
+		csi_id = <0>;
+		mclk = <24000000>;
+		mclk_source = <0>;
 		rotation = <180>;
 
 		port {
