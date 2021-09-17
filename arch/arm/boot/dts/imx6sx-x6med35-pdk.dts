@@ -291,6 +291,7 @@
 
 &gpio2 {
 	rs232_uart_sel {
+		gpio-hog;
 		gpios = <15 GPIO_ACTIVE_LOW>;
 		output-low;
 		line-name = "rs232_uart_sel";
@@ -298,10 +299,18 @@
 };
 
 &gpio4 {
-	rs485_cm_port_uart_sel {
+	rs485_cm_port_uart_sel_1 {
+		gpio-hog;
 		gpios = <9 GPIO_ACTIVE_LOW>;
 		output-low;
-		line-name = "rs485_cm_port_uart_sel";
+		line-name = "rs485_cmport1_uartsel";
+	};
+
+	rs485_cm_port_uart_sel_2 {
+		gpio-hog;
+		gpios = <14 GPIO_ACTIVE_LOW>;
+		output-low;
+		line-name = "rs485_cmport2_uartsel";
 	};
 };
 
@@ -809,6 +818,8 @@
 				MX6SX_PAD_SD3_DATA3__UART4_DCE_RX	0x1b0b1
 				MX6SX_PAD_SD3_CLK__UART4_DCE_CTS	0x1b0b1
 				MX6SX_PAD_SD3_DATA2__UART4_DCE_RTS	0x1b0b1
+				/* RS485_CM_PORT_UART_SEL#2 */
+				MX6SX_PAD_NAND_WE_B__GPIO4_IO_14	0x0b0b9
 			>;
 		};
 
@@ -818,6 +829,8 @@
 				MX6SX_PAD_KEY_COL3__UART5_DCE_TX	0x1b0b1
 				MX6SX_PAD_KEY_ROW2__UART5_DCE_CTS	0x1b0b1
 				MX6SX_PAD_KEY_COL2__UART5_DCE_RTS	0x1b0b1
+				/* RS485_CM_PORT_UART_SEL#1 */
+				MX6SX_PAD_NAND_DATA05__GPIO4_IO_9	0x0b0b9
 			>;
 		};
 
@@ -825,6 +838,8 @@
 			fsl,pins = <
 				MX6SX_PAD_KEY_COL1__UART6_DCE_TX	0x1b0b1
 				MX6SX_PAD_KEY_ROW1__UART6_DCE_RX	0x1b0b1
+				/* RS232_UART_SEL */
+				MX6SX_PAD_KEY_ROW0__GPIO2_IO_15		0x0b0b9
 			>;
 		};
 
