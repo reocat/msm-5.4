@@ -558,6 +558,24 @@
 
 &iomuxc {
 	imx6x-x6med35-som {
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hog1 &pinctrl_board_id>;
+
+		pinctrl_hog1: hoggrp-1 {
+			fsl,pins = <
+				MX6SX_PAD_USB_H_DATA__GPIO7_IO_10	0x83030
+			>;
+		};
+
+		pinctrl_board_id: hoggrp-2 {
+			fsl,pins = <
+				MX6SX_PAD_LCD1_DATA00__GPIO3_IO_1	0x110b0
+				MX6SX_PAD_LCD1_DATA01__GPIO3_IO_2	0x110b0
+				MX6SX_PAD_LCD1_DATA02__GPIO3_IO_3	0x110b0
+				MX6SX_PAD_LCD1_DATA23__GPIO3_IO_24	0x110b0
+			>;
+		};
+
 		pinctrl_audmux: audmuxgrp {
 			fsl,pins = <
 				MX6SX_PAD_LCD1_ENABLE__AUDMUX_AUD3_TXC	0x130b0
