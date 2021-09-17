@@ -192,6 +192,7 @@
 
 		sound_codec: simple-audio-card,codec {
 			sound-dai = <&codec>;
+			clocks = <&clks IMX6SX_CLK_AUDIO>;
 		};
 	};
 };
