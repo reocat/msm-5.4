@@ -509,6 +509,7 @@
 	pinctrl-0 = <&pinctrl_uart4>;
 	rts-gpios = <&gpio2 0 GPIO_ACTIVE_LOW>;
 	linux,rs485-enabled-at-boot-time;
+	rs485-rx-during-tx;
 	status = "okay";
 };
 
@@ -518,6 +519,7 @@
 	pinctrl-0 = <&pinctrl_uart5>;
 	rts-gpios = <&gpio2 17 GPIO_ACTIVE_LOW>;
 	linux,rs485-enabled-at-boot-time;
+	rs485-rx-during-tx;
 	status = "okay";
 };
 
@@ -805,7 +807,8 @@
 			fsl,pins = <
 				MX6SX_PAD_SD3_CMD__UART4_DCE_TX	0x1b0b1
 				MX6SX_PAD_SD3_DATA3__UART4_DCE_RX	0x1b0b1
-				MX6SX_PAD_SD3_CLK__GPIO7_IO_0	0xb099
+				MX6SX_PAD_SD3_CLK__UART4_DCE_CTS	0x1b0b1
+				MX6SX_PAD_SD3_DATA2__UART4_DCE_RTS	0x1b0b1
 			>;
 		};
 
@@ -813,7 +816,8 @@
 			fsl,pins = <
 				MX6SX_PAD_KEY_ROW3__UART5_DCE_RX	0x1b0b1
 				MX6SX_PAD_KEY_COL3__UART5_DCE_TX	0x1b0b1
-				MX6SX_PAD_KEY_ROW2__GPIO2_IO_17	0xb099
+				MX6SX_PAD_KEY_ROW2__UART5_DCE_CTS	0x1b0b1
+				MX6SX_PAD_KEY_COL2__UART5_DCE_RTS	0x1b0b1
 			>;
 		};
 
