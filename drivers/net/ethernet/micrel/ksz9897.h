@@ -68,6 +68,7 @@
 #define SW_AVB_ABLE			(1 << 4)
 #define SW_9567_RL_5_2			0xC
 #define SW_9477_SL_5_2			0xD
+#define SW_9897_SL_5_2			0xC	//defined for KSZ9897 switch
 
 #define SW_9896_GL_5_1			0xB
 #define SW_9896_RL_5_1			0x8

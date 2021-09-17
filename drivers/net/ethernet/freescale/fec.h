@@ -20,6 +20,26 @@
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
 
+#ifdef CONFIG_KSZ_SWITCH
+#ifdef CONFIG_PHYLINK
+#include <linux/phylink.h>
+#endif
+
+#if defined(CONFIG_HAVE_KSZ9897)
+#include "../micrel/ksz_cfg_9897.h"
+#elif defined(CONFIG_HAVE_KSZ8795)
+#include "../micrel/ksz_cfg_8795.h"
+#elif defined(CONFIG_HAVE_KSZ8895)
+#include "../micrel/ksz_cfg_8895.h"
+#elif defined(CONFIG_HAVE_KSZ8863)
+#include "../micrel/ksz_cfg_8863.h"
+#elif defined(CONFIG_HAVE_KSZ8463)
+#include "../micrel/ksz_cfg_8463.h"
+#elif defined(CONFIG_HAVE_LAN937X)
+#include "../microchip/lan937x_cfg.h"
+#endif
+#endif
+
 #ifdef CONFIG_IMX_SCU_SOC
 #include <dt-bindings/firmware/imx/rsrc.h>
 #include <linux/firmware/imx/sci.h>
@@ -629,12 +649,9 @@ struct fec_enet_private {
 #ifdef HAVE_KSZ_SWITCH
         struct platform_device  *sw_pdev;
 	struct fec_enet_private *hw_priv;
-	struct phy_device       dummy_phy;
 	spinlock_t              tx_lock;
 	struct ksz_port         port;
 	int                     phy_addr;
-	u8                      state;
-	u32                     ready:1;
 	u32                     multi:1;
 	u32                     promisc:1;
 	u8                      opened;
