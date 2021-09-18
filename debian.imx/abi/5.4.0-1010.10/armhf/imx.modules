@@ -228,6 +228,7 @@ ams-iaq-core
 ams369fg06
 analog
 analogix-anx78xx
+anatop-regulator
 ansi_cprng
 anubis
 anybuss_core
