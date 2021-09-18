@@ -18,6 +18,8 @@
 
 #include "clk.h"
 
+#define CCM_CCGR_OFFSET(index)		(index * 2)
+
 static const char *step_sels[]		= { "osc", "pll2_pfd2_396m", };
 static const char *pll1_sw_sels[]	= { "pll1_sys", "step", };
 static const char *periph_pre_sels[]	= { "pll2_bus", "pll2_pfd2_396m", "pll2_pfd0_352m", "pll2_198m", };
@@ -494,6 +496,16 @@ static void __init imx6sx_clocks_init(struct device_node *ccm_node)
 	imx_mmdc_mask_handshake(base, 0);
 
 	imx_check_clk_hws(hws, IMX6SX_CLK_CLK_END);
+
+	/*
+	 * QSPI2/GPMI_IO share the same clock source but with the
+	 * different gate, need explicitely gate the QSPI2 & GPMI_IO
+	 * during the clock init phase according to the SOC design.
+	 */
+	writel_relaxed(readl_relaxed(base + 0x78) &
+			~(3 << CCM_CCGR_OFFSET(5)), base + 0x78);
+	writel_relaxed(readl_relaxed(base + 0x78) &
+			~(3 << CCM_CCGR_OFFSET(14)), base + 0x78);
 
 	of_clk_add_hw_provider(np, of_clk_hw_onecell_get, clk_hw_data);
 
