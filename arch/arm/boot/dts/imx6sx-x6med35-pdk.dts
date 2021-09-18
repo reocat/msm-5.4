@@ -122,15 +122,7 @@
 		enable-active-high;
 	};
 
-	reg_wf_1v8: regulator-wf-1v8 {
-		compatible = "regulator-fixed";
-		regulator-name = "wifi_io_power";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		regulator-always-on;
-	};
-
-	reg_wifi_power: regulator-wifi-power {
+	reg_wifi: regulator-wifi {
 		compatible = "regulator-fixed";
 		regulator-name = "wifi_power";
 		regulator-min-microvolt = <1800000>;
@@ -553,8 +545,7 @@
 &usdhc2 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_usdhc2>;
-	vmmc-supply = <&reg_wifi_power>;
-	vqmmc-supply = <&reg_wf_1v8>;
+	vmmc-supply = <&reg_wifi>;
 	bus-width = <4>;
 	non-removable;
 	keep-power-in-suspend;
@@ -810,6 +801,8 @@
 				MX6SX_PAD_GPIO1_IO07__UART2_DCE_RX	0x1b0b1
 				MX6SX_PAD_GPIO1_IO08__UART2_RTS_B	0x1b0b1
 				MX6SX_PAD_GPIO1_IO09__UART2_CTS_B	0x1b0b1
+				/* bt_reg GPIO */
+				MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x1b0b1
 			>;
 		};
 
