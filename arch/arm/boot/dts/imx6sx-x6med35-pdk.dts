@@ -197,6 +197,16 @@
 	};
 };
 
+&adc1 {
+	vref-supply = <&reg_v_3v3>;
+	status = "okay";
+};
+
+&adc2 {
+	vref-supply = <&reg_v_3v3>;
+	status = "okay";
+};
+
 &anatop {
 	status = "disabled";
 };
