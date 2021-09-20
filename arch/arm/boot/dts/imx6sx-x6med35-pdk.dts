@@ -235,6 +235,7 @@
 
 	/delete-property/clock-names;
 	clock-names = "disp-axi", "csi_mclk", "disp_dcic";
+	power-domains = <&pd_disp>;
 
 	port {
 		csi1_ep: endpoint {
