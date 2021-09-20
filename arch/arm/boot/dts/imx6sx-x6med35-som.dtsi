@@ -108,6 +108,10 @@
 	};
 };
 
+&gpc {
+	fsl,ldo-bypass = <1>;
+};
+
 &i2c2 {
 	clock-frequency = <100000>;
 	pinctrl-names = "default";
@@ -134,10 +138,12 @@
 
 &reg_arm {
 	vin-supply = <&reg_vdd_1v38>;
+	regulator-allow-bypass;
 };
 
 &reg_soc {
 	vin-supply = <&reg_vdd_1v38>;
+	regulator-allow-bypass;
 };
 
 &usdhc4 {
