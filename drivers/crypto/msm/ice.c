@@ -65,7 +65,14 @@
 
 #define ICE_CRYPTO_CXT_FDE 1
 #define ICE_CRYPTO_CXT_FBE 2
-#define ICE_FDE_KEY_INDEX 31
+
+#define ICE_HASH_SIZE 32
+#define QSEECOM_ICE_FDE_KEY_INDEX 31
+
+static DEFINE_MUTEX(ioctl_lock);
+static DEFINE_SPINLOCK(mapper_lock);
+
+int mapper_lock_flag;
 
 static int ice_fde_flag;
 struct ice_clk_info {
@@ -119,8 +126,467 @@ struct ice_device {
 	wait_queue_head_t	block_suspend_ice_queue;
 };
 
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+struct available_key_slot_indexes {
+	int8_t top;
+	uint8_t slots[QSEECOM_ICE_FDE_KEY_INDEX+1];
+};
+
+struct mapper_node {
+	uint8_t slot_index;
+	uint8_t ice_fde_flag;	//To be used in per partition ice fde flag
+	unsigned char hash32[ICE_HASH_SIZE];
+	unsigned char *partition_name;
+	struct mapper_node *next;
+};
+
+static struct available_key_slot_indexes available_key_slots;
+static struct mapper_node *mapper;
+static struct qseecom_wipe_req_info wipe_info;
+#endif
+
 static int qcom_ice_init(struct ice_device *ice_dev, void *host_controller_data,
 			 ice_error_cb error_cb);
+
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+static void __qcom_ice_key_slot_indexes_init(void)
+{
+	int i = 0;
+	static bool init_done;
+
+	if (!init_done) {
+		spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+		for (i = 0; i < QSEECOM_ICE_FDE_KEY_INDEX+1; i++)
+			available_key_slots.slots[i] = i;
+		init_done = true;
+		available_key_slots.top = QSEECOM_ICE_FDE_KEY_INDEX;
+		spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	}
+}
+
+static int __qcom_ice_acquire_key_slot(void)
+{
+	int8_t top = -1;
+	int8_t index = -1;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	if (available_key_slots.top == -1) {
+		pr_err("All 32 slots are filled\n");
+		goto exit;
+	}
+	top = available_key_slots.top;
+	index = available_key_slots.slots[top];
+	available_key_slots.top--;
+exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	return index;
+}
+
+int qcom_ice_free_key_slot(int8_t slot)
+{
+	int ret = 0;
+	int8_t top = -1;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	if (available_key_slots.top == QSEECOM_ICE_FDE_KEY_INDEX) {
+		ret = -EINVAL;
+		pr_err("No slots are allocated to be freed");
+		goto exit;
+	}
+	available_key_slots.top++;
+	top = available_key_slots.top;
+	available_key_slots.slots[top] = slot;
+exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	return ret;
+}
+
+int qcom_ice_map_key_partition_name_pwd(uint8_t slot,
+					unsigned char *partition_name,
+					unsigned char *hash32)
+{
+	int ret = 0;
+	int len = 0;
+	struct mapper_node *node_traverse = NULL, *prev_node = NULL;
+	struct mapper_node *node = kmalloc(
+			sizeof(struct mapper_node), GFP_KERNEL);
+
+	len = strlen(partition_name)+1;
+	if (!node) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	node->partition_name = kmalloc(len, GFP_KERNEL);
+	if (!node->partition_name) {
+		kzfree(node);
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	node->slot_index = slot;
+	memcpy(node->partition_name, partition_name, len);
+	memcpy(node->hash32, hash32, ICE_HASH_SIZE);
+	node->next = NULL;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node_traverse = mapper;
+	if (!node_traverse) {
+		mapper = node;
+		goto unlock_exit;
+	}
+
+	while (node_traverse != NULL) {
+		if (!strcmp(node_traverse->partition_name, partition_name)) {
+			pr_err("Key slot has been already mapped for the given partition name");
+			ret = -EINVAL;
+			kzfree(node->partition_name);
+			kzfree(node);
+			goto unlock_exit;
+		}
+		prev_node = node_traverse;
+		node_traverse = node_traverse->next;
+	}
+	prev_node->next = node;
+unlock_exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+exit:
+	return ret;
+}
+
+int qcom_ice_umap_key_partition_name(uint8_t slot,
+				unsigned char *partition_name)
+{
+	int ret = 0;
+	int len = 0;
+	struct mapper_node *node = NULL, *prev_node = NULL;
+
+	if (!partition_name) {
+		pr_err("partition name cannot be NULL");
+		ret = -EINVAL;
+		return ret;
+	}
+	len = strlen(partition_name);
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node = mapper;
+
+	if (node == NULL) {
+		ret = -EINVAL;
+		goto no_map;
+	}
+
+	if (!strcmp(node->partition_name, partition_name)) {
+		mapper = node->next;
+		goto free_node;
+	}
+
+	while (node != NULL && strcmp(node->partition_name, partition_name)) {
+		prev_node = node;
+		node = node->next;
+	}
+
+	if (node == NULL) {
+		ret = -EINVAL;
+		goto no_map;
+	}
+	prev_node->next = node->next;
+
+free_node:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	kzfree(node->partition_name);
+	kzfree(node);
+	return ret;
+
+no_map:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	pr_debug("No key slot has been mapped with for the given paritition");
+	return ret;
+}
+
+unsigned char *qcom_ice_get_partition_name_from_pwd(unsigned char *hash32)
+{
+	int len = 0;
+	unsigned char *partition_name = NULL;
+	struct mapper_node *node = NULL;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node = mapper;
+
+	if (!hash32) {
+		pr_err("hash cannot be NULL");
+		goto exit;
+	}
+
+	if (node == NULL) {
+		pr_err("Mapper table empty!!!");
+		goto exit;
+	}
+
+	while (node && node->hash32 && memcmp(node->hash32,
+		hash32, ICE_HASH_SIZE))
+		node = node->next;
+
+	if (!node) {
+		pr_err("No partition found with given unique password");
+		goto exit;
+	}
+
+	if (!node->hash32) {
+		pr_err("Wrong Entry, password cannot be NULL");
+		goto exit;
+	}
+
+	len = strlen(node->partition_name)+1;
+	partition_name = kmalloc(len, GFP_ATOMIC);
+	if (!partition_name)
+		goto exit;
+
+	memcpy(partition_name, node->partition_name, len);
+exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	return partition_name;
+}
+
+int qcom_ice_get_key_slot(unsigned  char *partition_name)
+{
+	int ret = -1;
+	struct mapper_node *node = mapper;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node = mapper;
+
+	if (node == NULL)
+		goto exit;
+
+	while (node != NULL) {
+		if (!strcmp(node->partition_name, partition_name)) {
+			ret = node->slot_index;
+			goto exit;
+		}
+		node = node->next;
+	}
+exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+
+	if (ret == -1)
+		pr_debug("No key slot has been mapped with for the given paritition");
+
+	return ret;
+}
+
+int qcom_ice_get_pwd_for_partition(unsigned  char *partition_name,
+				unsigned char *hash32)
+{
+	int ret = -1;
+	struct mapper_node *node = mapper;
+
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node = mapper;
+
+	if (node == NULL)
+		goto exit;
+
+	while (node != NULL) {
+		if (!strcmp(node->partition_name, partition_name)) {
+			memcpy((void *)hash32, (void *)node->hash32,
+				ICE_HASH_SIZE);
+			ret = 0;
+			goto exit;
+		}
+		node = node->next;
+	}
+exit:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+
+	if (ret == -1)
+		pr_debug("No mapping is found for the mentioned partition");
+
+	return ret;
+}
+
+static int __qcom_ice_update_partition_pwd_mapper(unsigned char *partition_name,
+			unsigned char *current_has32, unsigned char *new_hash32)
+{
+	int ret = 0;
+	int len = 0;
+	struct mapper_node *node = mapper;
+
+	len = strlen(partition_name);
+	spin_lock_irqsave(&mapper_lock, mapper_lock_flag);
+	node = mapper;
+
+	if (node == NULL) {
+		ret = -EINVAL;
+		goto no_map;
+	}
+
+	while (node != NULL && strcmp(node->partition_name, partition_name))
+		node = node->next;
+
+	if (node == NULL) {
+		pr_err("No mapping found for the mentioned partition to update the password");
+		ret = -EINVAL;
+		goto no_map;
+	}
+
+	if (memcmp(node->hash32, current_has32, ICE_HASH_SIZE)) {
+		pr_err("Wrong current password");
+		ret = -EINVAL;
+		goto no_map;
+	}
+	memset(node->hash32, 0, ICE_HASH_SIZE);
+	memcpy(node->hash32, new_hash32, ICE_HASH_SIZE);
+
+no_map:
+	spin_unlock_irqrestore(&mapper_lock, mapper_lock_flag);
+	return ret;
+}
+
+static int __qcom_ice_add_to_mapper(void __user *argp)
+{
+	int ret = 0;
+	int8_t slot = -1;
+	unsigned char *partition_name = NULL;
+	struct ice_add_to_mapper_req add_to_mapper_req = {0};
+
+	ret = copy_from_user(&add_to_mapper_req, argp,
+				sizeof(add_to_mapper_req));
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		return ret;
+	}
+
+	partition_name = kmalloc(add_to_mapper_req.len, GFP_KERNEL);
+	if (!partition_name)
+		return -ENOMEM;
+
+	ret = copy_from_user(partition_name,
+				add_to_mapper_req.partition_name,
+				add_to_mapper_req.len);
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		goto free_buf;
+	}
+
+	slot = __qcom_ice_acquire_key_slot();
+	if (slot == -1) {
+		pr_err("No slots available to map paritition %s",
+			partition_name);
+		ret = -EINVAL;
+		goto free_buf;
+	}
+
+	ret = qcom_ice_map_key_partition_name_pwd(slot, partition_name,
+						add_to_mapper_req.hash32);
+free_buf:
+	if (partition_name)
+		kzfree(partition_name);
+
+	return ret;
+}
+
+static int __qcom_ice_remove_from_mapper(void __user *argp)
+{
+	int ret = 0;
+	int8_t slot = -1;
+	unsigned char *partition_name = NULL;
+	struct ice_remove_from_mapper_req remove_from_mapper = {0};
+
+	ret = copy_from_user(&remove_from_mapper, argp,
+				sizeof(remove_from_mapper));
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		return ret;
+	}
+
+	partition_name = kmalloc(remove_from_mapper.len, GFP_KERNEL);
+	if (!partition_name)
+		return -ENOMEM;
+
+	ret = copy_from_user(partition_name,
+				remove_from_mapper.partition_name,
+				remove_from_mapper.len);
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		goto free_buf;
+	}
+
+	slot = qcom_ice_get_key_slot(partition_name);
+	if (slot == -1) {
+		pr_err("No slot has been mapped to paritition %s",
+			partition_name);
+		ret = -EINVAL;
+		goto free_buf;
+	}
+
+	wipe_info.slot = slot;
+
+	ret = qcom_ice_get_pwd_for_partition(partition_name, wipe_info.hash32);
+	if (ret)
+		goto free_buf;
+
+	wipe_info.partition_name = kmalloc(remove_from_mapper.len+1,
+						GFP_KERNEL);
+	if (!wipe_info.partition_name) {
+		ret = -ENOMEM;
+		goto free_buf;
+	}
+
+	memcpy(wipe_info.partition_name, partition_name,
+		remove_from_mapper.len+1);
+
+	ret = qcom_ice_umap_key_partition_name(slot, partition_name);
+	if (ret) {
+		pr_err("No mapping found for partition %s", partition_name);
+		goto free_buf;
+	}
+
+	return ret;
+free_buf:
+	if (partition_name)
+		kzfree(partition_name);
+
+	return ret;
+}
+
+static int __qcom_ice_update_in_mapper(void __user *argp)
+{
+	int ret = 0;
+	unsigned char *partition_name = NULL;
+	struct ice_update_mapper_req update_mapper_req = {0};
+
+	ret = copy_from_user(&update_mapper_req, argp,
+				sizeof(update_mapper_req));
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		return ret;
+	}
+
+	partition_name = kmalloc(update_mapper_req.len, GFP_KERNEL);
+	if (!partition_name)
+		return -ENOMEM;
+
+	ret = copy_from_user(partition_name,
+				update_mapper_req.partition_name,
+				update_mapper_req.len);
+	if (ret) {
+		pr_err("copy_from_user failed\n");
+		return ret;
+	}
+
+	ret = __qcom_ice_update_partition_pwd_mapper(partition_name,
+					update_mapper_req.current_hash32,
+					update_mapper_req.new_hash32);
+	return ret;
+}
+
+struct qseecom_wipe_req_info qcom_ice_get_wipe_info(void)
+{
+	return wipe_info;
+}
+
+#endif
 
 static int qti_ice_setting_config(struct request *req,
 		struct ice_crypto_setting *crypto_data,
@@ -612,6 +1078,44 @@ err_dev:
 	return rc;
 }
 
+static long ice_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
+{
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	int ret = 0;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+		case ICE_IOCTL_MAP_SLOT_PARTITION_NAME_REQ: {
+			mutex_lock(&ioctl_lock);
+			__qcom_ice_key_slot_indexes_init();
+			ret = __qcom_ice_add_to_mapper(argp);
+			mutex_unlock(&ioctl_lock);
+			break;
+		}
+		case ICE_IOCTL_UMAP_SLOT_PARTITION_NAME_REQ: {
+			mutex_lock(&ioctl_lock);
+			ret = __qcom_ice_remove_from_mapper(argp);
+			mutex_unlock(&ioctl_lock);
+			break;
+		}
+		case ICE_IOCTL_UPDATE_PWD:{
+			mutex_lock(&ioctl_lock);
+			ret = __qcom_ice_update_in_mapper(argp);
+			mutex_unlock(&ioctl_lock);
+			break;
+		}
+		default: {
+			pr_err("Invalid IOCTL: 0x%x\n", cmd);
+			ret = -EINVAL;
+		}
+	}
+	return ret;
+#else
+	pr_err("Multi partition FDE is not enabled in kernel");
+	return -EINVAL;
+#endif
+}
+
 /*
  * ICE HW instance can exist in UFS or eMMC based storage HW
  * Userspace does not know what kind of ICE it is dealing with.
@@ -622,6 +1126,7 @@ err_dev:
  */
 static const struct file_operations qcom_ice_fops = {
 	.owner = THIS_MODULE,
+	.unlocked_ioctl = ice_ioctl
 };
 
 static int register_ice_device(struct ice_device *ice_dev)
@@ -738,7 +1243,7 @@ static int qcom_ice_probe(struct platform_device *pdev)
 	ice_dev->is_ice_enabled = true;
 	platform_set_drvdata(pdev, ice_dev);
 	list_add_tail(&ice_dev->list, &ice_devices);
-
+	spin_lock_init(&mapper_lock);
 	goto out;
 
 err_ice_dev:
@@ -1322,15 +1827,16 @@ int qcom_ice_config_start(struct request *req, struct ice_data_setting *setting)
 {
 	struct ice_crypto_setting ice_data = {0};
 	unsigned long sec_end = 0;
+	sector_t data_size;
 	bool is_partition_mapped = false;
 	int8_t slot = -1;
-	sector_t data_size;
 	int ret = 0;
 
 	if (!req) {
 		pr_err("%s: Invalid params passed\n", __func__);
 		return -EINVAL;
 	}
+
 	/*
 	 * It is not an error to have a request with no  bio
 	 * Such requests must bypass ICE. So first set bypass and then
@@ -1349,7 +1855,7 @@ int qcom_ice_config_start(struct request *req, struct ice_data_setting *setting)
 	if (ice_fde_flag && req->part && req->part->info
 				&& req->part->info->volname[0]) {
 #if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-		slot = get_key_slot(req->part->info->volname);
+		slot = qcom_ice_get_key_slot(req->part->info->volname);
 		if (slot != -1)
 			is_partition_mapped = true;
 #else
@@ -1386,7 +1892,6 @@ int qcom_ice_config_start(struct request *req, struct ice_data_setting *setting)
 					setting->crypto_data.key_index = slot;
 					return ret;
 				}
-
 			}
 		}
 	}
