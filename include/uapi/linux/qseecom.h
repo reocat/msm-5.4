@@ -147,24 +147,42 @@ enum qseecom_key_management_usage_type {
 struct qseecom_create_key_req {
 	unsigned char hash32[QSEECOM_HASH_SIZE];
 	enum qseecom_key_management_usage_type usage;
-	unsigned char *partition_name;
-	unsigned int len;
 };
 
 struct qseecom_wipe_key_req {
 	enum qseecom_key_management_usage_type usage;
 	int wipe_key_flag;/* 1->remove key from storage(alone with clear key) */
 			  /* 0->do not remove from storage (clear key) */
-	unsigned char *partition_name;
-	unsigned int len;
 };
 
 struct qseecom_update_key_userinfo_req {
 	unsigned char current_hash32[QSEECOM_HASH_SIZE];
 	unsigned char new_hash32[QSEECOM_HASH_SIZE];
 	enum qseecom_key_management_usage_type usage;
+};
+
+struct ice_add_to_mapper_req {
+	unsigned char hash32[QSEECOM_HASH_SIZE];
 	unsigned char *partition_name;
 	unsigned int len;
+};
+
+struct ice_remove_from_mapper_req {
+	unsigned char *partition_name;
+	unsigned int len;
+	unsigned int wipe_key_flag;
+};
+
+struct ice_update_mapper_req {
+	unsigned char current_hash32[QSEECOM_HASH_SIZE];
+	unsigned char new_hash32[QSEECOM_HASH_SIZE];
+	unsigned char *partition_name;
+	unsigned int len;
+};
+
+struct ice_fde_flag_partition_req {
+	unsigned char *partition_name;
+	unsigned int flag;
 };
 
 #define SHA256_DIGEST_LENGTH	(256/8)
@@ -304,6 +322,7 @@ struct file;
 
 
 #define QSEECOM_IOC_MAGIC    0x97
+#define ICE_IOC_MAGIC        0X17
 
 
 #define QSEECOM_IOCTL_REGISTER_LISTENER_REQ \
@@ -410,5 +429,17 @@ struct file;
 
 #define QSEECOM_IOCTL_FBE_CLEAR_KEY \
 	_IOWR(QSEECOM_IOC_MAGIC, 44, struct qseecom_ice_key_data_t)
+
+#define ICE_IOCTL_MAP_SLOT_PARTITION_NAME_REQ \
+	_IOWR(ICE_IOC_MAGIC, 1, struct ice_add_to_mapper_req)
+
+#define ICE_IOCTL_UMAP_SLOT_PARTITION_NAME_REQ \
+	_IOWR(ICE_IOC_MAGIC, 2, struct ice_remove_from_mapper_req)
+
+#define ICE_IOCTL_UPDATE_PWD \
+	_IOWR(ICE_IOC_MAGIC, 3, struct qseecom_update_key_userinfo_req)
+
+#define ICE_IOCTL_FDE_FLAG_PARTITION \
+	_IOWR(ICE_IOC_MAGIC, 4, struct ice_fde_flag_partition_req)
 
 #endif /* _UAPI_QSEECOM_H_ */
