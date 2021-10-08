@@ -812,6 +812,7 @@
 	/* ARM M7 debug console */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart4>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 
 	rts-gpios = <&gpio5 2 GPIO_ACTIVE_HIGH>;
