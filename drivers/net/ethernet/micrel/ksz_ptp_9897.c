@@ -1582,11 +1582,11 @@ static void adj_cur_time(struct ptp_info *ptp)
 #endif
 	}
 	if (ptp->sec_changed) {
-		struct timespec ts;
+		struct timespec64 ts;
 		struct ptp_utime cur;
 
 		ptp->reg->get_time(ptp, &ptp->cur_time);
-		ts = ktime_to_timespec(ktime_get_real());
+		ts = ktime_to_timespec64(ktime_get_real());
 		cur.sec = ts.tv_sec;
 		cur.nsec = ts.tv_nsec;
 		calc_udiff(&ptp->cur_time, &cur, &ptp->time_diff);
@@ -1891,7 +1891,7 @@ dbg_msg("%08x:%08x %08x:%08x"NL, cur.sec, cur.nsec, now.sec, now.nsec);
 static void ptp_start(struct ptp_info *ptp, int init)
 {
 	u32 ctrl;
-	struct timespec ts;
+	struct timespec64 ts;
 	struct ptp_utime t;
 	struct ksz_sw *sw = ptp->parent;
 
@@ -1938,7 +1938,7 @@ static void ptp_start(struct ptp_info *ptp, int init)
 	ptp_tx_intr_enable(ptp);
 	ptp->ops->release(ptp);
 
-	ts = ktime_to_timespec(ktime_get_real());
+	ts = ktime_to_timespec64(ktime_get_real());
 	t.sec = ts.tv_sec;
 	t.nsec = ts.tv_nsec;
 
@@ -2603,7 +2603,7 @@ static int ptp_drop_pkt(struct ptp_info *ptp, struct sk_buff *skb, u32 vlan_id,
 	*ptp_tag = get_rx_tag_ports(&sw->tag);
 	ptp->ops->get_rx_info(ptp, skb->data, *ptp_tag, sw->tag.timestamp);
 	*forward = ptp->forward;
-	if (!ptp->op_state) {
+	if (!ptp->op_state && !(ptp->rx_en & 1)) {
 		*ptp_tag = 0;
 		return false;
 	}
@@ -2999,6 +2999,8 @@ rx_msg->data.ts.t.sec, rx_msg->data.ts.t.nsec);
 				MANAGEMENT_ACKNOWLEDGE == action)
 			break;
 	}
+
+	/* fallthrough */
 	default:
 		info = kzalloc(sizeof(struct ptp_msg_info), GFP_KERNEL);
 		break;
@@ -4057,13 +4059,13 @@ static int proc_ptp_set_clk(struct ptp_info *ptp, u8 *data)
 {
 	struct ptp_utime t;
 	struct ptp_clk_options *cmd = (struct ptp_clk_options *) data;
-	struct timespec ts;
+	struct timespec64 ts;
 	struct ptp_utime sys_time;
 
 	t.sec = cmd->sec;
 	t.nsec = cmd->nsec;
 	ptp->ops->acquire(ptp);
-	ts = ktime_to_timespec(ktime_get_real());
+	ts = ktime_to_timespec64(ktime_get_real());
 	sys_time.sec = ts.tv_sec;
 	sys_time.nsec = ts.tv_nsec;
 	ptp->reg->set_time(ptp, &t);
@@ -4794,8 +4796,8 @@ static int ptp_get_port_info(struct ptp_info *ptp, u8 *data, int *output)
 	for (n = 0; n < dev_count; n++) {
 		netdev = sw->netdev[n];
 		if (!strncmp(netdev->name, devname, len) &&
-		    (sw->net_ops->get_priv_port)) {
-			netport = sw->net_ops->get_priv_port(netdev);
+		    sw->netport[n]) {
+			netport = sw->netport[n];
 			virt_port = netport->first_port;
 			phys_port = get_phy_port(sw, virt_port);
 			mask = 0;
@@ -4820,8 +4822,8 @@ static int ptp_get_port_info(struct ptp_info *ptp, u8 *data, int *output)
 		for (n = 0; n < dev_count; n++) {
 			netdev = sw->netdev[n];
 			if (!strncmp(netdev->name, devname, len) &&
-			    (sw->net_ops->get_priv_port)) {
-				netport = sw->net_ops->get_priv_port(netdev);
+			    sw->netport[n]) {
+				netport = sw->netport[n];
 				virt_port = netport->first_port;
 				virt_port += vlan - VLAN_PORT_START;
 				phys_port = get_phy_port(sw, virt_port);
@@ -5506,11 +5508,11 @@ static void proc_ptp_intr(struct ptp_info *ptp)
 	int i;
 	int tsi;
 	ktime_t cur_ktime;
-	struct timespec ts;
+	struct timespec64 ts;
 	struct ksz_sw *sw = ptp->parent;
 
 	cur_ktime = ktime_get_real();
-	ts = ktime_to_timespec(cur_ktime);
+	ts = ktime_to_timespec64(cur_ktime);
 
 proc_chk_trig_intr:
 	int_status = sw->reg->r32(sw, REG_PTP_INT_STATUS__4);
@@ -5786,11 +5788,11 @@ printk("%u:%09u"NL, ts.t.sec, ts.t.nsec);
 		break;
 	case PTP_GET_TIME:
 	{
-		struct timespec ts;
+		struct timespec64 ts;
 		struct ksz_ptp_time cur_time;
 		struct ksz_ptp_time sys_time;
 
-		ts = ktime_to_timespec(ktime_get_real());
+		ts = ktime_to_timespec64(ktime_get_real());
 		sys_time.sec = ts.tv_sec;
 		sys_time.nsec = ts.tv_nsec;
 		calc_diff(&ptp->time_diff, &sys_time, &cur_time);
@@ -6346,13 +6348,8 @@ dev_ioctl_done:
 	return err;
 }  /* ptp_dev_req */
 
-#ifdef HAVE_UNLOCKED_IOCTL
 static long ptp_dev_ioctl(struct file *filp, unsigned int cmd,
 	unsigned long arg)
-#else
-static int ptp_dev_ioctl(struct inode *inode, struct file *filp,
-	unsigned int cmd, unsigned long arg)
-#endif
 {
 	struct file_dev_info *info = (struct file_dev_info *)
 		filp->private_data;
@@ -6588,11 +6585,7 @@ static int ptp_dev_release(struct inode *inode, struct file *filp)
 static const struct file_operations ptp_dev_fops = {
 	.read		= ptp_dev_read,
 	.write		= ptp_dev_write,
-#ifdef HAVE_UNLOCKED_IOCTL
 	.unlocked_ioctl	= ptp_dev_ioctl,
-#else
-	.ioctl		= ptp_dev_ioctl,
-#endif
 	.open		= ptp_dev_open,
 	.release	= ptp_dev_release,
 };
