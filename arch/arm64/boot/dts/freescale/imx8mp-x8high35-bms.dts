@@ -608,8 +608,8 @@
 
 	pinctrl_uart1: uart1grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_UART1_RXD__UART1_DCE_RX	0x140
-			MX8MP_IOMUXC_UART1_TXD__UART1_DCE_TX	0x140
+			MX8MP_IOMUXC_SD1_CLK__UART1_DTE_RX 0x49
+			MX8MP_IOMUXC_SD1_CMD__UART1_DTE_TX 0x49
 			MX8MP_IOMUXC_SPDIF_EXT_CLK__GPIO5_IO05	0x19
 		>;
 	};
@@ -707,10 +707,13 @@
 };
 
 &uart1 {
+	/* RS-485 TouchFlakes */
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart1 &pinctrl_bt>;
-	status = "disabled";
-	fsl,uart-has-rtscts;
+	pinctrl-0 = <&pinctrl_uart1>;
+	fsl,dte-mode;
+	linux,rs485-enabled-at-boot-time;
+	rts-gpios = <&gpio5 5 GPIO_ACTIVE_HIGH>;
+	status = "okay";
 };
 
 &uart2 {
