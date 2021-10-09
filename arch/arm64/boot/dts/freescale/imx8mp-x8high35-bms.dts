@@ -39,10 +39,6 @@
 		};
 	};
 
-	chosen {
-		stdout-path = &uart2;
-	};
-
 	leds {
 		compatible = "gpio-leds";
 		/delete-property/pinctrl-0;
