@@ -2201,6 +2201,7 @@ static const struct flash_info spi_nor_ids[] = {
 
 	/* Fujitsu */
 	{ "mb85rs1mt", INFO(0x047f27, 0, 128 * 1024, 1, SPI_NOR_NO_ERASE) },
+	{ "mb85rq4ml", INFO(0x047f29, 0, 128 * 1024, 4, SPI_NOR_NO_ERASE) },
 
 	/* GigaDevice */
 	{
