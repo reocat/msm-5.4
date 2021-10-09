@@ -475,7 +475,6 @@ chacha_generic
 chaoskey
 charlcd
 chipone_icn8318
-chipreg
 chnl_net
 ci_hdrc
 ci_hdrc_imx
@@ -1728,7 +1727,6 @@ mag3110
 magellan
 mailbox-test
 map_absent
-map_funcs
 map_ram
 map_rom
 marvell
@@ -1917,7 +1915,6 @@ msp3400
 mspro_block
 mt7530
 mt9v011
-mtd
 mtd_blkdevs
 mtd_dataflash
 mtdblock
@@ -2897,16 +2894,11 @@ speakup_soft
 speakup_spkout
 speakup_txprt
 speedtch
-spi-bitbang
 spi-dln2
-spi-fsl-qspi
 spi-gpio
-spi-imx
 spi-lm70llp
 spi-loopback-test
 spi-mxic
-spi-nor
-spi-nxp-fspi
 spi-pl022
 spi-sc18is602
 spi-slave-system-control
