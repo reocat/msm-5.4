@@ -680,7 +680,7 @@
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI3_TXC__UART2_DTE_RX		0x49
 			MX8MP_IOMUXC_SAI3_TXFS__UART2_DTE_TX	0x49
-			/* MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x19 */
+			MX8MP_IOMUXC_SPDIF_RX__GPIO5_IO04		0x19
 		>;
 	};
 
@@ -790,10 +790,11 @@
 	/* ARM53 debug console */
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_uart2>;
+	linux,rs485-enabled-at-boot-time;
 	status = "okay";
 
 	fsl,dte-mode;
-	/* rts-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>; */
+	rts-gpios = <&gpio5 4 GPIO_ACTIVE_HIGH>;
 };
 
 &uart3 {
