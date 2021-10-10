@@ -85,9 +85,24 @@
 		enable-active-high;
 	};
 
+	reg_bt_power: regulator-bt-power {
+		compatible = "regulator-fixed";
+		regulator-name = "bt_power";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_bt_reg>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		gpio = <&gpio3 25 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+	};
+
+
 	reg_wifi_power: regulator-wifi-power {
 		compatible = "regulator-fixed";
 		regulator-name = "wifi_power";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wifi_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
@@ -528,7 +543,7 @@
 		>;
 	};
 
-	pinctrl_bt: btgrp {
+	pinctrl_bt_reg: btreggrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_MCLK__GPIO3_IO25	0x19
 		>;
@@ -777,6 +792,13 @@
 			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x19
 		>;
 	};
+
+	pinctrl_wifi_reg: wifireggrp {
+		fsl,pins = <
+			MX8MP_IOMUXC_SAI5_RXD3__GPIO3_IO24	0x19
+		>;
+	};
+
 };
 
 &ocotp {
