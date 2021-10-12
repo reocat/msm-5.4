@@ -895,17 +895,17 @@ EXPORT_SYMBOL(security_binder_set_context_mgr);
  * @from: source of the transaction
  * @to: destination of the transaction
  *
- * Verify that the tasks have the same LSM "display", then
+ * Verify that the creds have the same LSM "display", then
  * call the security module hooks.
  *
  * Returns -EINVAL if the displays don't match, or the
  * result of the security module checks.
  */
-int security_binder_transaction(struct task_struct *from,
-				struct task_struct *to)
+int security_binder_transaction(const struct cred *from,
+				const struct cred *to)
 {
-	int from_display = lsm_task_display(from);
-	int to_display = lsm_task_display(to);
+	int from_display = lsm_cred_display(from);
+	int to_display = lsm_cred_display(to);
 
 	/*
 	 * If the display is LSMBLOB_INVALID the first module that has
