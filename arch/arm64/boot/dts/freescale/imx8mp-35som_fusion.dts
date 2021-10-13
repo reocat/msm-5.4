@@ -111,7 +111,7 @@
 	};
 
 	lvds0_panel {
-		compatible = "tianma,tm101dvhg04-6bit";
+		compatible = "tianma,tianma-fusion";
 		backlight = <&lvds_backlight>;
 
 		port {
@@ -426,6 +426,13 @@
 		#gpio-cells = <2>;
 	};
 
+	tca6416_hmi: gpio@20 {
+		compatible = "ti,tca6416";
+		reg = <0x20>;
+		gpio-controller;
+		#gpio-cells = <2>;
+	};
+
 	typec_ptn5150: typec@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;
@@ -440,6 +447,19 @@
 		reg = <0x48>;
 		gpios = <&gpio5 3 1>, /* interrupt */
 		<&tca6416_dim 0 1>; /* Reset */
+		status = "disabled";
+	};
+
+	tp_fusion: ili251x@41 {
+                compatible = "ilitek,ili251x";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_tp>;
+                reg = <0x41>;
+                interrupt-parent = <&gpio5>;
+                interrupts = <3 GPIO_ACTIVE_LOW>;
+                reset-gpios = <&tca6416_hmi 14 0>;
+                touchscreen-size-x = <1280>;
+                touchscreen-size-y = <800>;
 	};
 
        /*      temperature sensor      */
@@ -626,7 +646,7 @@
 	status = "okay";
 
 	lvds-channel@0 {
-		fsl,data-mapping = "jeida";
+		fsl,data-mapping = "spwg";
 		fsl,data-width = <24>;
 		status = "okay";
 
