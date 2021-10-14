@@ -154,9 +154,21 @@
 	reg_3v3_p: regulator-3v3_p {
 		compatible = "regulator-fixed";
 		regulator-name = "vddio_vdda_3v3";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
+ 		regulator-min-microvolt = <3300000>;
+ 		regulator-max-microvolt = <3300000>;
 	};
+
+        reg_wifi_pwr: regulator-wifi-pwr {
+                compatible = "regulator-fixed";
+                regulator-name = "wifi-pwr";
+                regulator-min-microvolt = <3300000>;
+                regulator-max-microvolt = <3300000>;
+                gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
+                enable-active-high;
+                regulator-always-on;
+                startup-delay-us = <10000>;
+                off-on-delay-us = <12000>;
+        };
 
         reg_2p8v: regulator-2p8v {
                 compatible = "regulator-fixed";
@@ -177,18 +189,6 @@
                 regulator-name = "imx219_vddl";
                 regulator-min-microvolt = <1200000>;
                 regulator-max-microvolt = <1200000>;
-        };
-
-        reg_wifi_pwr: regulator-wifi-pwr {
-                compatible = "regulator-fixed";
-                regulator-name = "wifi-pwr";
-                regulator-min-microvolt = <3300000>;
-                regulator-max-microvolt = <3300000>;
-                gpio = <&gpio3 24 GPIO_ACTIVE_HIGH>;
-                enable-active-high;
-                regulator-always-on;
-                startup-delay-us = <10000>;
-                off-on-delay-us = <12000>;
         };
 
 	sound-hdmi {
@@ -769,13 +769,15 @@
 	ext_osc = <0>;
 	clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
 		 <&clk IMX8MP_CLK_PCIE_AUX>,
-		 <&clk IMX8MP_CLK_PCIE_PHY>,
+		 <&clk IMX8MP_CLK_DUMMY>,
 		 <&clk IMX8MP_CLK_PCIE_ROOT>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>,
 			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-rates = <500000000>, <10000000>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
 				 <&clk IMX8MP_SYS_PLL2_50M>;
+	l1ss-disabled;
 	status = "okay";
 };
 
@@ -785,11 +787,12 @@
 	ext_osc = <1>;
 	clocks = <&clk IMX8MP_CLK_HSIO_AXI_DIV>,
 		 <&clk IMX8MP_CLK_PCIE_AUX>,
-		 <&clk IMX8MP_CLK_PCIE_PHY>,
+		 <&clk IMX8MP_CLK_DUMMY>,
 		 <&clk IMX8MP_CLK_PCIE_ROOT>;
 	clock-names = "pcie", "pcie_aux", "pcie_phy", "pcie_bus";
 	assigned-clocks = <&clk IMX8MP_CLK_HSIO_AXI_SRC>,
 			  <&clk IMX8MP_CLK_PCIE_AUX>;
+	assigned-clock-rates = <500000000>, <10000000>;
 	assigned-clock-parents = <&clk IMX8MP_SYS_PLL2_500M>,
 				 <&clk IMX8MP_SYS_PLL2_50M>;
 	status = "disabled";
@@ -962,7 +965,7 @@
                 fsl,pins = <
                         MX8MP_IOMUXC_GPIO1_IO10__PWM3_OUT       0x116
                 >;
-	};
+        };
 
 	pinctrl_pwm4: pwm4grp {
 		fsl,pins = <
