@@ -195,7 +195,7 @@
               #size-cells = <1>;
               compatible = "mr25h40", "jedec,spi-nor";
               reg = <0 0x00000000 0x00080000>;
-              spi-max-frequency = <40000000>;
+              spi-max-frequency = <30000000>;
 
               partition@0 {
                       label = "mram";
@@ -709,11 +709,13 @@
 
 &usb_dwc3_0 {
 	//dr_mode = "peripheral";
-	dr_mode = "host";
+	//dr_mode = "host";
+	dr_mode = "otg";
 	extcon = <&typec_ptn5150>;
 	hnp-disable;
 	srp-disable;
 	adp-disable;
+	maximum-speed = "full-speed";
 	//usb-role-switch;
 	status = "okay";
 };
