@@ -244,6 +244,60 @@
 	};
 };
 
+/* Common module P1 */
+&ecspi1 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1>;
+	status = "okay";
+
+	num-cs = <1>;
+	cs-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
+
+	spidev@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+		dmas = <&sdma 3 7 1>, <&sdma 4 7 2>;
+		dma-names = "rx", "tx";
+	};
+};
+
+/* Common module P2 */
+&ecspi3 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi3>;
+	status = "okay";
+
+	num-cs = <1>;
+	cs-gpios = <&gpio4 30 GPIO_ACTIVE_LOW>;
+
+	spidev@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+		dmas = <&sdma 7 7 1>, <&sdma 8 7 2>;
+		dma-names = "rx", "tx";
+	};
+};
+
+/* LTE module */
+&ecspi5 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi5>;
+	status = "okay";
+
+	num-cs = <1>;
+	cs-gpios = <&gpio4 28 GPIO_ACTIVE_LOW>;
+
+	spidev@0 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <20000000>;
+		reg = <0>;
+		dmas = <&sdma 11 7 1>, <&sdma 12 7 2>;
+		dma-names = "rx", "tx";
+	};
+};
+
 &fec1 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_enet1>;
@@ -596,6 +650,33 @@
 				MX6SX_PAD_LCD1_HSYNC__AUDMUX_AUD3_TXD	0x12098
 				MX6SX_PAD_LCD1_RESET__AUDMUX_AUD3_RXD	0x130b0
 				MX6SX_PAD_ENET1_MDIO__AUDMUX_MCLK	0x13098
+			>;
+		};
+
+		pinctrl_ecspi1: ecspi1grp {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1A_DATA0__ECSPI1_MOSI		0x1b091
+				MX6SX_PAD_QSPI1A_DATA1__ECSPI1_MISO		0x1b091
+				MX6SX_PAD_QSPI1A_SCLK__ECSPI1_SCLK		0x1b099
+				MX6SX_PAD_QSPI1A_SS0_B__GPIO4_IO_22		0x0b0b9
+			>;
+		};
+
+		pinctrl_ecspi3: ecspi3grp {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1B_DATA0__ECSPI3_MOSI		0x1b091
+				MX6SX_PAD_QSPI1B_DATA1__ECSPI3_MISO		0x1b091
+				MX6SX_PAD_QSPI1B_SCLK__ECSPI3_SCLK		0x1b099
+				MX6SX_PAD_QSPI1B_SS0_B__GPIO4_IO_30		0x0b0b9
+			>;
+		};
+
+		pinctrl_ecspi5: ecspi5grp {
+			fsl,pins = <
+				MX6SX_PAD_QSPI1A_DQS__ECSPI5_MOSI		0x1b091
+				MX6SX_PAD_QSPI1A_SS1_B__ECSPI5_MISO		0x1b091
+				MX6SX_PAD_QSPI1B_SS1_B__ECSPI5_SCLK		0x1b099
+				MX6SX_PAD_QSPI1B_DQS__GPIO4_IO_28		0x0b0b9
 			>;
 		};
 
