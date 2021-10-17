@@ -23,7 +23,6 @@
 #include <drm/drm_fb_helper.h>
 #include <drm/drm_of.h>
 #include <drm/drm_probe_helper.h>
-#include <drm/drm_simple_kms_helper.h>
 
 #include "imx-drm.h"
 
@@ -328,6 +327,10 @@ static const struct drm_connector_helper_funcs imx_ldb_connector_helper_funcs = 
 	.get_modes = imx_ldb_connector_get_modes,
 };
 
+static const struct drm_encoder_funcs imx_ldb_encoder_funcs = {
+	.destroy = imx_drm_encoder_destroy,
+};
+
 static const struct drm_encoder_helper_funcs imx_ldb_encoder_helper_funcs = {
 	.atomic_mode_set = imx_ldb_encoder_atomic_mode_set,
 	.enable = imx_ldb_encoder_enable,
@@ -347,6 +350,7 @@ static int imx_ldb_get_clk(struct imx_ldb *imx_ldb, int chno)
 		return PTR_ERR(imx_ldb->clk[chno]);
 
 	snprintf(clkname, sizeof(clkname), "di%d_pll", chno);
+
 	imx_ldb->clk_pll[chno] = devm_clk_get(dev, clkname);
 
 	return PTR_ERR_OR_ZERO(imx_ldb->clk_pll[chno]);

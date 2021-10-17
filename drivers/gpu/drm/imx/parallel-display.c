@@ -17,7 +17,6 @@
 #include <drm/drm_of.h>
 #include <drm/drm_panel.h>
 #include <drm/drm_probe_helper.h>
-#include <drm/drm_simple_kms_helper.h>
 
 #include "imx-drm.h"
 
@@ -247,6 +246,10 @@ static const struct drm_connector_helper_funcs imx_pd_connector_helper_funcs = {
 	.get_modes = imx_pd_connector_get_modes,
 };
 
+static const struct drm_encoder_funcs imx_pd_encoder_funcs = {
+	.destroy = imx_drm_encoder_destroy,
+};
+
 static const struct drm_bridge_funcs imx_pd_bridge_funcs = {
 	.enable = imx_pd_bridge_enable,
 	.disable = imx_pd_bridge_disable,
@@ -275,7 +278,8 @@ static int imx_pd_register(struct drm_device *drm,
 	 */
 	imxpd->connector.dpms = DRM_MODE_DPMS_OFF;
 
-	drm_simple_encoder_init(drm, encoder, DRM_MODE_ENCODER_NONE);
+	drm_encoder_init(drm, encoder, &imx_pd_encoder_funcs,
+			 DRM_MODE_ENCODER_NONE, NULL);
 
 	imxpd->bridge.funcs = &imx_pd_bridge_funcs;
 	drm_bridge_attach(encoder, &imxpd->bridge, NULL);
