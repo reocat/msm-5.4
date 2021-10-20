@@ -31,6 +31,22 @@
 		reg = <0x0 0x40000000 0 0x80000000>;
 	};
 
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		/* 32MiB */
+		optee_core@56000000 {
+			reg = <0x00 0x56000000 0x00 0x2000000>;
+		};
+
+		/* 4K */
+		optee_shm@57c00000 {
+			reg = <0x00 0x57c00000 0x00 0x400000>;
+		};
+	};
+
 	can20m: can20m {
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
