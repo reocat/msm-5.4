@@ -1088,6 +1088,7 @@ gl518sm
 gl520sm
 gl620a
 gluebi
+gmsl-max9286
 gnss
 gnss-mtk
 gnss-serial
@@ -1493,6 +1494,14 @@ imx6q-cpufreq
 imx6ul_tsc
 imx7d_adc
 imx7ulp_wdt
+imx8-capture
+imx8-isi-cap
+imx8-isi-hw
+imx8-isi-m2m
+imx8-media-dev
+imx8-mipi-csi2
+imx8-mipi-csi2-sam
+imx8-parallel-csi
 imx8mm_thermal
 imx_sc_thermal
 imx_sc_wdt
@@ -2182,8 +2191,12 @@ mvmdio
 mwifiex
 mwifiex_sdio
 mwifiex_usb
+mx6s_capture
+mxc-jpeg-encdec
 mxc4005
 mxc6255
+mxc_mipi_csi
+mxc_vadc
 mxl111sf-demod
 mxl111sf-tuner
 mxl5005s
@@ -2431,6 +2444,8 @@ orangefs
 oti6858
 otm3225a
 ov2640
+ov5640_camera_mipi_v2
+ov5640_camera_v2
 ov7251
 ov7640
 overlay
@@ -3396,12 +3411,14 @@ spi-cadence
 spi-dln2
 spi-dw
 spi-dw-mmio
+spi-fsl-qspi
 spi-gpio
 spi-imx
 spi-lm70llp
 spi-loopback-test
 spi-mxic
 spi-nor
+spi-nxp-fspi
 spi-oc-tiny
 spi-rockchip
 spi-sc18is602
@@ -3883,6 +3900,7 @@ via-velocity
 vicodec
 video-mux
 videobuf-core
+videobuf-dma-contig
 videobuf-vmalloc
 videobuf2-common
 videobuf2-dma-contig
