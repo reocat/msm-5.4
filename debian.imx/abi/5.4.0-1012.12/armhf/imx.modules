@@ -3607,7 +3607,6 @@ team_mode_broadcast
 team_mode_loadbalance
 team_mode_random
 team_mode_roundrobin
-tee
 tef6862
 teranetics
 test-kprobes
