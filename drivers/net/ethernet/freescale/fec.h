@@ -649,6 +649,7 @@ struct fec_enet_private {
 #ifdef HAVE_KSZ_SWITCH
         struct platform_device  *sw_pdev;
 	struct fec_enet_private *hw_priv;
+	struct phy_device       dummy_phy;
 	spinlock_t              tx_lock;
 	struct ksz_port         port;
 	int                     phy_addr;

@@ -235,9 +235,10 @@
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_fec>;
 	phy-mode = "rgmii-txid";
-	phy-handle = <&ethphy1>;
 	resets = <&ksz9477_reset>;
 	fsl,magic-packet;
+	phy-reset-gpios = <&tca6416_nw 12 1>;
+	phy-reset-duration =<20>;
 	status = "okay";
 
         fixed-link {
@@ -245,18 +246,6 @@
                 full-duplex;
         };
 
-	mdio {
-		#address-cells = <1>;
-		#size-cells = <0>;
-
-		ethphy1: ethernet-phy@1 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <1>;
-			micrel,led-mode = <1>;
-                        eee-broken-100tx;
-                        eee-broken-1000t;
-		};
-	};
 };
 
 &flexspi {

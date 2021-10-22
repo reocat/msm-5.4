@@ -1411,6 +1411,7 @@ fec_restart(struct net_device *ndev)
 
 		/* 1G, 100M or 10M */
 		if (ndev->phydev) {
+			ndev->phydev->speed = SPEED_1000;	//Fixed the Speed to 1Gbps.
 			if (ndev->phydev->speed == SPEED_1000)
 				ecntl |= (1 << 5);
 			else if (ndev->phydev->speed == SPEED_100)
@@ -2857,7 +2858,11 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	 * Given that ceil(clkrate / 5000000) <= 64, the calculation for
 	 * holdtime cannot result in a value greater than 3.
 	 */
+
 	holdtime = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), 100000000) - 1;
+
+	/* Change MII Speed to achieve 2MHz frequency on MDIO Bus. */
+	mii_speed = 63;
 
 	fep->phy_speed = mii_speed << 1 | holdtime << 8;
 
@@ -4217,11 +4222,14 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 #ifdef HAVE_KSZ_SWITCH
-	if (!sw_is_switch(sw))
+	if (!sw_is_switch(sw)) {
 #endif
 
 	phy_disconnect(ndev->phydev);
 	ndev->phydev = NULL;
+#ifdef HAVE_KSZ_SWITCH
+}
+#endif
 
 	if (fep->quirks & FEC_QUIRK_ERR006687)
 		imx6q_cpuidle_fec_irqs_unused();
@@ -4853,6 +4861,11 @@ static int fec_enet_sw_init(struct fec_enet_private *fep)
 
 		fep->hw_priv = hw_priv;
 		fep->phy_interface = hw_priv->phy_interface;
+
+		dev->phydev = &fep->dummy_phy;
+		dev->phydev->duplex = 1;
+		dev->phydev->speed = SPEED_1000;
+		dev->phydev->autoneg = 1;
 
 		spin_lock_init(&fep->tx_lock);
 
