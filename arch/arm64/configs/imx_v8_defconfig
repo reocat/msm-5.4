@@ -324,6 +324,7 @@ CONFIG_BRCMFMAC_PCIE=y
 CONFIG_BCMDHD=y
 CONFIG_BCMDHD_FW_PATH="/lib/firmware/cypress/fw_bm28.bin"
 CONFIG_BCMDHD_NVRAM_PATH="/lib/firmware/cypress/nvram_bm28.bin"
+CONFIG_BCMDHD_CLM_PATH="/lib/firmware/cypress/fw_bm28.clm_blob"
 CONFIG_HOSTAP=y
 CONFIG_MXMWIFIEX=m
 CONFIG_WL18XX=m
