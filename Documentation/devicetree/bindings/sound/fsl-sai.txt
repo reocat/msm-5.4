@@ -52,6 +52,11 @@ Optional properties:
   - big-endian		: Boolean property, required if all the SAI
 			  registers are big-endian rather than little-endian.
 
+  - enable-mclk-early	: Boolean property, required on the Honeywell i.MX8MP
+			  X8High35 PDK, somehow the audio design needs to
+			  enable the mclk early and skip to reset the Tx and
+			  Rx.
+
 Optional properties (for mx6ul):
 
   - fsl,sai-mclk-direction-output: This is a boolean property. If present,
