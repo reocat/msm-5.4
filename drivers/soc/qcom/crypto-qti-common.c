@@ -1230,13 +1230,6 @@ void crypto_qti_ice_set_fde_flag(int flag)
 	 */
 	ice_dev = list_first_entry_or_null(&ice_devices, struct ice_device,
 		list);
-
-	if (!ice_dev) {
-		dev_err(dev, "%s:ICE dev is  null/empty\n", __func__);
-		ret = -EINVAL;
-		goto out;
-	}
-
 	part_cfg = crypto_qti_ice_get_part_cfg(ice_dev, CRYPTO_UD_VOLNAME);
 	if (part_cfg) {
 		dev_info(ice_dev->pdev, "%s: FDE flag=%d for %s\n",
@@ -1249,10 +1242,6 @@ void crypto_qti_ice_set_fde_flag(int flag)
 			"%s: Cannot set FDE flag=%d for %s\n",
 			__func__, flag, CRYPTO_UD_VOLNAME);
 	}
-
-out:
-	return ret;
-
 }
 EXPORT_SYMBOL(crypto_qti_ice_set_fde_flag);
 
