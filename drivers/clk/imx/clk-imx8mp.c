@@ -538,6 +538,9 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	hws[IMX8MP_CLK_A53_CG] = hws[IMX8MP_CLK_A53_DIV];
 	hws[IMX8MP_CLK_M7_CORE] = imx8m_clk_hw_composite_core("m7_core", imx8mp_m7_sels, ccm_base + 0x8080);
 	hws[IMX8MP_CLK_ML_CORE] = imx8m_clk_hw_composite_core("ml_core", imx8mp_ml_sels, ccm_base + 0x8100);
+	hws[IMX8MP_CLK_ML_SRC] = hws[IMX8MP_CLK_ML_CORE];
+	hws[IMX8MP_CLK_ML_CG] = hws[IMX8MP_CLK_ML_CORE];
+	hws[IMX8MP_CLK_ML_DIV] = hws[IMX8MP_CLK_ML_CORE];
 	hws[IMX8MP_CLK_GPU3D_CORE] = imx8m_clk_hw_composite_core("gpu3d_core", imx8mp_gpu3d_core_sels, ccm_base + 0x8180);
 	hws[IMX8MP_CLK_GPU3D_CORE_SRC] = hws[IMX8MP_CLK_GPU3D_CORE];
 	hws[IMX8MP_CLK_GPU3D_CORE_CG] = hws[IMX8MP_CLK_GPU3D_CORE];
@@ -546,7 +549,10 @@ static int imx8mp_clocks_probe(struct platform_device *pdev)
 	hws[IMX8MP_CLK_GPU3D_SHADER_SRC] = hws[IMX8MP_CLK_GPU3D_SHADER_CORE];
 	hws[IMX8MP_CLK_GPU3D_SHADER_CG] = hws[IMX8MP_CLK_GPU3D_SHADER_CORE];
 	hws[IMX8MP_CLK_GPU3D_SHADER_DIV] = hws[IMX8MP_CLK_GPU3D_SHADER_CORE];
-	hws[IMX8MP_CLK_GPU2D_CORE] = imx8m_clk_hw_composite("gpu2d_core", imx8mp_gpu2d_sels, ccm_base + 0x8280);
+	hws[IMX8MP_CLK_GPU2D_CORE] = imx8m_clk_hw_composite_core("gpu2d_core", imx8mp_gpu2d_sels, ccm_base + 0x8280);
+	hws[IMX8MP_CLK_GPU2D_SRC] = hws[IMX8MP_CLK_GPU2D_CORE];
+	hws[IMX8MP_CLK_GPU2D_CG] = hws[IMX8MP_CLK_GPU2D_CORE];
+	hws[IMX8MP_CLK_GPU2D_DIV] = hws[IMX8MP_CLK_GPU2D_CORE];
 	hws[IMX8MP_CLK_AUDIO_AXI] = imx8m_clk_hw_composite_core("audio_axi", imx8mp_audio_axi_sels, ccm_base + 0x8300);
 	hws[IMX8MP_CLK_AUDIO_AXI_SRC] = hws[IMX8MP_CLK_AUDIO_AXI];
 	hws[IMX8MP_CLK_AUDIO_AXI_CG] = hws[IMX8MP_CLK_AUDIO_AXI];
