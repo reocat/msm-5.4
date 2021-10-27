@@ -419,13 +419,6 @@
 	pinctrl-0 = <&pinctrl_i2c3>;
 	status = "okay";
 
-	tca6416_dim: gpio@20 {
-		compatible = "ti,tca6416";
-		reg = <0x20>;
-		gpio-controller;
-		#gpio-cells = <2>;
-	};
-
 	tca6416_hmi: gpio@20 {
 		compatible = "ti,tca6416";
 		reg = <0x20>;
@@ -438,16 +431,6 @@
 		reg = <0x3d>;
 		vbus-gpios = <&pca9505 18 GPIO_ACTIVE_HIGH>;
 		status = "okay";
-	};
-
-	tp: solomon@48 {
-		compatible = "solomon,ssd254x";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_tp>;
-		reg = <0x48>;
-		gpios = <&gpio5 3 1>, /* interrupt */
-		<&tca6416_dim 0 1>; /* Reset */
-		status = "disabled";
 	};
 
 	tp_fusion: ili251x@41 {

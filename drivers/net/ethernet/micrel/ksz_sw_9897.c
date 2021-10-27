@@ -15996,7 +15996,6 @@ static void link_update_work(struct work_struct *work)
 	struct ksz_port *port =
 		container_of(work, struct ksz_port, link_update);
 	struct ksz_sw *sw = port->sw;
-	struct net_device *dev;
 	struct ksz_port_info *info;
 	uint i;
 	uint p;
@@ -16017,7 +16016,7 @@ static void link_update_work(struct work_struct *work)
 
 	sw_notify_link_change(sw, port->link_ports);
 
-	if (!sw->dev_offset || port != sw->netport[0])
+	if ((!sw->dev_offset || port != sw->netport[0]) && port->netdev)
 		sw_report_link(sw, port, port->linked);
 
 #ifdef CONFIG_KSZ_STP
@@ -16031,6 +16030,7 @@ static void link_update_work(struct work_struct *work)
 #ifdef CONFIG_KSZ_HSR
 	if (sw->features & HSR_HW) {
 		struct ksz_hsr_info *hsr = &sw->info->hsr;
+		struct net_device *dev;
 
 		dev = port->netdev;
 		if (dev && dev == hsr->redbox_dev) {
@@ -17369,6 +17369,7 @@ static void sw_init_phy_priv(struct sw_priv *ks)
 		if (!n) {
 			port->port_cnt = sw->mib_port_cnt;
 			port->mib_port_cnt = sw->mib_port_cnt;
+			p = 1;
 		}
 		port->first_port = p;
 		p = get_phy_port(sw, p);
