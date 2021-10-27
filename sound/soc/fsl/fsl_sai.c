@@ -672,12 +672,14 @@ static int fsl_sai_dai_probe(struct snd_soc_dai *cpu_dai)
 	struct fsl_sai *sai = dev_get_drvdata(cpu_dai->dev);
 	unsigned int ofs = sai->soc_data->reg_offset;
 
-	/* Software Reset for both Tx and Rx */
-	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
-	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
-	/* Clear SR bit to finish the reset */
-	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
-	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+	if (!sai->mclk_early) {
+		/* Software Reset for both Tx and Rx */
+		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
+		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
+		/* Clear SR bit to finish the reset */
+		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
+		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+	}
 
 	regmap_update_bits(sai->regmap, FSL_SAI_TCR1(ofs),
 			   FSL_SAI_CR1_RFW_MASK(sai->soc_data->fifo_depth),
@@ -1034,12 +1036,24 @@ static int fsl_sai_probe(struct platform_device *pdev)
 				   MCLK_DIR(index));
 	}
 
+	if (of_find_property(np, "enable-mclk-early", NULL))
+		sai->mclk_early = true;
+
 	sai->dma_params_rx.addr = res->start + FSL_SAI_RDR0;
 	sai->dma_params_tx.addr = res->start + FSL_SAI_TDR0;
 	sai->dma_params_rx.maxburst = FSL_SAI_MAXBURST_RX;
 	sai->dma_params_tx.maxburst = FSL_SAI_MAXBURST_TX;
 
 	platform_set_drvdata(pdev, sai);
+
+	if (sai->mclk_early) {
+		clk_prepare_enable(sai->bus_clk);
+		clk_prepare_enable(sai->mclk_clk[1]);
+		regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
+				   FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
+		regmap_update_bits(sai->regmap, FSL_SAI_TCSR(8),
+				   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
+	}
 
 	pm_runtime_enable(&pdev->dev);
 
@@ -1163,11 +1177,14 @@ static int fsl_sai_runtime_resume(struct device *dev)
 	}
 
 	regcache_cache_only(sai->regmap, false);
-	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
-	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
-	usleep_range(1000, 2000);
-	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
-	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+
+	if (!sai->mclk_early) {
+		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
+		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
+		usleep_range(1000, 2000);
+		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
+		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+	}
 
 	ret = regcache_sync(sai->regmap);
 	if (ret)
