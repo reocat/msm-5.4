@@ -1330,7 +1330,9 @@ fec_restart(struct net_device *ndev)
 	u32 temp_mac[2];
 	u32 rcntl = OPT_FRAME_SIZE | 0x04;
 	u32 ecntl = FEC_ENET_ETHEREN; /* ETHEREN */
-
+#ifdef HAVE_KSZ_SWITCH
+        struct ksz_sw *sw = fep->port.sw;
+#endif
 	/* Whack a reset.  We should wait for this.
 	 * For i.MX6SX SOC, enet use AXI bus, we use disable MAC
 	 * instead of reset MAC itself.
@@ -1411,7 +1413,10 @@ fec_restart(struct net_device *ndev)
 
 		/* 1G, 100M or 10M */
 		if (ndev->phydev) {
-			ndev->phydev->speed = SPEED_1000;	//Fixed the Speed to 1Gbps.
+#ifdef HAVE_KSZ_SWITCH
+			if (sw_is_switch(sw))
+				ndev->phydev->speed = SPEED_1000;	//Fixed the Speed to 1Gbps.
+#endif
 			if (ndev->phydev->speed == SPEED_1000)
 				ecntl |= (1 << 5);
 			else if (ndev->phydev->speed == SPEED_100)
@@ -2799,6 +2804,9 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	struct device_node *node;
 	int err = -ENXIO;
 	u32 mii_speed, holdtime;
+#ifdef HAVE_KSZ_SWITCH
+        struct ksz_sw *sw = fep->port.sw;
+#endif
 
 	/*
 	 * The i.MX28 dual fec interfaces are not equal.
@@ -2861,8 +2869,12 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 
 	holdtime = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), 100000000) - 1;
 
-	/* Change MII Speed to achieve 2MHz frequency on MDIO Bus. */
-	mii_speed = 63;
+#ifdef HAVE_KSZ_SWITCH
+	if (sw_is_switch(sw)) {
+		/* Change MII Speed to achieve 2MHz frequency on MDIO Bus. */
+		mii_speed = 63;
+	}
+#endif
 
 	fep->phy_speed = mii_speed << 1 | holdtime << 8;
 
