@@ -1212,7 +1212,7 @@ int crypto_qti_ice_config_start(struct request *req, struct ice_data_setting *se
 }
 EXPORT_SYMBOL(crypto_qti_ice_config_start);
 
-void crypto_qti_ice_set_fde_flag(int flag)
+int crypto_qti_ice_set_fde_flag(int flag)
 {
 	struct ice_device *ice_dev = NULL;
 	struct ice_part_cfg *part_cfg = NULL;
@@ -1232,9 +1232,8 @@ void crypto_qti_ice_set_fde_flag(int flag)
 		list);
 
 	if (!ice_dev) {
-		dev_err(dev, "%s:ICE dev is  null/empty\n", __func__);
-		ret = -EINVAL;
-		goto out;
+		pr_debug("%s:ICE dev is  null/empty\ \n", __func__);
+		return -EINVAL;
 	}
 
 	part_cfg = crypto_qti_ice_get_part_cfg(ice_dev, CRYPTO_UD_VOLNAME);
@@ -1250,8 +1249,6 @@ void crypto_qti_ice_set_fde_flag(int flag)
 			__func__, flag, CRYPTO_UD_VOLNAME);
 	}
 
-out:
-	return ret;
 
 }
 EXPORT_SYMBOL(crypto_qti_ice_set_fde_flag);
