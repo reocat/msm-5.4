@@ -1,0 +1,780 @@
+/* Copyright (c) 2021 Lantronix Inc. All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 2 and
+ * only version 2 as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ */
+
+&bluetooth {
+	status = "disabled";
+};
+
+&cam_csiphy0 {
+	status = "disabled";
+};
+
+&cam_csiphy1 {
+	status = "disabled";
+};
+
+&cam_csiphy2 {
+	status = "disabled";
+};
+
+&cam_csiphy2 {
+	status = "disabled";
+};
+
+&cam_cci0 {
+	status = "disabled";
+};
+
+&cam_cci1 {
+	status = "disabled";
+};
+
+&cam_isp_mgr {
+	status = "disabled";
+};
+&cam_fd_mgr {
+	status = "disabled";
+};
+&cam_fd {
+	status = "disabled";
+};
+
+&cam_lrme_mgr {
+	status = "disabled";
+};
+&cam_lrme {
+	status = "disabled";
+};
+&cam_csid0 {
+	status = "disabled";
+};
+
+&cam_vfe0 {
+	status = "disabled";
+};
+
+&cam_csid1 {
+	status = "disabled";
+};
+
+&cam_vfe1 {
+	status = "disabled";
+};
+
+&cam_csid_lite0 {
+	status = "disabled";
+};
+
+&cam_vfe_lite0 {
+	status = "disabled";
+};
+
+&cam_csid_lite1 {
+	status = "disabled";
+};
+
+&cam_vfe_lite1 {
+	status = "disabled";
+};
+
+&cam_smmu {
+	status = "disabled";
+};
+
+&cam_a5 {
+	status = "disabled";
+};
+
+&cam_ipe0 {
+	status = "disabled";
+};
+
+&cam_ipe1 {
+	status = "disabled";
+};
+
+&cam_bps {
+	status = "disabled";
+};
+
+&cam_jpeg_mgr {
+	status = "disabled";
+};
+
+&cam_jpeg_enc {
+	status = "disabled";
+};
+
+&cam_jpeg_dma {
+	status = "disabled";
+};
+
+&qupv3_se11_i2c {
+	status = "disabled";
+};
+
+&gecko_core_platform {
+	status = "disabled";
+};
+
+&tdm_pri_rx {
+	status = "disabled";
+};
+
+&tdm_pri_tx {
+	status = "disabled";
+};
+
+&tdm_sec_rx {
+	status = "disabled";
+};
+
+&tdm_sec_tx {
+	status = "disabled";
+};
+
+&tdm_tert_rx {
+	status = "disabled";
+};
+
+&tdm_tert_tx {
+	status = "disabled";
+};
+
+&tdm_quat_rx {
+	status = "disabled";
+};
+
+&tdm_quat_tx {
+	status = "disabled";
+};
+
+&tdm_quin_rx {
+	status = "disabled";
+};
+
+&tdm_quin_tx {
+	status = "disabled";
+};
+
+&fsa4480 {
+	status = "disabled";
+};
+
+&hsi2s {
+	status = "disabled";
+};
+
+&ethqos_hw {
+	status = "disabled";
+};
+
+&emac_hw {
+	status = "disabled";
+};
+
+/ {
+	aliases {
+		hsuart2 = &qupv3_se11_2uart;
+		hsuart3 = &qupv3_se16_2uart;
+		hsuart4 = &qupv3_se7_4uart;
+	};
+};
+
+&soc {
+	/delete-node/ cam_isp_mgr;
+	/delete-node/ cam_fd_mgr;
+	/delete-node/ cam_fd;
+	/delete-node/ cam_lrme_mgr;
+	/delete-node/ cam_lrme;
+	/delete-node/ cam_csid0;
+	/delete-node/ cam_vfe0;
+	/delete-node/ cam_csid1;
+	/delete-node/ cam_vfe1;
+	/delete-node/ cam_csid_lite0;
+	/delete-node/ cam_vfe_lite0;
+	/delete-node/ cam_csid_lite1;
+	/delete-node/ cam_vfe_lite1;
+	/delete-node/ cam_csiphy0;
+	/delete-node/ cam_csiphy1;
+	/delete-node/ cam_csiphy2;
+	/delete-node/ cam_csiphy3;
+	/delete-node/ cam_cci0;
+	/delete-node/ cam_cci1;
+	/delete-node/ cam_smmu;
+	/delete-node/ cam_a5;
+	/delete-node/ cam_ipe0;
+	/delete-node/ cam_ipe1;
+	/delete-node/ cam_bps;
+	/delete-node/ cam_jpeg_mgr;
+	/delete-node/ cam_jpeg_enc;
+	/delete-node/ cam_jpeg_dma;
+        /delete-node/ gecko_core_platform;
+        /delete-node/ tdm_pri_rx;
+        /delete-node/ tdm_pri_tx;
+        /delete-node/ tdm_sec_rx;
+        /delete-node/ tdm_sec_tx;
+        /delete-node/ tdm_tert_rx;
+        /delete-node/ tdm_tert_tx;
+        /delete-node/ tdm_quat_rx;
+        /delete-node/ tdm_quat_tx;
+        /delete-node/ tdm_quin_rx;
+        /delete-node/ tdm_quin_tx;
+	/delete-node/ hsi2s;
+	/delete-node/ gpio_keys;
+	/delete-node/ ethqos_hw;
+	/delete-node/ emac_hw;
+
+	qcom,cam-req-mgr {
+		status = "disabled";
+	};
+
+	/* Balance Meter Board */
+	qupv3_se11_2uart: qcom,qup_uart@a8c000 {
+		compatible = "qcom,msm-geni-serial-hs";
+		reg = <0xa8c000 0x4000>;
+		reg-names = "se_phys";
+		clock-names = "se-clk", "m-ahb", "s-ahb";
+		clocks = <&clock_gcc GCC_QUPV3_WRAP1_S3_CLK>,
+                        <&clock_gcc GCC_QUPV3_WRAP_1_M_AHB_CLK>,
+                        <&clock_gcc GCC_QUPV3_WRAP_1_S_AHB_CLK>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&qupv3_se11_2uart_active>;
+		pinctrl-1 = <&qupv3_se11_2uart_sleep>;
+		interrupts = <GIC_SPI 356 0>;
+		qcom,wrapper-core = <&qupv3_1>;
+		status = "okay";
+	};
+
+	/* PLC */
+	qupv3_se16_2uart: qcom,qup_uart@a94000 {
+		compatible = "qcom,msm-geni-serial-hs";
+		reg = <0xa94000 0x4000>;
+		reg-names = "se_phys";
+		clock-names = "se-clk", "m-ahb", "s-ahb";
+		clocks = <&clock_gcc GCC_QUPV3_WRAP1_S5_CLK>,
+		       <&clock_gcc GCC_QUPV3_WRAP_1_M_AHB_CLK>,
+		       <&clock_gcc GCC_QUPV3_WRAP_1_S_AHB_CLK>;
+		pinctrl-names = "default", "sleep";
+		pinctrl-0 = <&qupv3_se16_2uart_active>;
+		pinctrl-1 = <&qupv3_se16_2uart_sleep>;
+		interrupts = <GIC_SPI 358 0>;
+		qcom,wrapper-core = <&qupv3_1>;
+		status = "okay";
+	};
+
+	/* 169MHz RF module */
+    qupv3_se7_4uart: qcom,qup_uart@89c000 {
+            compatible = "qcom,msm-geni-serial-hs";
+            reg = <0x89c000 0x4000>;
+            reg-names = "se_phys";
+            clock-names = "se-clk", "m-ahb", "s-ahb";
+            clocks = <&clock_gcc GCC_QUPV3_WRAP0_S7_CLK>,
+                     <&clock_gcc GCC_QUPV3_WRAP_0_M_AHB_CLK>,
+                     <&clock_gcc GCC_QUPV3_WRAP_0_S_AHB_CLK>;
+            pinctrl-names = "default", "active", "sleep";
+            pinctrl-0 = <&qupv3_se7_default_ctsrtsrx>,
+                        <&qupv3_se7_default_tx>;
+            pinctrl-1 = <&qupv3_se7_ctsrx>, <&qupv3_se7_rts>,
+                        <&qupv3_se7_tx>;
+            pinctrl-2 = <&qupv3_se7_ctsrx>, <&qupv3_se7_rts>,
+                        <&qupv3_se7_tx>;
+            interrupts-extended = <&pdc GIC_SPI 608 0>,
+                                  <&tlmm 101 0>;
+            qcom,wrapper-core = <&qupv3_0>;
+            qcom,wakeup-byte = <0xFD>;
+            status = "okay";
+    };
+
+    meter_board_rst {
+		compatible = "meter-brd-rst";
+		label = "meter-brd-rst";
+		pinctrl-names = "default";
+		pinctl-0 = <&meter_board_default>;
+		reset-gpios = <&tlmm 82 GPIO_ACTIVE_LOW>;
+		status = "ok";
+    };
+
+        rotary_switch {
+                compatible = "gpio-keys";
+                label = "rotary-switch";
+
+                pinctrl-names = "default";
+                pinctrl-0 = <&key_rotary_default>;
+
+                rotary_change {
+			label = "rotary-switch";
+			gpios = <&tlmm 81 GPIO_ACTIVE_HIGH>;
+			linux,input-type = <1>;
+			linux,code = <KEY_HOME>;
+			gpio-key,wakeup;
+			debounce-interval = <15>;
+			linux,can-disable;
+                };
+        };
+
+        rf_ctl {
+                compatible = "rf-ctl";
+                label = "rf-ctl";
+                pinctrl-names = "default";
+                pinctl-0 = <&gpio9_rf_rst_def
+                                &gpio10_rf_sleep_def>;
+
+                rst {
+                        label = "rf_rst";
+                        gpios = <&pm8150_1_gpios 9 GPIO_ACTIVE_LOW>;
+                };
+
+                sleep {
+                        label = "rf_sleep";
+                        gpios = <&pm8150_1_gpios 10 GPIO_ACTIVE_HIGH>;
+                };
+
+        };
+
+
+};
+
+&tlmm {
+	lis2dh12_int1_default: lis2dh12_int1_default {
+		mux {
+			pins = "gpio142";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio142";
+			drive-strength = <16>;
+			bias-pull-down;
+		};
+	};
+
+	lis2dh12_int2_default: lis2dh12_int2_default {
+		mux {
+			pins = "gpio153";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio153";
+			drive-strength = <16>;
+			bias-pull-down;
+		};
+	};
+	nxp_rtc_int_default: nxp_rtc_int_default {
+		mux {
+			pins = "gpio97";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio97";
+			drive-strength = <16>;
+			bias-pull-down;
+		};
+	};
+	key_rotary_switch {
+		key_rotary_default: key_rotary_default {
+			pins = "gpio81";
+			function = "gpio";
+			input-enable;
+			bias-pull-up;
+		};
+	};
+
+	nxp_rtc_int_default: nxp_rtc_int_default {
+		mux {
+			pins = "gpio97";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio97";
+			drive-strength = <16>;
+			bias-pull-down;
+		};
+	};
+
+	pcie0_wake_qed_default: pcie0_wake_qed_default {
+		mux {
+			pins = "gpio37";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio37";
+			drive-strength = <2>;
+			bias-disable;
+		};
+	};
+
+	meter_board_default: meter_board_default {
+		mux {
+			pins = "gpio82";
+			function = "gpio";
+		};
+		config {
+			pins = "gpio82";
+			drive-strength =<2>;
+			bias-pull-down;
+		};
+	};
+
+	qupv3_se7_4uart_pins: qupv3_se7_4uart_pins {
+           qupv3_se7_default_ctsrtsrx: qupv3_se7_default_ctsrtsrx {
+               mux {
+                    pins = "gpio98", "gpio99", "gpio101";
+                    function = "gpio";
+               };
+
+               config {
+                    pins = "gpio98", "gpio99", "gpio101";
+                    drive-strength = <2>;
+                    bias-pull-down;
+               };
+           };
+
+           qupv3_se7_default_tx: qupv3_se7_default_tx {
+              mux {
+                                      pins = "gpio100";
+                  function = "gpio";
+              };
+
+              config {
+                                      pins = "gpio100";
+                  drive-strength = <2>;
+                  bias-pull-up;
+              };
+           };
+
+           qupv3_se7_ctsrx: qupv3_se7_ctsrx {
+              mux {
+                                      pins = "gpio98", "gpio101";
+                  function = "qup7";
+              };
+
+              config {
+                  pins = "gpio98", "gpio101";
+                  drive-strength = <2>;
+                  bias-disable;
+              };
+          };
+
+          qupv3_se7_rts: qupv3_se7_rts {
+             mux {
+                    pins = "gpio99";
+                    function = "qup7";
+                };
+
+             config {
+                    pins = "gpio99";
+                    drive-strength = <2>;
+                    bias-pull-down;
+                };
+            };
+
+          qupv3_se7_tx: qupv3_se7_tx {
+              mux {
+                   pins = "gpio100";
+                   function = "qup7";
+              };
+
+              config {
+                   pins = "gpio100";
+                   drive-strength = <2>;
+                   bias-pull-up;
+              };
+           };
+        };
+
+	/* Balance Meter Board Pin Control */
+        qupv3_se11_2uart_pins: qupv3_se11_2uart_pins {
+                qupv3_se11_2uart_active: qupv3_se11_2uart_active {
+                        mux {
+                                pins = "gpio92", "gpio93";
+                                function = "qup11";
+                        };
+                        config {
+                                pins = "gpio92", "gpio93";
+                                drive-strength = <2>;
+                                bias-disable;
+                        };
+                };
+                qupv3_se11_2uart_sleep: qupv3_se11_2uart_sleep {
+                        mux {
+                                pins = "gpio92", "gpio93";
+                                function = "qup11";
+                        };
+
+                        config {
+                                pins = "gpio92", "gpio93";
+                                drive-strength = <2>;
+                                bias-disable;
+                        };
+                };
+        };
+
+};
+
+&qupv3_se17_i2c {
+	status = "ok";
+
+	lis2dh12_accel@19 {
+		status = "okay";
+		compatible = "st,lis2dh12-accel";
+		reg = <0x19>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <142 IRQ_TYPE_EDGE_RISING>,
+			     <152 IRQ_TYPE_EDGE_RISING>;
+	        st,drdy-int-pin = <1>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&lis2dh12_int1_default
+			&lis2dh12_int2_default>;
+	};
+
+	nxp_rtc@51 {
+		status = "okay";
+		compatible = "nxp,pcf2129";
+		reg = <0x51>;
+		interrupt-parent = <&tlmm>;
+		interrupts = <97 IRQ_TYPE_EDGE_RISING>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&nxp_rtc_int_default>;
+	};
+};
+
+&qupv3_se4_i2c {
+	status = "okay";
+	/delete-node/ fsa4480;
+
+	ioexp_qed: gpio@3e {
+		compatible = "semtech,sx1509q";
+		reg = <0x3e>;
+		gpio-controller;
+		semtech,probe-reset;
+		pinctrl-names = "default";
+		pinctrl-0 = <&front_panel_led1_pins
+			&front_panel_led2_pins
+			&front_panel_led3_pins
+			&front_panel_led4_pins
+			&front_panel_led5_pins
+			&front_panel_led6a_pins
+			&front_panel_led6b_pins
+			&front_panel_led7a_pins
+			&front_panel_led7b_pins
+			&front_panel_led8a_pins
+			&front_panel_led8b_pins
+			&front_panel_inner_led1_pins
+			&front_panel_inner_led2_pins
+			&front_panel_inner_led3_pins
+			&front_panel_inner_led4_pins
+			&front_panel_inner_led5_pins>;
+
+		front_panel_led1_pins: gpio1-led {
+			pins = "gpio0";
+			bias-disable;
+		};
+
+		front_panel_led2_pins: gpio2-led {
+			pins = "gpio1";
+			bias-disable;
+		};
+
+		front_panel_led3_pins: gpio3-led {
+			pins = "gpio2";
+			bias-disable;
+		};
+
+		front_panel_led4_pins: gpio4-led {
+			pins = "gpio3";
+			bias-disable;
+		};
+
+		front_panel_led5_pins: gpio5-led {
+			pins = "gpio4";
+			bias-disable;
+		};
+
+		front_panel_led6a_pins: gpio6a-led {
+			pins = "gpio5";
+			bias-disable;
+		};
+
+		front_panel_led6b_pins: gpio6b-led {
+			pins = "gpio6";
+			bias-disable;
+		};
+
+		front_panel_led7a_pins: gpio7a-led {
+			pins = "gpio7";
+			bias-disable;
+		};
+
+		front_panel_led7b_pins: gpio7b-led {
+			pins = "gpio8";
+			bias-disable;
+		};
+
+		front_panel_led8a_pins: gpio8a-led {
+			pins = "gpio9";
+			bias-disable;
+		};
+
+		front_panel_led8b_pins: gpio8b-led {
+			pins = "gpio10";
+			bias-disable;
+		};
+
+		front_panel_inner_led1_pins: gpio_inner1-led {
+			pins = "gpio11";
+			bias-disable;
+		};
+
+		front_panel_inner_led2_pins: gpio_inner2-led {
+			pins = "gpio12";
+			bias-disable;
+		};
+
+		front_panel_inner_led3_pins: gpio_inner3-led {
+			pins = "gpio13";
+			bias-disable;
+		};
+
+		front_panel_inner_led4_pins: gpio_inner4-led {
+			pins = "gpio14";
+			bias-disable;
+		};
+
+		front_panel_inner_led5_pins: gpio_inner5-led {
+			pins = "gpio15";
+			bias-disable;
+		};
+	};
+};
+
+&qupv3_se19_i2c {
+	status = "ok";
+};
+
+/* arm control qup */
+&qupv3_se14_spi {
+	status = "ok";
+};
+
+&pm8150_vadc {
+	amux_thm1_pu2 {
+		reg = <ADC_AMUX_THM1_PU2>;
+		label = "aux_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+	amux_thm2_pu2 {
+		reg = <ADC_AMUX_THM2_PU2>;
+		label = "fpga_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
+&pm8150_2_vadc {
+	xo_therm {
+		reg = <ADC_XO_THERM_PU2>;
+		label = "ufs_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+	amux_thm2_pu2 {
+		reg = <ADC_AMUX_THM2_PU2>;
+		label = "power_therm";
+		qcom,ratiometric;
+		qcom,hw-settle-time = <200>;
+		qcom,pre-scaling = <1 1>;
+	};
+};
+
+&pcie0 {
+	pinctrl-0 = <&pcie0_clkreq_default
+		&pcie0_perst_default
+		&pcie0_wake_qed_default>;
+	qcom,boot-option = <0x0>;
+};
+
+&pcie1 {
+	qcom,boot-option = <0x0>;
+};
+
+&sdhc_2 {
+	pinctrl-0 = <&sdc2_clk_on
+		&sdc2_cmd_on &sdc2_data_on>;
+	pinctrl-1 = <&sdc2_clk_off
+		&sdc2_cmd_off &sdc2_data_off>;
+
+	/delete-node/ cd-gpios;
+};
+
+&pm8150_1_gpios {
+	interrupts = <0x0 0xc0 0 IRQ_TYPE_NONE>,
+			<0x0 0xc2 0 IRQ_TYPE_NONE>,
+			<0x0 0xc3 0 IRQ_TYPE_NONE>,
+			<0x0 0xc5 0 IRQ_TYPE_NONE>,
+			<0x0 0xc6 0 IRQ_TYPE_NONE>,
+			<0x0 0xc8 0 IRQ_TYPE_NONE>,
+			<0x0 0xc9 0 IRQ_TYPE_NONE>;
+	interrupt-names = "pm8150_1_gpio1", "pm8150_1_gpio3",
+			"pm8150_1_gpio4", "pm8150_1_gpio6", "pm8150_1_gpio7",
+			"pm8150_1_gpio9", "pm8150_1_gpio10";
+	gpio-controller;
+	qcom,gpios-disallowed = <2 5 8>;
+
+	/delete-node/ key_home;
+	/delete-node/ storage_sd_detect;
+	/delete-node/ key_vol_up;
+
+	gpio6_dc {
+		gpio6_dc_def: gpio6_dc_def {
+			pins = "gpio6";
+			function = "normal";
+			bias-disable;
+			input-enable;
+			power-source = <0>;
+		};
+	};
+
+	gpio7_ac{
+        gpio7_dc_def: gpio7_dc_def {
+                        pins = "gpio7";
+                        function = "normal";
+                        input-enable;
+                        bias-disable;
+                        power-source = <0>;
+                };
+        };
+
+        gpio9_rf_rst {
+                gpio9_rf_rst_def: gpio9_rf_rst_def {
+                        pins = "gpio9";
+                        function = "normal";
+                        input-enable;
+                        bias-pull-up;
+                        power-source = <0>;
+                };
+        };
+
+        gpio10_rf_sleep {
+                gpio10_rf_sleep_def: gpio10_rf_sleep_def {
+                        pins = "gpio10";
+                        function = "normal";
+                        input-enable;
+                        bias-pull-down;
+                        power-source = <0>;
+                };
+        };
+};
