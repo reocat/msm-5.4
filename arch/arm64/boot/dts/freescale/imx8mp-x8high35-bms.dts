@@ -246,6 +246,19 @@
 		speed = <1000>;
 		full-duplex;
 	};
+
+	mdio {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ethphy1: ethernet-phy@0 {
+			compatible = "ethernet-phy-ieee802.3-c45";
+			reg = <0>;
+			phy-mode = "mii";
+			max-speed = <10>;
+		};
+	};
+
 };
 
 &flexcan1 {
@@ -286,6 +299,7 @@
 	switch: switch@5f {
 		compatible = "microchip,ksz9897";
 		reg = <0x5f>;
+		phy-mode = "rgmii-id";
 
 		ports {
 			#address-cells = <1>;
@@ -320,6 +334,7 @@
 				reg = <6>;
 				label = "cpu";
 				ethernet = <&fec>;
+				phy-mode = "rgmii-id";
 				fixed-link {
 					speed = <1000>;
 					full-duplex;
