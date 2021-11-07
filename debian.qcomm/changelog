@@ -1,3 +1,84 @@
+linux-qcomm (4.14.0-1020.23) focal; urgency=medium
+
+  * Miscellaneous upstream changes
+    - Revert "ARM: dts: msm: Adding appsbl and commonlib64 support"
+
+ -- Shrirang Bagul <shrirang.bagul@canonical.com>  Fri, 29 Oct 2021 15:19:20 +0800
+
+linux-qcomm (4.14.0-1019.22) focal; urgency=medium
+
+  * INVALID or PRIVATE BUG (LP: #1945470)
+    - ARM: dts: msm: fixed marked issue
+    - ARM: dts: msm: disable cnss node for SA8155 IOT target
+    - msm: ipa3: Fix to prevent Integer Overflow
+    - msm: ipa3: Added pdn config type check
+    - msm: ipa: Add change to fix out of bound access issue
+    - ARM: dts: msm: Adding appsbl and commonlib64 support
+    - ARM: dts: msm: disable display memory
+    - Revert "UBUNTU: [Config] CONFIG_CRYPTO_DEV_QCOM_ICE=y"
+    - Revert "UBUNTU: SAUCE: crypto: msm: multi partition FDE support with
+      separate keys"
+    - Revert "UBUNTU: SAUCE: Add support for block disk encryption"
+    - Fix OTA issue with vts fixes for new fbe framework
+    - mmc: host: reprogram the key to cover the invalid config case
+    - Add support for block disk encryption
+    - Compilation fix when CONFIG_QTI_CRYPTO_COMMON is not defined
+    - ARM: dts: Make crypto address part of controller node
+    - crypto: msm: multi partition FDE support with separate keys
+    - msm: adsprpc: Fix race condition in internal_control
+    - msm: adsprpc: Handle UAF in process shell memory
+    - disp: msm: sde: add null check for drm file in msm_release
+    - disp: msm: add check for buffer length before copy
+    - disp: msm: dp: validate edid before dereferencing
+    - [Config] updateconfigs to support FDE using QCOM ICE
+
+ -- Shrirang Bagul <shrirang.bagul@canonical.com>  Thu, 07 Oct 2021 08:11:26 +0800
+
+linux-qcomm (4.14.0-1018.21) focal; urgency=medium
+
+  * Miscellaneous Ubuntu changes
+    - [Config] CONFIG_IIO_ST_ACCEL_3AXIS=m
+
+ -- Shrirang Bagul <shrirang.bagul@canonical.com>  Thu, 30 Sep 2021 19:47:55 +0800
+
+linux-qcomm (4.14.0-1017.20) focal; urgency=medium
+
+  * Miscellaneous Ubuntu changes
+    - SAUCE: Add support for block disk encryption
+    - SAUCE: crypto: msm: multi partition FDE support with separate keys
+    - [Config] CONFIG_CRYPTO_DEV_QCOM_ICE=y
+    - [Packaging] stop building android kernel images
+    - [Config] updateconfigs for QED board
+
+  * Miscellaneous upstream changes
+    - Initial Device tree for QEd platform
+    - i210 support for QED
+    - Rearranged sa8155p-v2-qed.dtsi
+    - Enable QUP16 connected to PLC
+    - Disable hsi2s node
+    - Balance Meter Board enable
+    - Enable QUP as UART port for RF Module
+    - RF PMIC gpio pin enable
+    - Add thermistor channel to VADC
+    - Enable QUP4 & sx1509b ioexpander
+    - Add nxp pcf2129 device tree and pin control
+    - Removing conflicting PMA gpios
+    - Add Reset pin control for STM32F20X of Meter Board
+    - Support digital event from rotary switch
+    - Aliases for high speed uarts
+    - Data acquisition and processing on ARM
+    - ]3977[ turn off autosuspend of serial port
+    - Data acquisition and processing on ARM
+    - Data acquisition and processing on ARM
+    - Data acquisition and processing on ARM
+    - Support QED specific board id
+    - Revert "UBUNTU: [Packaging] include oem-wendover-fdehelper to provide TA in
+      initrd"
+    - Revert "UBUNTU: [Packaging] build-avb: add packages (build-dependencies) to
+      provide tools to generate android boot img"
+
+ -- Shrirang Bagul <shrirang.bagul@canonical.com>  Mon, 27 Sep 2021 23:13:01 +0800
+
 linux-qcomm (4.14.0-1016.19) focal; urgency=medium
 
   * INVALID or PRIVATE BUG (LP: #1940100)
