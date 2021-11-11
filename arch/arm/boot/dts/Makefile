@@ -679,6 +679,7 @@ dtb-$(CONFIG_SOC_IMX6SX) += \
 	imx6sx-udoo-neo-basic.dtb \
 	imx6sx-udoo-neo-extended.dtb \
 	imx6sx-udoo-neo-full.dtb \
+	imx6sx-x6med35-pdk.dtb \
 	imx6sx-ys.dtb \
 	imx6sx-ys-m4.dtb \
 	imx6sx-ys-rev2.dtb \
