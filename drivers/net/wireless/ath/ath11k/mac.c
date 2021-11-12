@@ -1049,6 +1049,83 @@ static int ath11k_mac_monitor_stop(struct ath11k *ar)
 	return 0;
 }
 
+static int ath11k_mac_vif_setup_ps(struct ath11k_vif *arvif)
+{
+	struct ath11k *ar = arvif->ar;
+	struct ieee80211_vif *vif = arvif->vif;
+	struct ieee80211_conf *conf = &ar->hw->conf;
+	enum wmi_sta_powersave_param param;
+	enum wmi_sta_ps_mode psmode;
+	int ret;
+	int timeout;
+	bool enable_ps;
+
+	lockdep_assert_held(&arvif->ar->conf_mutex);
+
+	if (arvif->vif->type != NL80211_IFTYPE_STATION)
+		return 0;
+
+	enable_ps = arvif->ps;
+
+	if (!arvif->is_started) {
+		/* mac80211 can update vif powersave state while disconnected.
+		 * Firmware doesn't behave nicely and consumes more power than
+		 * necessary if PS is disabled on a non-started vdev. Hence
+		 * force-enable PS for non-running vdevs.
+		 */
+		psmode = WMI_STA_PS_MODE_ENABLED;
+	} else if (enable_ps) {
+		psmode = WMI_STA_PS_MODE_ENABLED;
+		param = WMI_STA_PS_PARAM_INACTIVITY_TIME;
+
+		timeout = conf->dynamic_ps_timeout;
+		if (timeout == 0) {
+			/* firmware doesn't like 0 */
+			timeout = ieee80211_tu_to_usec(vif->bss_conf.beacon_int) / 1000;
+		}
+
+		ret = ath11k_wmi_set_sta_ps_param(ar, arvif->vdev_id, param,
+						  timeout);
+		if (ret) {
+			ath11k_warn(ar->ab, "failed to set inactivity time for vdev %d: %i\n",
+				    arvif->vdev_id, ret);
+			return ret;
+		}
+	} else {
+		psmode = WMI_STA_PS_MODE_DISABLED;
+	}
+
+	ath11k_dbg(ar->ab, ATH11K_DBG_MAC, "mac vdev %d psmode %s\n",
+		   arvif->vdev_id, psmode ? "enable" : "disable");
+
+	ret = ath11k_wmi_pdev_set_ps_mode(ar, arvif->vdev_id, psmode);
+	if (ret) {
+		ath11k_warn(ar->ab, "failed to set sta power save mode %d for vdev %d: %d\n",
+			    psmode, arvif->vdev_id, ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int ath11k_mac_config_ps(struct ath11k *ar)
+{
+	struct ath11k_vif *arvif;
+	int ret = 0;
+
+	lockdep_assert_held(&ar->conf_mutex);
+
+	list_for_each_entry(arvif, &ar->arvifs, list) {
+		ret = ath11k_mac_vif_setup_ps(arvif);
+		if (ret) {
+			ath11k_warn(ar->ab, "failed to setup powersave: %d\n", ret);
+			break;
+		}
+	}
+
+	return ret;
+}
+
 static int ath11k_mac_op_config(struct ieee80211_hw *hw, u32 changed)
 {
 	struct ath11k *ar = hw->priv;
@@ -2418,6 +2495,7 @@ static void ath11k_bss_assoc(struct ieee80211_hw *hw,
 
 	rcu_read_unlock();
 
+	peer_arg.is_assoc = true;
 	ret = ath11k_wmi_send_peer_assoc_cmd(ar, &peer_arg);
 	if (ret) {
 		ath11k_warn(ar->ab, "failed to run peer assoc for %pM vdev %i: %d\n",
@@ -2940,6 +3018,16 @@ static void ath11k_mac_op_bss_info_changed(struct ieee80211_hw *hw,
 
 		arvif->txpower = info->txpower;
 		ath11k_mac_txpower_recalc(ar);
+	}
+
+	if (changed & BSS_CHANGED_PS &&
+	    ar->ab->hw_params.supports_sta_ps) {
+		arvif->ps = vif->bss_conf.ps;
+
+		ret = ath11k_mac_config_ps(ar);
+		if (ret)
+			ath11k_warn(ar->ab, "failed to setup ps on vdev %i: %d\n",
+				    arvif->vdev_id, ret);
 	}
 
 	if (changed & BSS_CHANGED_MCAST_RATE &&
@@ -3685,6 +3773,7 @@ static int ath11k_station_assoc(struct ath11k *ar,
 
 	ath11k_peer_assoc_prepare(ar, vif, sta, &peer_arg, reassoc);
 
+	peer_arg.is_assoc = true;
 	ret = ath11k_wmi_send_peer_assoc_cmd(ar, &peer_arg);
 	if (ret) {
 		ath11k_warn(ar->ab, "failed to run peer assoc for STA %pM vdev %i: %d\n",
@@ -3896,6 +3985,7 @@ static void ath11k_sta_rc_update_wk(struct work_struct *wk)
 			ath11k_peer_assoc_prepare(ar, arvif->vif, sta,
 						  &peer_arg, true);
 
+			peer_arg.is_assoc = false;
 			err = ath11k_wmi_send_peer_assoc_cmd(ar, &peer_arg);
 			if (err)
 				ath11k_warn(ar->ab, "failed to run peer assoc for STA %pM vdev %i: %d\n",
@@ -5638,7 +5728,8 @@ static int ath11k_mac_op_add_interface(struct ieee80211_hw *hw,
 			goto err_peer_del;
 		}
 
-		ret = ath11k_wmi_pdev_set_ps_mode(ar, arvif->vdev_id, false);
+		ret = ath11k_wmi_pdev_set_ps_mode(ar, arvif->vdev_id,
+						  WMI_STA_PS_MODE_DISABLED);
 		if (ret) {
 			ath11k_warn(ar->ab, "failed to disable vdev %d ps mode: %d\n",
 				    arvif->vdev_id, ret);
@@ -7672,7 +7763,8 @@ static int __ath11k_mac_register(struct ath11k *ar)
 	 * for each band for a dual band capable radio. It will be tricky to
 	 * handle it when the ht capability different for each band.
 	 */
-	if (ht_cap & WMI_HT_CAP_DYNAMIC_SMPS || ar->supports_6ghz)
+	if (ht_cap & WMI_HT_CAP_DYNAMIC_SMPS ||
+	    (ar->supports_6ghz && ab->hw_params.supports_dynamic_smps_6ghz))
 		ar->hw->wiphy->features |= NL80211_FEATURE_DYNAMIC_SMPS;
 
 	ar->hw->wiphy->max_scan_ssids = WLAN_SCAN_PARAMS_MAX_SSID;
