@@ -1244,7 +1244,8 @@ int ath11k_wmi_pdev_set_param(struct ath11k *ar, u32 param_id,
 	return ret;
 }
 
-int ath11k_wmi_pdev_set_ps_mode(struct ath11k *ar, int vdev_id, u32 enable)
+int ath11k_wmi_pdev_set_ps_mode(struct ath11k *ar, int vdev_id,
+				enum wmi_sta_ps_mode psmode)
 {
 	struct ath11k_pdev_wmi *wmi = ar->wmi;
 	struct wmi_pdev_set_ps_mode_cmd *cmd;
@@ -1259,7 +1260,7 @@ int ath11k_wmi_pdev_set_ps_mode(struct ath11k *ar, int vdev_id, u32 enable)
 	cmd->tlv_header = FIELD_PREP(WMI_TLV_TAG, WMI_TAG_STA_POWERSAVE_MODE_CMD) |
 			  FIELD_PREP(WMI_TLV_LEN, sizeof(*cmd) - TLV_HDR_SIZE);
 	cmd->vdev_id = vdev_id;
-	cmd->sta_ps_mode = enable;
+	cmd->sta_ps_mode = psmode;
 
 	ret = ath11k_wmi_cmd_send(wmi, skb, WMI_STA_POWERSAVE_MODE_CMDID);
 	if (ret) {
@@ -1269,7 +1270,7 @@ int ath11k_wmi_pdev_set_ps_mode(struct ath11k *ar, int vdev_id, u32 enable)
 
 	ath11k_dbg(ar->ab, ATH11K_DBG_WMI,
 		   "WMI vdev set psmode %d vdev id %d\n",
-		   enable, vdev_id);
+		   psmode, vdev_id);
 
 	return ret;
 }
@@ -1762,7 +1763,7 @@ ath11k_wmi_copy_peer_flags(struct wmi_peer_assoc_complete_cmd *cmd,
 		cmd->peer_flags |= WMI_PEER_AUTH;
 	if (param->need_ptk_4_way) {
 		cmd->peer_flags |= WMI_PEER_NEED_PTK_4_WAY;
-		if (!hw_crypto_disabled)
+		if (!hw_crypto_disabled && param->is_assoc)
 			cmd->peer_flags &= ~WMI_PEER_AUTH;
 	}
 	if (param->need_gtk_2_way)
@@ -2386,6 +2387,8 @@ int ath11k_wmi_send_scan_chan_list_cmd(struct ath11k *ar,
 					    tchan_info->reg_class_id);
 			*reg2 |= FIELD_PREP(WMI_CHAN_REG_INFO2_ANT_MAX,
 					    tchan_info->antennamax);
+			*reg2 |= FIELD_PREP(WMI_CHAN_REG_INFO2_MAX_TX_PWR,
+					    tchan_info->maxregpower);
 
 			ath11k_dbg(ar->ab, ATH11K_DBG_WMI,
 				   "WMI chan scan list chan[%d] = %u, chan_info->info %8x\n",
@@ -6398,6 +6401,7 @@ static void ath11k_peer_sta_kickout_event(struct ath11k_base *ab, struct sk_buff
 	struct ieee80211_sta *sta;
 	struct ath11k_peer *peer;
 	struct ath11k *ar;
+	u32 vdev_id;
 
 	if (ath11k_pull_peer_sta_kickout_ev(ab, skb, &arg) != 0) {
 		ath11k_warn(ab, "failed to extract peer sta kickout event");
@@ -6413,10 +6417,15 @@ static void ath11k_peer_sta_kickout_event(struct ath11k_base *ab, struct sk_buff
 	if (!peer) {
 		ath11k_warn(ab, "peer not found %pM\n",
 			    arg.mac_addr);
+		spin_unlock_bh(&ab->base_lock);
 		goto exit;
 	}
 
-	ar = ath11k_mac_get_ar_by_vdev_id(ab, peer->vdev_id);
+	vdev_id = peer->vdev_id;
+
+	spin_unlock_bh(&ab->base_lock);
+
+	ar = ath11k_mac_get_ar_by_vdev_id(ab, vdev_id);
 	if (!ar) {
 		ath11k_warn(ab, "invalid vdev id in peer sta kickout ev %d",
 			    peer->vdev_id);
@@ -6437,7 +6446,6 @@ static void ath11k_peer_sta_kickout_event(struct ath11k_base *ab, struct sk_buff
 	ieee80211_report_low_ack(sta, 10);
 
 exit:
-	spin_unlock_bh(&ab->base_lock);
 	rcu_read_unlock();
 }
 
