@@ -23,3 +23,4 @@ CONFIG_SND_SOC_SOF_NOCODEC_SUPPORT      policy<{'arm64': '-'}>
 CONFIG_USB_EHCI_HCD_PLATFORM            policy<{'arm64': 'm', 'armhf': 'm'}>
 CONFIG_VFIO                             policy<{'arm64': '-', 'armhf': '-'}>
 CONFIG_VFIO_PCI                         policy<{'arm64': '-', 'armhf': '-'}>
+CONFIG_CMA_SIZE_MBYTES                  policy<{'arm64': '320', 'armhf': '32', }>

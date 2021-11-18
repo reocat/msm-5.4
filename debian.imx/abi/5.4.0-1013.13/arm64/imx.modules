@@ -668,8 +668,6 @@ dp83867
 dp83tc811
 dpot-dac
 drbd
-drm
-drm_kms_helper
 drm_mipi_dbi
 drv260x
 drv2665
@@ -839,7 +837,6 @@ fb_ssd1331
 fb_ssd1351
 fb_st7735r
 fb_st7789v
-fb_sys_fops
 fb_tinylcd
 fb_tls8204
 fb_uc1611
@@ -1235,7 +1232,6 @@ i1480-dfu-usb
 i1480-est
 i2400m
 i2400m-usb
-i2c-algo-bit
 i2c-algo-pca
 i2c-arb-gpio-challenge
 i2c-demux-pinctrl
@@ -2992,9 +2988,6 @@ synaptics_i2c
 synaptics_usb
 synclink_cs
 syscon-reboot-mode
-syscopyarea
-sysfillrect
-sysimgblt
 sysv
 t5403
 tag_8021q
