@@ -431,6 +431,7 @@ enum {
 	PROC_SW_PORT_LAST,
 };
 
+int cpu_host_port;
 /* -------------------------------------------------------------------------- */
 
 static uint get_phy_port(struct ksz_sw *sw, uint n)
@@ -14854,6 +14855,7 @@ static void setup_device_node(struct ksz_sw *sw)
 	const char *name;
 	int err;
 	u32 reg;
+	u32 cpu;
 
 	if (!ks->of_dev)
 		return;
@@ -14872,6 +14874,11 @@ dbg_msg(" found eth\n");
 				name = of_get_property(port, "label", NULL);
 				if (name)
 dbg_msg(" name: %s\n", name);
+				err = of_property_read_u32(port, "cpu", &cpu);
+				if (!err) {
+					dbg_msg("found cpu_port: %d\n", cpu);
+					cpu_host_port = cpu;
+				}
 				/* Save the device node. */
 				sw->devnode[reg] = port;
 			}
@@ -18041,7 +18048,6 @@ static void ksz9897_dev_monitor(struct timer_list *t)
 }  /* ksz9897_dev_monitor */
 
 static int intr_mode;
-static int sw_host_port;
 static int sysfs_sw;
 static int ports;
 
@@ -18334,6 +18340,7 @@ static int ksz_probe_next(struct sw_priv *ks)
 	uint phy_port_count;
 	uint pi;
 	uint port_count;
+	int sw_host_port = 0;
 	int reset = true;
 	int ret = -ENODEV;
 
@@ -18408,6 +18415,8 @@ dbg_msg("%02x %02x"NL, id1, id2);
 		sku = KSZ9893_SKU;
 	}
 
+	setup_device_node(sw);
+
 	/* Check for S2 revision. */
 	sw->ops->acquire(sw);
 	id = sw->reg->r8(sw, REG_GLOBAL_OPTIONS);
@@ -18456,14 +18465,13 @@ dbg_msg("%02x %02x"NL, id1, id2);
 		case SW_9477_SL_5_2:
 			/* Last port is SGMII. */
 			if (!sw_host_port)
-				sw_host_port = 6;
+				sw_host_port = cpu_host_port;
 			sku = KSZ9477_SKU;
 			break;
-		case SW_9897_SL_5_2:	
+		case SW_9897_SL_5_2:
 			/* Last port is SGMII. */
-			if (!sw_host_port) {
-				sw_host_port = 6;
-			}
+			if (!sw_host_port)
+				sw_host_port = cpu_host_port;
 			sku = KSZ9897_SKU;
 			break;
 		}
@@ -18772,7 +18780,6 @@ info->tx_rate / TX_RATE_UNIT, info->duplex);
 	sw->ops->release(sw);
 
 	sw_init_phy_priv(ks);
-	setup_device_node(sw);
 
 	ret = ksz_mii_init(ks);
 	if (ret)
@@ -19110,9 +19117,13 @@ module_param(intr_mode, int, 0);
 MODULE_PARM_DESC(intr_mode,
 	"Configure which interrupt mode to use(1=level low, 2=falling)");
 
+/* Not required this as KSZ driver is static.
+   and sw_host_port value is taken from device tree. */
+/*
 module_param(sw_host_port, int, 0);
 MODULE_PARM_DESC(sw_host_port,
 	"Configure switch host port");
+*/
 
 module_param(sysfs_sw, int, 0);
 MODULE_PARM_DESC(sysfs_sw,

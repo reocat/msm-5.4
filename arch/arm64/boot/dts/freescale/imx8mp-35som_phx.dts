@@ -476,6 +476,7 @@
                        port@5 {
                                reg = <5>;
                                label = "cpu";
+			       cpu = <6>;		/* Added cpu property to get cpu port in ksz driver */
                                ethernet = <&eqos>;
                                fixed-link {
                                       speed = <1000>;
@@ -543,6 +544,7 @@
 			port@5 {
 				reg = <5>;
 				label = "cpu";
+				cpu = <6>;		/* Added cpu property to get cpu port in ksz driver */
 				ethernet = <&fec>;
 				fixed-link {
 					speed = <1000>;

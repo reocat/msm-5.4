@@ -608,6 +608,8 @@
 	phy-mode = "rgmii-txid";
 	resets = <&ksz9477_reset>;
 	fsl,magic-packet;
+	phy-reset-gpios = <&tca6416_nw 12 1>;
+        phy-reset-duration =<20>;
 	status = "okay";
 
         fixed-link {
@@ -851,6 +853,7 @@
                        port@6 {
                               reg = <6>;
                               label = "cpu";
+			      cpu = <7>;		/* Added cpu property to get cpu port in ksz driver */
                               ethernet = <&eqos>;
                               fixed-link {
                                      speed = <1000>;
@@ -990,6 +993,7 @@
 			port@5 {
 				reg = <5>;
 				label = "cpu";
+			        cpu = <6>;		/* Added cpu property to get cpu port in ksz driver */
 				ethernet = <&fec>;
 				fixed-link {
 					speed = <1000>;
