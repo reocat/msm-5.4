@@ -107,7 +107,7 @@
 				     80 81 82 83 84 85 86 87 88 89
 				     90 91 92 93 94 95 96 97 98 99
 				    100>;
-		default-brightness-level = <80>;
+		default-brightness-level = <100>;
 	};
 
 	lvds0_panel {
@@ -788,7 +788,7 @@
 	typec_ptn5150: typec@3d {
 		compatible = "nxp,ptn5150";
 		reg = <0x3d>;
-		vbus-gpios = <&pca9505 18 GPIO_ACTIVE_HIGH>;
+		vbus-gpios = <&pca9505 18 GPIO_ACTIVE_LOW>;
 		status = "okay";
 	};
 
@@ -1013,7 +1013,7 @@
 };
 
 &irqsteer_hdmi {
-	status = "disabled";
+	status = "okay";
 };
 
 &flexcan1 {
@@ -1031,23 +1031,23 @@
 };
 
 &hdmimix_clk {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmimix_reset {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi_pavi {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmi {
-	status = "disabled";
+	status = "okay";
 };
 
 &hdmiphy {
-	status = "disabled";
+	status = "okay";
 };
 
 &lcdif1 {
