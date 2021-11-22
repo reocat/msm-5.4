@@ -2991,7 +2991,7 @@ static unsigned short seq_file_family(const struct seq_file *seq)
 #endif
 
 	/* Iterated from proc fs */
-	afinfo = PDE_DATA(file_inode(seq->file));
+	afinfo = file_inode(seq->file)->i_private;
 	return afinfo->family;
 }
 
