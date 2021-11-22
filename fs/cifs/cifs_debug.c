@@ -1007,7 +1007,7 @@ static const struct proc_ops cifs_security_flags_proc_ops = {
 };
 
 /* To make it easier to debug, can help to show mount params */
-static int cifs_mount_params_proc_show(struct seq_file *m, void *v)
+static int cifs_mount_params_show(struct seq_file *m, void *v)
 {
 	const struct fs_parameter_spec *p;
 	const char *type;
@@ -1035,20 +1035,7 @@ static int cifs_mount_params_proc_show(struct seq_file *m, void *v)
 
 	return 0;
 }
-
-static int cifs_mount_params_proc_open(struct inode *inode, struct file *file)
-{
-	return single_open(file, cifs_mount_params_proc_show, NULL);
-}
-
-static const struct proc_ops cifs_mount_params_proc_ops = {
-	.proc_open	= cifs_mount_params_proc_open,
-	.proc_read	= seq_read,
-	.proc_lseek	= seq_lseek,
-	.proc_release	= single_release,
-	/* No need for write for now */
-	/* .proc_write	= cifs_mount_params_proc_write, */
-};
+DEFINE_PROC_SHOW_ATTRIBUTE(cifs_mount_params);
 
 #else
 inline void cifs_proc_init(void)
