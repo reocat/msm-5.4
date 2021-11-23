@@ -17,6 +17,7 @@
 #include <linux/skbuff.h>
 #include <linux/sctp.h>
 #include <net/gre.h>
+#include <net/gro.h>
 #include <net/ip6_checksum.h>
 #include <net/pkt_cls.h>
 #include <net/tcp.h>
@@ -52,10 +53,6 @@ static struct hnae3_client client;
 static int debug = -1;
 module_param(debug, int, 0);
 MODULE_PARM_DESC(debug, " Network interface message level setting");
-
-static unsigned int tx_spare_buf_size;
-module_param(tx_spare_buf_size, uint, 0400);
-MODULE_PARM_DESC(tx_spare_buf_size, "Size used to allocate tx spare buffer");
 
 static unsigned int tx_sgl = 1;
 module_param(tx_sgl, uint, 0600);
@@ -1041,8 +1038,7 @@ static void hns3_init_tx_spare_buffer(struct hns3_enet_ring *ring)
 	dma_addr_t dma;
 	int order;
 
-	alloc_size = tx_spare_buf_size ? tx_spare_buf_size :
-		     ring->tqp->handle->kinfo.tx_spare_buf_size;
+	alloc_size = ring->tqp->handle->kinfo.tx_spare_buf_size;
 	if (!alloc_size)
 		return;
 
@@ -2678,7 +2674,7 @@ static bool hns3_get_tx_timeo_queue_info(struct net_device *ndev)
 		unsigned long trans_start;
 
 		q = netdev_get_tx_queue(ndev, i);
-		trans_start = q->trans_start;
+		trans_start = READ_ONCE(q->trans_start);
 		if (netif_xmit_stopped(q) &&
 		    time_after(jiffies,
 			       (trans_start + ndev->watchdog_timeo))) {
@@ -5531,8 +5527,8 @@ static int hns3_reset_notify_uninit_enet(struct hnae3_handle *handle)
 	return 0;
 }
 
-static int hns3_reset_notify(struct hnae3_handle *handle,
-			     enum hnae3_reset_notify_type type)
+int hns3_reset_notify(struct hnae3_handle *handle,
+		      enum hnae3_reset_notify_type type)
 {
 	int ret = 0;
 
