@@ -717,9 +717,9 @@ alternative_else_nop_endif
 
 	.macro tramp_exit, regsize = 64
 	tramp_data_read_var	x30, this_cpu_vector
-#ifdef CONFIG_MITIGATE_SPECTRE_BRANCH_HISTORY
-	add	x30, x30, SZ_4K
-#endif
+	get_this_cpu_offset x29
+	ldr	x30, [x30, x29]
+
 	msr	vbar_el1, x30
 	ldr	lr, [sp, #S_LR]
 	tramp_unmap_kernel	x29
