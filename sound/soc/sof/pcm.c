@@ -814,6 +814,18 @@ int sof_pcm_dai_link_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_pa
 			"channels_min: %d channels_max: %d\n",
 			channels->min, channels->max);
 		break;
+	case SOF_DAI_MEDIATEK_AFE:
+		rate->min = dai->dai_config->afe.rate;
+		rate->max = dai->dai_config->afe.rate;
+		channels->min = dai->dai_config->afe.channels;
+		channels->max = dai->dai_config->afe.channels;
+
+		dev_dbg(component->dev,
+			"rate_min: %d rate_max: %d\n", rate->min, rate->max);
+		dev_dbg(component->dev,
+			"channels_min: %d channels_max: %d\n",
+			channels->min, channels->max);
+		break;
 	case SOF_DAI_IMX_SAI:
 		rate->min = dai->dai_config->sai.fsync_rate;
 		rate->max = dai->dai_config->sai.fsync_rate;
@@ -824,6 +836,42 @@ int sof_pcm_dai_link_fixup(struct snd_soc_pcm_runtime *rtd, struct snd_pcm_hw_pa
 			"rate_min: %d rate_max: %d\n", rate->min, rate->max);
 		dev_dbg(component->dev,
 			"channels_min: %d channels_max: %d\n",
+			channels->min, channels->max);
+		break;
+	case SOF_DAI_AMD_BT:
+		rate->min = dai->dai_config->acpbt.fsync_rate;
+		rate->max = dai->dai_config->acpbt.fsync_rate;
+		channels->min = dai->dai_config->acpbt.tdm_slots;
+		channels->max = dai->dai_config->acpbt.tdm_slots;
+
+		dev_dbg(component->dev,
+			"AMD_BT rate_min: %d rate_max: %d\n", rate->min, rate->max);
+		dev_dbg(component->dev,
+			"AMD_BT channels_min: %d channels_max: %d\n",
+			channels->min, channels->max);
+		break;
+	case SOF_DAI_AMD_SP:
+		rate->min = dai->dai_config->acpsp.fsync_rate;
+		rate->max = dai->dai_config->acpsp.fsync_rate;
+		channels->min = dai->dai_config->acpsp.tdm_slots;
+		channels->max = dai->dai_config->acpsp.tdm_slots;
+
+		dev_dbg(component->dev,
+			"AMD_SP rate_min: %d rate_max: %d\n", rate->min, rate->max);
+		dev_dbg(component->dev,
+			"AMD_SP channels_min: %d channels_max: %d\n",
+			channels->min, channels->max);
+		break;
+	case SOF_DAI_AMD_DMIC:
+		rate->min = dai->dai_config->acpdmic.fsync_rate;
+		rate->max = dai->dai_config->acpdmic.fsync_rate;
+		channels->min = dai->dai_config->acpdmic.tdm_slots;
+		channels->max = dai->dai_config->acpdmic.tdm_slots;
+
+		dev_dbg(component->dev,
+			"AMD_DMIC rate_min: %d rate_max: %d\n", rate->min, rate->max);
+		dev_dbg(component->dev,
+			"AMD_DMIC channels_min: %d channels_max: %d\n",
 			channels->min, channels->max);
 		break;
 	default:
