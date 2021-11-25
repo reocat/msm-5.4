@@ -684,12 +684,14 @@ int fb_prepare_logo(struct fb_info *info, int rotate)
 	return fb_prepare_extra_logos(info, height, yres);
 }
 
+#define NUM_HON_LOGO 1
+
 int fb_show_logo(struct fb_info *info, int rotate)
 {
 	int y;
 
 	y = fb_show_logo_line(info, rotate, fb_logo.logo, 0,
-			      num_online_cpus());
+			      NUM_HON_LOGO);
 	y = fb_show_extra_logos(info, y, rotate);
 
 	return y;

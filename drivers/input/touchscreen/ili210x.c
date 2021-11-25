@@ -20,12 +20,40 @@
 #define REG_TOUCHDATA		0x10
 #define REG_PANEL_INFO		0x20
 #define REG_FIRMWARE_VERSION	0x40
+#define REG_PROTOCOL_VERSION	0x42
 #define REG_CALIBRATE		0xcc
+
+/* scaling */
+#define XAXIS_SCALING		78125
+#define YAXIS_SCALING		83333
+
+struct finger {
+	u8 x_low;
+	u8 x_high;
+	u8 y_low;
+	u8 y_high;
+} __packed;
+
+struct panel_info {
+	struct finger finger_max;
+	u8 xchannel_num;
+	u8 ychannel_num;
+	u8 max_point;
+	u8 channel_number;
+	u8 touchkey_low;
+	u8 touchkey_high;
+} __packed;
 
 struct firmware_version {
 	u8 id;
 	u8 major;
 	u8 minor;
+} __packed;
+
+struct protocol_version {
+	u8 major;
+	u8 minor;
+	u8 release;
 } __packed;
 
 enum ili2xxx_model {
@@ -130,7 +158,10 @@ static bool ili251x_touchdata_to_coords(struct ili210x *priv, u8 *touchdata,
 		return false;
 
 	*x &= 0x3fff;
+	*x = (XAXIS_SCALING**x)/1000000;
+
 	*y = get_unaligned_be16(touchdata + 1 + (finger * 5) + 2);
+	*y = (YAXIS_SCALING**y)/1000000;
 
 	return true;
 }
@@ -268,7 +299,10 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 	struct gpio_desc *reset_gpio;
 	struct input_dev *input;
 	struct firmware_version firmware;
+	struct protocol_version protocol;
+	struct panel_info panel;
 	enum ili2xxx_model model;
+	int xmax, ymax;
 	int error;
 
 	model = (enum ili2xxx_model)id->driver_data;
@@ -325,10 +359,45 @@ static int ili210x_i2c_probe(struct i2c_client *client,
 		return error;
 	}
 
+	printk("ILI210x initialized (IRQ: %d), firmware version %d.%d.%d",
+		client->irq, firmware.id, firmware.major, firmware.minor);
+
+	/* Get protocol version */
+	error = ili210x_read_reg(client, REG_PROTOCOL_VERSION,
+				 &protocol, sizeof(protocol));
+	if (error) {
+		dev_err(dev, "Failed to get protocol version, err: %d\n",
+			error);
+		return error;
+	}
+
+	/* get panel info */
+	error = ili210x_read_reg(client, REG_PANEL_INFO, &panel, sizeof(panel));
+	if (error) {
+		dev_err(dev, "Failed to get panel information, err: %d\n",
+			error);
+		return error;
+	}
+
+	printk("ILI210x initialized (IRQ: %d), panel info %d.%d.%d.%d",
+		client->irq, panel.finger_max.x_low, panel.finger_max.x_high,
+			panel.finger_max.y_low,panel.finger_max.y_high);
+
+	xmax = panel.finger_max.x_low | (panel.finger_max.x_high << 8);
+	ymax = panel.finger_max.y_low | (panel.finger_max.y_high << 8);
+
+	printk("ILI210x initialized (IRQ: %d), panel info xmax = %d.ymax = %d"
+			,client->irq, xmax, ymax);
+
 	/* Setup input device */
 	input->name = "ILI210x Touchscreen";
 	input->id.bustype = BUS_I2C;
 	input->dev.parent = dev;
+
+	__set_bit(EV_SYN, input->evbit);
+	__set_bit(EV_KEY, input->evbit);
+	__set_bit(EV_ABS, input->evbit);
+	__set_bit(BTN_TOUCH, input->keybit);
 
 	/* Multi touch */
 	input_set_abs_params(input, ABS_MT_POSITION_X, 0, 0xffff, 0, 0);

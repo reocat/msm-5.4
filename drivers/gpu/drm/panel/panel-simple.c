@@ -3204,6 +3204,36 @@ static const struct panel_desc tianma_tm101dvhg04_6bit = {
 	.bus_format =  MEDIA_BUS_FMT_RGB888_1X7X4_JEIDA,
 };
 
+static const struct display_timing tianma_fusion_timing = {
+	.pixelclock = { 50000000, 50000000, 50000000 },
+        .hactive = { 1280, 1280, 1280 },
+        .hfront_porch = { 64, 64, 64 },
+        .hback_porch = { 5, 5, 5 },
+        .hsync_len = { 69, 69, 69 },
+        .vactive = { 800, 800, 800 },
+        .vfront_porch = { 40, 40, 40 },
+        .vback_porch = { 2, 2, 2 },
+        .vsync_len = { 42, 42, 42 },
+	.flags = DISPLAY_FLAGS_DE_HIGH,
+};
+
+static const struct panel_desc tianma_fusion = {
+	.timings = &tianma_fusion_timing,
+	.num_timings = 1,
+	.bpc = 8,
+	.size = {
+		.width = 223,
+		.height = 125,
+	},
+	.delay = {
+		.prepare = 200,
+		.enable = 200,
+		.disable = 200,
+		.unprepare = 200,
+	},
+	.bus_format =  MEDIA_BUS_FMT_RGB888_1X7X4_SPWG,
+};
+
 static const struct of_device_id platform_of_match[] = {
 	{
 		.compatible = "ampire,am-480272h3tmqw-t01h",
@@ -3541,6 +3571,9 @@ static const struct of_device_id platform_of_match[] = {
 	}, {
 		.compatible = "tianma,tm101dvhg04-6bit",
 		.data = &tianma_tm101dvhg04_6bit,
+	}, {
+		.compatible = "tianma,tianma-fusion",
+		.data = &tianma_fusion,
 	}, {
 		/* sentinel */
 	}

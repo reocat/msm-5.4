@@ -20,6 +20,10 @@
 #define KSZ_SW_9897_H
 
 
+#ifdef CONFIG_PHYLINK
+#include <linux/phylink.h>
+#endif
+
 /* These definitions should be defined before this header file. */
 #ifndef PRIO_QUEUES
 #define PRIO_QUEUES			4
@@ -52,10 +56,6 @@ struct ksz_vlan_table;
 
 #define NUM_OF_VID			4094
 #define NUM_OF_MSTI			8
-
-#ifdef CONFIG_PHYLINK
-#include <linux/phylink.h>
-#endif
 
 #include "ksz_sw_api.h"
 #ifdef CONFIG_KSZ_MSTP
@@ -529,6 +529,9 @@ struct ksz_sw_net_ops {
 		char *dev_name, struct ksz_port *port, int i, uint port_cnt,
 		uint mib_port_cnt);
 	void (*leave_dev)(struct ksz_sw *sw);
+	u8 (*get_state)(struct net_device *dev);
+	void (*set_state)(struct net_device *dev, u8 state);
+	struct ksz_port *(*get_priv_port)(struct net_device *dev);
 	int (*get_ready)(struct net_device *dev);
 
 	void (*start)(struct ksz_sw *sw, u8 *addr);
