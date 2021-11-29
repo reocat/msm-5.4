@@ -1348,6 +1348,9 @@ static int ksz9477_setup(struct dsa_switch *ds)
 		return ret;
 	}
 
+	/* Enable reserved multicast table. */
+	ksz_cfg(dev, REG_SW_LUE_CTRL_0, SW_RESV_MCAST_ENABLE, true);
+
 	/* Required for port partitioning. */
 	ksz9477_cfg32(dev, REG_SW_QM_CTRL__4, UNICAST_VLAN_BOUNDARY,
 		      true);
@@ -1560,6 +1563,24 @@ static int ksz9477_switch_init(struct ksz_device *dev)
 				  GFP_KERNEL);
 	if (!dev->ports)
 		return -ENOMEM;
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	struct dsa_port *p;
+	int j;
+	for (i = 0; i < dev->mib_port_cnt; i++) {
+		dev->ports[i].acl_info = devm_kzalloc(dev->dev,
+			sizeof(struct ksz_acl_table) * ACL_TABLE_ENTRIES,
+			GFP_KERNEL);
+		for (j = 0; j < ACL_TABLE_ENTRIES; j++) {
+			dev->ports[i].acl_info[j].data = devm_kzalloc(dev->dev,
+				sizeof(u8) * ACL_TABLE_LEN,
+				GFP_KERNEL);
+		}
+		p = dsa_to_port(dev->ds, i);
+		p->priv = &dev->ports[i];
+		mutex_init(&dev->ports[i].acllock);
+		mutex_init(&dev->ports[i].linkmdlock);
+	}
+#endif
 	for (i = 0; i < dev->mib_port_cnt; i++) {
 		mutex_init(&dev->ports[i].mib.cnt_mutex);
 		dev->ports[i].mib.counters =

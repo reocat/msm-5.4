@@ -24,6 +24,54 @@ struct ksz_port_mib {
 	u64 *counters;
 };
 
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+struct ksz_acl_table {
+	u16 first_rule;
+	u16 ruleset;
+	u8 mac[ETH_ALEN];
+	u16 eth_type;
+	u8 protocol;
+	u8 ip4_addr[4];
+	u8 ip4_mask[4];
+	u32 seqnum;
+	u16 max_port;
+	u16 min_port;
+	u8 prio;
+	u8 vlan_prio;
+	u16 ports;
+	u16 cnt;
+	u8 tcp_flag_mask;
+	u8 tcp_flag;
+#if 0
+	u8 ip6_addr[16];
+	u8 ip6_mask[16];
+#endif
+	u32 mode:2;
+	u32 enable:2;
+	u32 src:1;
+	u32 equal:1;
+	u32 port_mode:2;
+	u32 tcp_flag_enable:1;
+	u32 msec:1;
+	u32 intr_mode:1;
+	u32 prio_mode:2;
+	u32 vlan_prio_replace:1;
+	u32 map_mode:2;
+	u32 changed:1;
+	u32 action_changed:1;
+	u32 ruleset_changed:1;
+	u32 action_selected:1;
+
+	u8 *data;
+};
+
+struct ksz_cable_info {
+	u32 status[5];
+	u32 length[5];
+};
+
+#endif
+
 struct ksz_port {
 	u16 member;
 	u16 vid_member;
@@ -39,7 +87,24 @@ struct ksz_port {
 	u32 freeze:1;			/* MIB counter freeze is enabled */
 
 	struct ksz_port_mib mib;
+
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	struct mutex acllock;
+	struct ksz_acl_table *acl_info;
+	u16 acl_index;
+	u16 acl_act_index;
+	u16 acl_rule_index;
+	struct mutex linkmdlock;
+	struct ksz_cable_info cable_info;
+#endif
 };
+
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+struct ksz_sw_sysfs {
+	struct ksz_dev_attr **ksz_port_attrs;
+	struct attribute ***port_attrs;
+};
+#endif
 
 struct ksz_device {
 	struct dsa_switch *ds;
@@ -50,6 +115,9 @@ struct ksz_device {
 	struct mutex regmap_mutex;	/* regmap access */
 	struct mutex alu_mutex;		/* ALU access */
 	struct mutex vlan_mutex;	/* vlan access */
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	struct semaphore proc_sem;
+#endif
 	const struct ksz_dev_ops *dev_ops;
 
 	struct device *dev;
@@ -95,6 +163,10 @@ struct ksz_device {
 	u32 overrides;			/* chip functions set by user */
 	u16 host_mask;
 	u16 port_mask;
+
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	struct ksz_sw_sysfs sysfs;
+#endif
 };
 
 struct alu_struct {

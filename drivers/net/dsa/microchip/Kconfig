@@ -9,6 +9,9 @@ menuconfig NET_DSA_MICROCHIP_KSZ9477
 	help
 	  This driver adds support for Microchip KSZ9477 switch chips.
 
+config HAVE_KSZ_SYSFS
+	def_bool y
+
 config NET_DSA_MICROCHIP_KSZ9477_I2C
 	tristate "KSZ9477 series I2C connected switch driver"
 	depends on NET_DSA_MICROCHIP_KSZ9477 && I2C
@@ -39,3 +42,10 @@ config NET_DSA_MICROCHIP_KSZ8795_SPI
 
 	  It is required to use the KSZ8795 switch driver as the only access
 	  is through SPI.
+
+config NET_DSA_MICROCHIP_KSZ_SYSFS
+	tristate "Microchip KSZ9897 switch sysfs support"
+	depends on HAVE_KSZ_SYSFS
+	select NET_DSA_MICROCHIP_KSZ9477
+	help
+	  Supports the Microchip KSZ9897 switch sysfs.
