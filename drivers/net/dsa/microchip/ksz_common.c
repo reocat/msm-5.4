@@ -19,6 +19,9 @@
 #include <net/switchdev.h>
 
 #include "ksz_common.h"
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+#include "ksz_sw_sysfs.h"
+#endif
 
 void ksz_update_port_member(struct ksz_device *dev, int port)
 {
@@ -71,11 +74,17 @@ static void ksz_mib_read_work(struct work_struct *work)
 	struct ksz_port_mib *mib;
 	struct ksz_port *p;
 	int i;
+	const struct dsa_port *dp;
 
 	for (i = 0; i < dev->mib_port_cnt; i++) {
 		if (dsa_is_unused_port(dev->ds, i))
 			continue;
 
+		dp = dsa_to_port(dev->ds, i);
+		if (!dp->slave)
+			continue;
+		if (!dp->slave->phydev)
+			continue;
 		p = &dev->ports[i];
 		mib = &p->mib;
 		mutex_lock(&mib->cnt_mutex);
@@ -84,8 +93,6 @@ static void ksz_mib_read_work(struct work_struct *work)
 		 * If not, read only dropped counters when link is not up.
 		 */
 		if (!p->read) {
-			const struct dsa_port *dp = dsa_to_port(dev->ds, i);
-
 			if (!netif_carrier_ok(dp->slave))
 				mib->cnt_ptr = dev->reg_mib_cnt;
 		}
@@ -437,6 +444,9 @@ int ksz_switch_register(struct ksz_device *dev,
 	mutex_init(&dev->regmap_mutex);
 	mutex_init(&dev->alu_mutex);
 	mutex_init(&dev->vlan_mutex);
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	sema_init(&dev->proc_sem, 1);
+#endif
 
 	dev->dev_ops = ops;
 
@@ -464,6 +474,10 @@ int ksz_switch_register(struct ksz_device *dev,
 		return ret;
 	}
 
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	ksz_sw_sysfs_init(dev, &dev->sysfs, dev->dev);
+#endif
+
 	return 0;
 }
 EXPORT_SYMBOL(ksz_switch_register);
@@ -482,6 +496,9 @@ void ksz_switch_remove(struct ksz_device *dev)
 	if (dev->reset_gpio)
 		gpiod_set_value_cansleep(dev->reset_gpio, 1);
 
+#ifdef CONFIG_HAVE_KSZ_SYSFS
+	ksz_sw_sysfs_exit(dev, &dev->sysfs, dev->dev);
+#endif
 }
 EXPORT_SYMBOL(ksz_switch_remove);
 
