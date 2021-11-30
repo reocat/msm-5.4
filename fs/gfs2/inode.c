@@ -708,18 +708,15 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
 	error = gfs2_glock_get(sdp, ip->i_no_addr, &gfs2_inode_glops, CREATE, &ip->i_gl);
 	if (error)
 		goto fail_free_inode;
-	flush_delayed_work(&ip->i_gl->gl_work);
 
 	error = gfs2_glock_get(sdp, ip->i_no_addr, &gfs2_iopen_glops, CREATE, &io_gl);
 	if (error)
 		goto fail_free_inode;
-	gfs2_cancel_delete_work(io_gl);
 
 	error = gfs2_glock_nq_init(ip->i_gl, LM_ST_EXCLUSIVE, GL_SKIP, ghs + 1);
 	if (error)
 		goto fail_gunlock2;
 
-	glock_set_object(ip->i_gl, ip);
 	error = gfs2_trans_begin(sdp, blocks, 0);
 	if (error)
 		goto fail_gunlock2;
@@ -735,9 +732,13 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
 	if (error)
 		goto fail_gunlock2;
 
-	glock_set_object(io_gl, ip);
 	gfs2_set_iop(inode);
-	insert_inode_hash(inode);
+	error = insert_inode_locked4(inode, ip->i_no_addr, iget_test, &ip->i_no_addr);
+	BUG_ON(error);
+	glock_set_object(ip->i_gl, ip);
+	glock_set_object(io_gl, ip);
+	flush_delayed_work(&ip->i_gl->gl_work);
+	gfs2_cancel_delete_work(io_gl);
 
 	free_vfs_inode = 0; /* After this point, the inode is no longer
 			       considered free. Any failures need to undo
@@ -779,17 +780,17 @@ static int gfs2_create_inode(struct inode *dir, struct dentry *dentry,
 	gfs2_glock_dq_uninit(ghs + 1);
 	gfs2_glock_put(io_gl);
 	gfs2_qa_put(dip);
+	unlock_new_inode(inode);
 	return error;
 
 fail_gunlock3:
+	glock_clear_object(ip->i_gl, ip);
 	glock_clear_object(io_gl, ip);
 	gfs2_glock_dq_uninit(&ip->i_iopen_gh);
 fail_gunlock2:
-	glock_clear_object(io_gl, ip);
 	gfs2_glock_put(io_gl);
 fail_free_inode:
 	if (ip->i_gl) {
-		glock_clear_object(ip->i_gl, ip);
 		if (free_vfs_inode) /* else evict will do the put for us */
 			gfs2_glock_put(ip->i_gl);
 	}
@@ -807,7 +808,10 @@ fail_gunlock:
 			mark_inode_dirty(inode);
 		set_bit(free_vfs_inode ? GIF_FREE_VFS_INODE : GIF_ALLOC_FAILED,
 			&GFS2_I(inode)->i_flags);
-		iput(inode);
+		if (!free_vfs_inode)
+			iget_failed(inode);
+		else
+			iput(inode);
 	}
 	if (gfs2_holder_initialized(ghs + 1))
 		gfs2_glock_dq_uninit(ghs + 1);
