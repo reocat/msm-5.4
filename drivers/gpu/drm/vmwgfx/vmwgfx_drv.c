@@ -25,7 +25,6 @@
  *
  **************************************************************************/
 
-#include <linux/console.h>
 #include <linux/dma-mapping.h>
 #include <linux/module.h>
 #include <linux/pci.h>
@@ -1156,7 +1155,7 @@ static void vmw_driver_unload(struct drm_device *dev)
 	unregister_pm_notifier(&dev_priv->pm_nb);
 
 	if (dev_priv->ctx.res_ht_initialized)
-		drm_ht_remove(&dev_priv->ctx.res_ht);
+		vmwgfx_ht_remove(&dev_priv->ctx.res_ht);
 	vfree(dev_priv->ctx.cmd_bounce);
 	if (dev_priv->enable_fb) {
 		vmw_fb_off(dev_priv);
@@ -1651,7 +1650,7 @@ static int __init vmwgfx_init(void)
 {
 	int ret;
 
-	if (vgacon_text_force())
+	if (drm_firmware_drivers_only())
 		return -EINVAL;
 
 	ret = pci_register_driver(&vmw_pci_driver);
