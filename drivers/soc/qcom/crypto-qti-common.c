@@ -1232,7 +1232,7 @@ int crypto_qti_ice_set_fde_flag(int flag)
 		list);
 
 	if (!ice_dev) {
-		pr_debug("%s:ICE dev is  null/empty\ \n", __func__);
+		pr_debug("%s:ICE dev is  null/empty \n", __func__);
 		return -EINVAL;
 	}
 
@@ -1248,7 +1248,7 @@ int crypto_qti_ice_set_fde_flag(int flag)
 			__func__, flag, CRYPTO_UD_VOLNAME);
 	}
 
-
+	return 0;
 }
 EXPORT_SYMBOL(crypto_qti_ice_set_fde_flag);
 
