@@ -3452,6 +3452,7 @@ int amdgpu_device_init(struct amdgpu_device *adev,
 	init_rwsem(&adev->reset_sem);
 	mutex_init(&adev->psp.mutex);
 	mutex_init(&adev->notifier_lock);
+	mutex_init(&adev->pstate_profile_ctx_lock);
 
 	r = amdgpu_device_init_apu_flags(adev);
 	if (r)
