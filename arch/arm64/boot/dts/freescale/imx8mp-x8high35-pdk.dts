@@ -971,105 +971,13 @@
 		interrupt-parent = <&gpio3>;
 		interrupts = <22 IRQ_TYPE_EDGE_FALLING>;
 		vcc-supply = <&reg_v_3v3>;
-
-		port1_3v3_pwr_ctl {
-			gpio-hog;
-			gpios = <0 GPIO_ACTIVE_HIGH>;
-			line-name = "PORT1_3V3_PWR_CTL";
-		};
-
-		nint_port1 {
-			gpio-hog;
-			gpios = <1 GPIO_ACTIVE_LOW>;
-			line-name = "nINT_PORT1";
-		};
-
-		port1_nrst {
-			gpio-hog;
-			gpios = <2 GPIO_ACTIVE_LOW>;
-			line-name = "PORT1_nRST";
-		};
-
-		/* ToDo: GPIO/SPI_CTS_PORT1 (P03) */
-
-		board_id_1 {
-			gpio-hog;
-			gpios = <4 0>;
-			input;
-			line-name = "BOARD_ID_1";
-		};
-
-		board_id_2 {
-			gpio-hog;
-			gpios = <5 0>;
-			input;
-			line-name = "BOARD_ID_2";
-		};
-
-		board_id_3 {
-			gpio-hog;
-			gpios = <6 0>;
-			input;
-			line-name = "BOARD_ID_3";
-		};
-
-		board_id_4 {
-			gpio-hog;
-			gpios = <7 0>;
-			input;
-			line-name = "BOARD_ID_4";
-		};
-
-		lte_igt {
-			gpio-hog;
-			gpios = <8 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_IGT";
-		};
-
-		lte_radio_usb_ctrl {
-			gpio-hog;
-			gpios = <9 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_RADIO_USB_CTR";
-		};
-
-		lte_power_en {
-			gpio-hog;
-			gpios = <10 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_POWER_EN";
-		};
-
-		lte_emergency_off {
-			gpio-hog;
-			gpios = <11 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_EMERGENCY_OFF";
-		};
-
-		lte_uart_dtr {
-			gpio-hog;
-			gpios = <12 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_UART_DTR";
-		};
-
-		lte_vdd5v_en {
-			gpio-hog;
-			gpios = <13 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_VDD5V_EN";
-		};
-
-		/* ToDo: GPIO/SPI_CTS_PORT1 (P03) */
-
-		lte_ring_wakeup {
-			gpio-hog;
-			gpios = <15 GPIO_ACTIVE_HIGH>;
-			output-low;
-			line-name = "LTE_RING_WAKEUP";
-		};
+		gpio-line-names =
+			"PORT1_3V3_PWR_CTL", "nINT_PORT1",
+			"PORT1_nRST", "GPIO_SPI_CTS_PORT1",
+			"BOARD_ID_1", "BOARD_ID_2", "BOARD_ID_3",
+			"BOARD_ID_4", "LTE_IGT", "LTE_RADIO_USB_CTRL",
+			"LTE_PWR_EN", "LTE_EMERGENCY_OFF", "LTE_UART_DTR",
+			"LTE_VDD5V_EN",	"LTE_GPIO_1", "LTE_RING_WAKEUP";
 	};
 
 	gpio_exp_75: gpio@75 {
@@ -1081,6 +989,14 @@
 		interrupt-parent = <&gpio3>;
 		interrupts = <23 IRQ_TYPE_EDGE_FALLING>;
 		vcc-supply = <&reg_v_3v3>;
+		gpio-line-names =
+			"LVDS0_3V3_RST", "LVDS0_UPDN",
+			"LVDS0_SHLR", "LVDS0_ID",
+			"LVDS1_3V3_RST", "LVDS1_UPDN",
+			"LVDS1_SHLR", "LVDS1_ID",
+			"EXP2_UART_nRST", "ADC_GPIO", "CSI2_GPIO",
+			"CSI1_GPIO", "DSI_GPIO", "EXP1_UART_nRST",
+			"NC1", "NC2";
 	};
 
 	led_expander: led-controller@21 {
