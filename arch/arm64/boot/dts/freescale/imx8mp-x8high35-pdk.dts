@@ -836,6 +836,23 @@
     };
 };
 
+&ecspi2 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi2>;
+	cs-gpios = <&gpio5 13 GPIO_ACTIVE_LOW>;
+	num-cs = <1>;
+	status = "okay";
+
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	spidev@1 {
+		compatible = "rohm,dh2228fv";
+		spi-max-frequency = <500000>;
+		reg = <1>;
+	};
+};
+
 &eqos {
 	pinctrl-names = "default";
 	pinctrl-0 = <&pinctrl_eqos>;
@@ -1067,6 +1084,15 @@
 			MX8MP_IOMUXC_ECSPI1_MOSI__ECSPI1_MOSI	0x82
 			MX8MP_IOMUXC_ECSPI1_SS0__ECSPI1_SS0	0x82
 			MX8MP_IOMUXC_GPIO1_IO01__GPIO1_IO01	0x82
+		>;
+	};
+
+	pinctrl_ecspi2: ecspi2grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_ECSPI2_SCLK__ECSPI2_SCLK	0x82
+			MX8MP_IOMUXC_ECSPI2_MISO__ECSPI2_MISO	0x82
+			MX8MP_IOMUXC_ECSPI2_MOSI__ECSPI2_MOSI	0x82
+			MX8MP_IOMUXC_ECSPI2_SS0__GPIO5_IO13	0x400000
 		>;
 	};
 
