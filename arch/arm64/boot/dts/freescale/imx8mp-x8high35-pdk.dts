@@ -1374,6 +1374,11 @@
 	pinctrl-0 = <&pinctrl_uart1 &pinctrl_bt>;
 	status = "okay";
 	fsl,uart-has-rtscts;
+
+	bluetooth {
+		compatible = "brcm,bcm4330-bt";
+		shutdown-gpios = <&gpio3 25 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 &uart2 {
