@@ -101,6 +101,17 @@ parts:
       - firmware/brcm
       - firmware/nxp
 
+  # optee signing keys: used for signing ot Trusted Applications
+  optee-keys:
+    plugin: dump
+    source: https://git.launchpad.net/~ondrak/+git/dev-keys
+    source-type: git
+    source-branch: ta-keys
+    organize:
+      '*': ta-keys/
+    prime:
+       - -*
+
   optee-os:
     after:
       - optee-uc-fde
