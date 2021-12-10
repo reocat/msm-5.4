@@ -935,6 +935,13 @@
 		reg = <0x6f>;
 	};
 
+	/*	EEPROM CHIP 24AA32A-I/SN	*/
+	eeprom: eeprom@52 {
+		compatible = "atmel,24c32";
+		reg = <0x52>;
+		status = "okay";
+	};
+
 	codec: sgtl5000@a {
 		#sound-dai-cells = <0>;
 		compatible = "fsl,sgtl5000";
