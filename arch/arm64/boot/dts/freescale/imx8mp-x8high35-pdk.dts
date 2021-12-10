@@ -912,6 +912,20 @@
 		compatible = "rohm,dh2228fv";
 		spi-max-frequency = <20000000>;
 		reg = <0>;
+		status = "no";
+	};
+
+	/*	Winbond 25Q128JWSIQ SPI NOR flash	*/
+	flash: w25q128@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		m25p,fast-read;
+		spi-tx-bus-width = <1>;
+		spi-rx-bus-width = <4>;
+		spi-max-frequency = <40000000>;
+		reg = <0>;
+		status = "okay";
 	};
 };
 
