@@ -17,17 +17,41 @@ build-base: core22
 
 parts:
   kernel:
+    after:
+      - firmware
     plugin: kernel
-    source: .
-    source-type: git
-    kconfigflavour: generic
-    kconfigs:
+    kernel-kdefconfig:
+      - snappy_defconfig
+    kernel-with-firmware: false
+    kernel-image-target: Image.gz
+    kernel-initrd-compression: zstd
+    kernel-initrd-stage-firmware: true
+    kernel-initrd-modules:
+      - atl1c
+      - qcom-emac
+      - phy-qcom-qusb2
+      - slimbus
+      - xhci-hcd
+      - libarc4
+    kernel-kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
-      cp debian/scripts/retpoline-extract-one \
-        $SNAPCRAFT_PART_BUILD/scripts/ubuntu-retpoline-extract-one
-      snapcraftctl build
-    kernel-with-firmware: false
+      craftctl default
+      kernel_version="$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 14-)"
+      craftctl set version=${kernel_version}
+    stage:
+      - config-*
+      - dtbs
+      - initrd.img
+      - kernel.img
+      - lib
+      - modules
+      - System.map-*
+    prime:
+      - -dtbs
+      - -initrd.img
+      - -kernel.img
+
   firmware:
     plugin: dump
     source: https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22
