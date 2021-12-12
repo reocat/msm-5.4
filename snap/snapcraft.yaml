@@ -10,6 +10,8 @@ architectures:
   - build-on: [amd64, arm64]
     run-on: arm64
 
+build-base: core20
+
 parts:
   kernel:
     after:
