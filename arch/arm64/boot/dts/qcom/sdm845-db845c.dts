@@ -420,6 +420,10 @@
 			   <GCC_LPASS_SWAY_CLK>;
 };
 
+&gpi_dma0 {
+	status = "okay";
+};
+
 &gpu {
 	zap-shader {
 		memory-region = <&gpu_mem>;
@@ -487,6 +491,13 @@
 
 &mdss_mdp {
 	status = "okay";
+};
+
+&msm_dp {
+	status = "okay";
+	data-lanes = <0 1>;
+	vdda-1p2-supply = <&vreg_l26a_1p2>;
+	vdda-0p9-supply = <&vreg_l1a_0p875>;
 };
 
 &mss_pil {
