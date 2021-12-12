@@ -27,14 +27,17 @@ parts:
       snapcraftctl build
     kernel-with-firmware: false
   firmware:
-    plugin: nil
+    plugin: dump
+    source: https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22
+    source-type: git
+    source-branch: main
     stage-packages:
       - linux-firmware
+      - wireless-regdb
     organize:
       lib/firmware: firmware
     prime:
-      - -usr
-      - -lib
+      - firmware
 
 build-packages:
     - dpkg-dev
