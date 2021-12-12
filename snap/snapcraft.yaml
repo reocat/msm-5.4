@@ -1,10 +1,10 @@
-name: pc-kernel
+name: snapdragon-kernel
 version: null
 version-script: |
     . debian/debian.env
     dpkg-parsechangelog -l $DEBIAN/changelog -S version
-summary: The Ubuntu generic Linux kernel
-description: This Ubuntu generic Linux kernel
+summary: Snapdragon kernel
+description: This is a snapdragon snapped kernel, based off linaro kernel
 grade: stable
 confinement: strict
 type: kernel
