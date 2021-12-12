@@ -1,13 +1,12 @@
 name: snapdragon-kernel
-version: null
-version-script: |
-    . debian/debian.env
-    dpkg-parsechangelog -l $DEBIAN/changelog -S version
 summary: Snapdragon kernel
 description: This is a snapdragon snapped kernel, based off linaro kernel
 grade: stable
 confinement: strict
 type: kernel
+version: '0'
+version-script: |
+  git describe --tags  | cut -c 14-
 
 architectures:
   - build-on: [amd64, arm64]
