@@ -15,17 +15,39 @@ architectures:
 
 parts:
   kernel:
-    plugin: kernel
-    source: .
+    after:
+      - firmware
+    plugin: x-kernel
     source-type: git
-    kconfigflavour: generic
+    kdefconfig: [ "snappy_defconfig" ]
+    kernel-with-firmware: false
+    kernel-image-target: Image.gz
+    kernel-initrd-compression: lz4
+    kernel-initrd-modules:
+      - atl1c
+      - qcom-emac
+      - phy-qcom-qusb2
+      - slimbus
+      - xhci-hcd
+      - libarc4
     kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
-      cp debian/scripts/retpoline-extract-one \
-        $SNAPCRAFT_PART_BUILD/scripts/ubuntu-retpoline-extract-one
       snapcraftctl build
-    kernel-with-firmware: false
+      kernel_version="$(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 14-)"
+      snapcraftctl set-version ${kernel_version}
+    stage:
+      - dtbs
+      - System.map-*
+      - config-*
+      - initrd.img
+      - kernel.img
+      - modules
+    prime:
+      - -dtbs
+      - -initrd.img
+      - -kernel.img
+
   firmware:
     plugin: nil
     stage-packages:
