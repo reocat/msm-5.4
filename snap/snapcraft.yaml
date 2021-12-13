@@ -76,6 +76,15 @@ parts:
     stage-packages:
       - linux-firmware
       - wireless-regdb
+    override-pull: |
+      for f in firmware-atheros firmware-qcom-dragonboard410c firmware-qcom-dragonboard820c firmware-qcom-dragonboard845c firmware-qcom-media firmware-qcom-soc
+      do
+        version="$(curl -s http://obs.linaro.org/linaro-overlay-sid/sid/Packages.gz | zcat | grep "${f}" |grep "Filename" | tail -1 | awk '{ print $2}' | cut -c3-)"
+        echo "current_version=${version}"
+        curl -O http://obs.linaro.org/linaro-overlay-sid/sid/${version}
+      done
+    override-build: |
+      find ${SNAPCRAFT_PART_SRC} -name "*.deb" -exec dpkg -x {} ${SNAPCRAFT_PART_INSTALL} \;
     stage:
       - -firmware/amd
       - -firmware/amdgpu
@@ -98,10 +107,7 @@ parts:
       - -firmware/qed
       - -firmware/radeon
       - -firmware/rockchip
-      - -firmware/ath10k/QCA9377/hw1.0/firmware-5.bin
       - -firmware/ath3k-1.fw
-      - -firmware/qca/htbtfw20.tlv
-      - -firmware/qcom
       - -firmware/s5p*
       - -usr
       - -lib
