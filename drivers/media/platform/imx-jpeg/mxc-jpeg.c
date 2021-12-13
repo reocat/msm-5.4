@@ -1009,13 +1009,14 @@ static bool mxc_jpeg_source_change(struct mxc_jpeg_ctx *ctx,
 {
 	struct device *dev = ctx->mxc_jpeg->dev;
 	struct mxc_jpeg_q_data *q_data_cap;
-	bool src_chg = false;
 
 	if (!jpeg_src_buf->fmt)
-		return src_chg;
+		return false;
 
 	q_data_cap = mxc_jpeg_get_q_data(ctx, V4L2_BUF_TYPE_VIDEO_CAPTURE);
-	if (q_data_cap->w != jpeg_src_buf->w || q_data_cap->h != jpeg_src_buf->h) {
+	if (q_data_cap->fmt != jpeg_src_buf->fmt ||
+	    q_data_cap->w != jpeg_src_buf->w ||
+	    q_data_cap->h != jpeg_src_buf->h) {
 		dev_dbg(dev, "Detected jpeg res=(%dx%d)->(%dx%d), pixfmt=%c%c%c%c\n",
 			q_data_cap->w, q_data_cap->h,
 			jpeg_src_buf->w, jpeg_src_buf->h,
@@ -1052,9 +1053,16 @@ static bool mxc_jpeg_source_change(struct mxc_jpeg_ctx *ctx,
 		mxc_jpeg_bytesperline(q_data_cap, jpeg_src_buf->fmt->precision);
 		mxc_jpeg_sizeimage(q_data_cap);
 		notify_src_chg(ctx);
-		src_chg = true;
+		ctx->source_change = 1;
 	}
-	return src_chg;
+	return ctx->source_change ? true : false;
+}
+
+static int mxc_jpeg_job_ready(void *priv)
+{
+	struct mxc_jpeg_ctx *ctx = priv;
+
+	return ctx->source_change ? 0 : 1;
 }
 
 static void mxc_jpeg_device_run(void *priv)
@@ -1158,6 +1166,7 @@ static void mxc_jpeg_set_last_buffer_dequeued(struct mxc_jpeg_ctx *ctx)
 	q->last_buffer_dequeued = true;
 	wake_up(&q->done_wq);
 	ctx->stopped = 0;
+	ctx->header_parsed = false;
 }
 
 static int mxc_jpeg_decoder_cmd(struct file *file, void *priv,
@@ -1597,6 +1606,7 @@ static void mxc_jpeg_buf_finish(struct vb2_buffer *vb)
 	if (list_empty(&q->done_list)) {
 		vbuf->flags |= V4L2_BUF_FLAG_LAST;
 		ctx->stopped = 0;
+		ctx->header_parsed = false;
 	}
 }
 
