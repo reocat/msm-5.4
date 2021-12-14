@@ -531,9 +531,14 @@
 /* UART For BT */
 &uart2 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart2>;
+	pinctrl-0 = <&pinctrl_uart2 &pinctrl_bt>;
 	uart-has-rtscts;
 	status = "okay";
+
+	bluetooth {
+		compatible = "brcm,bcm4330-bt";
+		shutdown-gpios = <&gpio1 2 GPIO_ACTIVE_HIGH>;
+	};
 };
 
 /* UART For WWAN/Modem */
@@ -625,6 +630,12 @@
 				MX6SX_PAD_LCD1_HSYNC__AUDMUX_AUD3_TXD	0x12098
 				MX6SX_PAD_LCD1_RESET__AUDMUX_AUD3_RXD	0x130b0
 				MX6SX_PAD_ENET1_MDIO__AUDMUX_MCLK	0x13098
+			>;
+		};
+
+		pinctrl_bt: btgrp {
+			fsl,pins = <
+				MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x1b0b1
 			>;
 		};
 
@@ -858,8 +869,6 @@
 				MX6SX_PAD_GPIO1_IO07__UART2_DCE_RX	0x1b0b1
 				MX6SX_PAD_GPIO1_IO08__UART2_RTS_B	0x1b0b1
 				MX6SX_PAD_GPIO1_IO09__UART2_CTS_B	0x1b0b1
-				/* bt_reg GPIO */
-				MX6SX_PAD_GPIO1_IO02__GPIO1_IO_2	0x1b0b1
 			>;
 		};
 
