@@ -134,18 +134,6 @@
 		off-on-delay-us = <12000>;
 	};
 
-	reg_bt_power: regulator-bt-power {
-		compatible = "regulator-fixed";
-		regulator-name = "bt_power";
-		regulator-min-microvolt = <3300000>;
-		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio1 2 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-always-on;
-		startup-delay-us = <10000>;
-		off-on-delay-us = <12000>;
-	};
-
 	reg_v_3v3: regulator-v-3v3 {
 		compatible = "regulator-fixed";
 		regulator-name = "v_3v3";
