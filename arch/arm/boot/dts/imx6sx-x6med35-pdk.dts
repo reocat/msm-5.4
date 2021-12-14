@@ -125,8 +125,8 @@
 	reg_wifi: regulator-wifi {
 		compatible = "regulator-fixed";
 		regulator-name = "wifi_power";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio2 10 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
@@ -137,8 +137,8 @@
 	reg_bt_power: regulator-bt-power {
 		compatible = "regulator-fixed";
 		regulator-name = "bt_power";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
 		gpio = <&gpio1 2 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 		regulator-always-on;
