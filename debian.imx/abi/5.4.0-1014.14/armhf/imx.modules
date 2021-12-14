@@ -453,10 +453,6 @@ c_can
 c_can_pci
 c_can_platform
 ca8210
-caam
-caam_jr
-caamalg_desc
-caamhash_desc
 cachefiles
 cadence-quadspi
 cadence_wdt
@@ -914,7 +910,6 @@ epat
 epia
 eql
 erofs
-error
 esd_usb2
 esp4
 esp4_offload
@@ -1822,7 +1817,6 @@ libarc4
 libceph
 libcomposite
 libcrc32c
-libdes
 libertas
 libertas_sdio
 libertas_spi
