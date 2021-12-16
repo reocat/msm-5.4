@@ -8,6 +8,7 @@
 #include <asm/kvm_hyp.h>
 #include <asm/kvm_mmu.h>
 #include <asm/kvm_pgtable.h>
+#include <asm/kvm_pkvm.h>
 
 #include <nvhe/early_alloc.h>
 #include <nvhe/fixed_config.h>
@@ -17,7 +18,6 @@
 #include <nvhe/mm.h>
 #include <nvhe/trap_handler.h>
 
-struct hyp_pool hpool;
 unsigned long hyp_nr_cpus;
 
 #define hyp_percpu_size ((unsigned long)__per_cpu_end - \
@@ -27,6 +27,7 @@ static void *vmemmap_base;
 static void *hyp_pgt_base;
 static void *host_s2_pgt_base;
 static struct kvm_pgtable_mm_ops pkvm_pgtable_mm_ops;
+static struct hyp_pool hpool;
 
 static int divide_memory_pool(void *virt, unsigned long size)
 {
