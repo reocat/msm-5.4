@@ -1353,11 +1353,6 @@ iget_no_retry:
 		goto out;
 	}
 
-#ifdef CONFIG_CIFS_FSCACHE
-	/* populate tcon->resource_id */
-	tcon->resource_id = CIFS_I(inode)->uniqueid;
-#endif
-
 	if (rc && tcon->pipe) {
 		cifs_dbg(FYI, "ipc connection - fake read inode\n");
 		spin_lock(&inode->i_lock);
@@ -1371,19 +1366,6 @@ iget_no_retry:
 	} else if (rc) {
 		iget_failed(inode);
 		inode = ERR_PTR(rc);
-	}
-
-	if (!rc) {
-		/*
-		 * The cookie is initialized from volume info returned above.
-		 * Inside cifs_fscache_get_super_cookie it checks
-		 * that we do not get super cookie twice.
-		 */
-		rc = cifs_fscache_get_super_cookie(tcon);
-		if (rc < 0) {
-			iget_failed(inode);
-			inode = ERR_PTR(rc);
-		}
 	}
 
 out:
