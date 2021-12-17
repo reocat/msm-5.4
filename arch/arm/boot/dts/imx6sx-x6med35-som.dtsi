@@ -42,7 +42,7 @@
 		};
 
 		m4_reserved {
-			reg = <0x9ff00000 0xf0000>;
+			reg = <0x9ff00000 0x10000>;
 			no-map;
 		};
 
