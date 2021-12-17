@@ -47,7 +47,7 @@
 		};
 
 		rpmsg_reserved {
-			reg = <0x9ff00000 0x10000>;
+			reg = <0xbff00000 0x10000>;
 			no-map;
 		};
 	};
