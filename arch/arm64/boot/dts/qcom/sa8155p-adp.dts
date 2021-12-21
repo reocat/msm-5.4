@@ -15,6 +15,9 @@
 	model = "Qualcomm Technologies, Inc. SA8155P ADP";
 	compatible = "qcom,sa8155p-adp", "qcom,sa8155p";
 
+	qcom,msm-id = <0x16f 0x20000>;
+	qcom,board-id = <0x1000019 0x00>;
+
 	aliases {
 		serial0 = &uart2;
 	};
