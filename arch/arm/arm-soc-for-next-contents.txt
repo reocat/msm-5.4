@@ -7,6 +7,8 @@ arm/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-soc-5.17
 	samsung/soc
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-soc-5.17
+	patch
+		arm64: exynos: Enable Exynos Multi-Core Timer driver
 
 arm/dt
 	patch
@@ -73,6 +75,8 @@ arm/dt
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt-5.17
 	samsung/dt64
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-dt64-5.17
+	<no branch> (bd048487af68a9782ebccc3af6606e9e0d7d9f8b)
+		git://git.kernel.org/pub/scm/linux/kernel/git/tegra/linux tags/tegra-for-5.17-arm-dt
 
 arm/drivers
 	renesas/drivers
@@ -101,6 +105,12 @@ arm/drivers
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-drivers-5.17
 	samsung/soc-driver
 		git://git.kernel.org/pub/scm/linux/kernel/git/krzk/linux tags/samsung-drivers-5.17
+	qcom/drivers
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-drivers-for-5.17
+	qcom/dt
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-dts-for-5.17
+	qcom/dt64
+		git://git.kernel.org/pub/scm/linux/kernel/git/qcom/linux tags/qcom-arm64-for-5.17
 
 arm/defconfig
 	patch
@@ -113,6 +123,8 @@ arm/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/at91/linux tags/at91-defconfig-5.17
 	imx/defconfig
 		git://git.kernel.org/pub/scm/linux/kernel/git/shawnguo/linux tags/imx-defconfig-5.17
+	patch
+		arm64: defconfig: Enable Samsung I2C driver
 
 arm/newsoc
 	starfive/jh7100
