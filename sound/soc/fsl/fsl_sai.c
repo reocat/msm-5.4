@@ -1178,12 +1178,17 @@ static int fsl_sai_runtime_resume(struct device *dev)
 
 	regcache_cache_only(sai->regmap, false);
 
-	if (!sai->mclk_early) {
-		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
-		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
-		usleep_range(1000, 2000);
-		regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
-		regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), FSL_SAI_CSR_SR);
+	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), FSL_SAI_CSR_SR);
+	usleep_range(1000, 2000);
+	regmap_write(sai->regmap, FSL_SAI_TCSR(ofs), 0);
+	regmap_write(sai->regmap, FSL_SAI_RCSR(ofs), 0);
+
+	if (sai->mclk_early) {
+		regmap_update_bits(sai->regmap, FSL_SAI_MCTL,
+				   FSL_SAI_MCTL_MCLK_EN, FSL_SAI_MCTL_MCLK_EN);
+		regmap_update_bits(sai->regmap, FSL_SAI_TCSR(8),
+				   FSL_SAI_CSR_TERE, FSL_SAI_CSR_TERE);
 	}
 
 	ret = regcache_sync(sai->regmap);
@@ -1205,11 +1210,27 @@ disable_bus_clk:
 }
 #endif /* CONFIG_PM */
 
+static int fsl_sai_pm_suspend(struct device *dev)
+{
+	return pm_runtime_force_suspend(dev);
+}
+
+static int fsl_sai_pm_resume(struct device *dev)
+{
+    int ret;
+
+	pm_runtime_get_noresume(dev);
+	ret = pm_runtime_force_resume(dev);
+	pm_runtime_put(dev);
+
+	return ret;
+}
+
 static const struct dev_pm_ops fsl_sai_pm_ops = {
 	SET_RUNTIME_PM_OPS(fsl_sai_runtime_suspend,
 			   fsl_sai_runtime_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(pm_runtime_force_suspend,
-				pm_runtime_force_resume)
+	SET_SYSTEM_SLEEP_PM_OPS(fsl_sai_pm_suspend,
+				fsl_sai_pm_resume)
 };
 
 static struct platform_driver fsl_sai_driver = {
