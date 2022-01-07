@@ -499,6 +499,8 @@ cdc_subset
 cdns-csi2rx
 cdns-csi2tx
 cdns-pltfrm
+cdns_mhdp_drmcore
+cdns_mhdp_imx
 ceph
 cfb
 cfg80211
@@ -818,6 +820,10 @@ dvb-usb-umt-010
 dvb-usb-vp702x
 dvb-usb-vp7045
 dvb_usb_v2
+dw-hdmi-ahb-audio
+dw-hdmi-cec
+dw-hdmi-gp-audio
+dw-hdmi-i2s-audio
 dw_dmac
 dw_dmac_core
 dw_mmc
@@ -1010,6 +1016,7 @@ fsi-master-hub
 fsi-scom
 fsl-edma
 fsl-edma-common
+fsl-imx-ldb
 fsl-mph-dr-of
 fsl-qdma
 fsl_lpuart
@@ -1044,6 +1051,7 @@ g_serial
 g_webcam
 g_zero
 gadgetfs
+galcore
 gamecon
 gameport
 garmin_gps
@@ -1480,11 +1488,18 @@ imon_raw
 impa7
 ims-pcu
 imx-dma
+imx-dpu-crtc
+imx-dpu-render
 imx-ipu-v3
+imx-ipuv3-crtc
+imx-lcdif-crtc
+imx-lcdifv3-crtc
+imx-ldb
 imx-mailbox
 imx-pcm-dma
 imx-pxp
 imx-sdma
+imx-tve
 imx-vdoa
 imx6q-cpufreq
 imx6ul_tsc
@@ -1499,6 +1514,7 @@ imx8-mipi-csi2
 imx8-mipi-csi2-sam
 imx8-parallel-csi
 imx8mm_thermal
+imx8mp-ldb
 imx_sc_thermal
 imx_sc_wdt
 imx_thermal
@@ -1660,6 +1676,7 @@ isofs
 isp116x-hcd
 isp1704_charger
 isp1760
+it6263
 it87
 it913x
 itd1000
@@ -1729,6 +1746,7 @@ lapb
 lapbether
 lattice-ecp3-config
 lcd
+lcdif-mux-display
 ldusb
 lec
 led-class-flash
@@ -2190,6 +2208,7 @@ mxc-jpeg-encdec
 mxc4005
 mxc6255
 mxc_mipi_csi
+mxc_mlb
 mxc_vadc
 mxl111sf-demod
 mxl111sf-tuner
@@ -2406,6 +2425,7 @@ nvmet-tcp
 nxp-nci
 nxp-nci_i2c
 nxp-ptn3460
+nxp-seiko-43wvfig
 nxp-tja11xx
 nxt200x
 nxt6000
@@ -2476,6 +2496,7 @@ panel-sitronix-st7701
 panel-sitronix-st7789v
 panel-tpo-tpg110
 parade-ps8622
+parallel-display
 paride
 parkbd
 parport
@@ -2526,7 +2547,9 @@ phram
 phy-am335x
 phy-am335x-control
 phy-cpcap-usb
+phy-fsl-imx8mp-lvds
 phy-fsl-imx8mq-usb
+phy-fsl-samsung-hdmi
 phy-generic
 phy-gpio-vbus-usb
 phy-isp1301
@@ -3242,6 +3265,7 @@ snd-soc-es8328-i2c
 snd-soc-es8328-spi
 snd-soc-fsl-asoc-card
 snd-soc-fsl-asrc
+snd-soc-fsl-aud2htx
 snd-soc-fsl-audmix
 snd-soc-fsl-esai
 snd-soc-fsl-micfil
@@ -3252,6 +3276,7 @@ snd-soc-gtm601
 snd-soc-hdmi-codec
 snd-soc-imx-audmix
 snd-soc-imx-audmux
+snd-soc-imx-cdnhdmi
 snd-soc-imx-sgtl5000
 snd-soc-imx-spdif
 snd-soc-inno-rk3036

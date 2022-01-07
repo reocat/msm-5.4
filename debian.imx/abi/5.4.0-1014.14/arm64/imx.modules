@@ -457,6 +457,8 @@ cdc_subset
 cdns-csi2rx
 cdns-csi2tx
 cdns-pltfrm
+cdns_mhdp_drmcore
+cdns_mhdp_imx
 ceph
 cfb
 cfg80211
@@ -691,6 +693,10 @@ dumb-vga-dac
 dummy
 dummy-irq
 dummy_stm
+dw-hdmi-ahb-audio
+dw-hdmi-cec
+dw-hdmi-gp-audio
+dw-hdmi-i2s-audio
 dw_dmac
 dw_dmac_core
 dw_wdt
@@ -858,6 +864,7 @@ fou
 fou6
 freevxfs
 fscache
+fsl-imx-ldb
 fsl-mph-dr-of
 fsl_imx8_ddr_perf
 fsl_lpuart
@@ -890,6 +897,7 @@ g_serial
 g_webcam
 g_zero
 gadgetfs
+galcore
 gamecon
 gameport
 garmin_gps
@@ -1058,6 +1066,7 @@ gunze
 gve
 habanalabs
 hampshire
+hantrodec
 hanwang
 hci
 hci_nokia
@@ -1303,8 +1312,15 @@ imon
 imon_raw
 ims-pcu
 imx-cpufreq-dt
+imx-dcss
+imx-dpu-crtc
+imx-dpu-render
+imx-lcdif-crtc
+imx-lcdifv3-crtc
+imx-ldb
 imx-pcm-dma
 imx-pxp
+imx-tve
 imx6q-cpufreq
 imx6ul_tsc
 imx7d_adc
@@ -1318,6 +1334,7 @@ imx8-mipi-csi2
 imx8-mipi-csi2-sam
 imx8-parallel-csi
 imx8mm_thermal
+imx8mp-ldb
 imx_sc_thermal
 imx_sc_wdt
 imx_thermal
@@ -1474,6 +1491,7 @@ isofs
 isp116x-hcd
 isp1704_charger
 isp1760
+it6263
 it87
 itg3200
 iuu_phoenix
@@ -1537,6 +1555,7 @@ lapb
 lapbether
 lattice-ecp3-config
 lcd
+lcdif-mux-display
 ldusb
 lec
 led-class-flash
@@ -1934,6 +1953,7 @@ mxc-jpeg-encdec
 mxc4005
 mxc6255
 mxc_mipi_csi
+mxc_mlb
 mxc_vadc
 mxsfb
 mxuport
@@ -2140,9 +2160,11 @@ nvmet
 nvmet-fc
 nvmet-rdma
 nvmet-tcp
+nwl-mipi-dsi
 nxp-nci
 nxp-nci_i2c
 nxp-ptn3460
+nxp-seiko-43wvfig
 nxp-tja11xx
 ocfb
 ocfs2
@@ -2202,6 +2224,7 @@ panel-sitronix-st7701
 panel-sitronix-st7789v
 panel-tpo-tpg110
 parade-ps8622
+parallel-display
 parkbd
 parport
 parport_ax88796
@@ -2239,7 +2262,9 @@ pfuze100-regulator
 phantom
 phonet
 phram
+phy-fsl-imx8mp-lvds
 phy-fsl-imx8mq-usb
+phy-fsl-samsung-hdmi
 phy-generic
 phy-gpio-vbus-usb
 phy-isp1301
@@ -2728,6 +2753,8 @@ scsi_transport_srp
 sctp
 sctp_diag
 sdio_uart
+sec-dsim
+sec_mipi_dsim-imx
 seed
 sensorhub
 ser_gigaset
@@ -2832,6 +2859,7 @@ snd-soc-es8328-i2c
 snd-soc-es8328-spi
 snd-soc-fsl-asoc-card
 snd-soc-fsl-asrc
+snd-soc-fsl-aud2htx
 snd-soc-fsl-audmix
 snd-soc-fsl-esai
 snd-soc-fsl-micfil
@@ -2841,6 +2869,7 @@ snd-soc-fsl-ssi
 snd-soc-hdmi-codec
 snd-soc-imx-audmix
 snd-soc-imx-audmux
+snd-soc-imx-cdnhdmi
 snd-soc-imx-es8328
 snd-soc-imx-sgtl5000
 snd-soc-imx-spdif
