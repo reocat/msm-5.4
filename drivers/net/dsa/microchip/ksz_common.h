@@ -75,6 +75,7 @@ struct ksz_cable_info {
 struct ksz_port {
 	u16 member;
 	u16 vid_member;
+	u16 non_tag_vlan_member;
 	int stp_state;
 	struct phy_device phydev;
 
