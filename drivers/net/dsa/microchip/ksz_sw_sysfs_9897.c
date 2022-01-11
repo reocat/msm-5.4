@@ -43,6 +43,7 @@
 
 struct sw_attributes {
 	int linkmd;
+	int vlan_member;
 	int authen_mode;
 	int acl;
 	int acl_first_rule;
@@ -178,6 +179,7 @@ static char *sw_name[] = {
 
 enum {
 	PROC_SET_LINK_MD,
+	PROC_SET_VLAN_MEMBER,
 	PROC_SET_AUTHEN_MODE,
 	PROC_SET_ACL,
 	PROC_SET_ACL_FIRST_RULE,
@@ -441,6 +443,27 @@ static void sw_get_link_md(struct ksz_device *sw, uint port, struct ksz_cable_in
 		}
 	}
 }
+
+static u16 sw_get_non_tag_vlan(struct ksz_device *sw, uint p)
+{
+	struct ksz_port *port = &sw->ports[p];
+	return port->non_tag_vlan_member;
+}  /* sw_get_non_tag_vlan */
+
+/**
+ * sw_cfg_non_tag_vlan - configure port-based VLAN membership
+ * @sw:		The switch instance.
+ * @port:	The port index.
+ * @member:	The port-based VLAN membership.
+ *
+ * This routine configures the port-based VLAN membership of the port.
+ */
+static void sw_cfg_non_tag_vlan(struct ksz_device *sw, uint p, u16 member)
+{
+	struct ksz_port *port = &sw->ports[p];
+	port->non_tag_vlan_member = member | sw->host_mask | port->vid_member;
+	ksz_pwrite32(sw, p, REG_PORT_VLAN_MEMBERSHIP__4, port->non_tag_vlan_member);
+}  /* sw_cfg_non_tag_vlan */
 
 /* -------------------------------------------------------------------------- */
 
@@ -1177,7 +1200,7 @@ static void sw_init_acl(struct ksz_device *sw)
 
 /* -------------------------------------------------------------------------- */
 
-static ssize_t sysfs_acl_read(struct ksz_device *sw, int proc_num, uint n,
+static ssize_t sysfs_port_read(struct ksz_device *sw, int proc_num, uint n,
 	ssize_t len, char *buf)
 {
 	struct ksz_port *p;
@@ -1197,6 +1220,11 @@ static ssize_t sysfs_acl_read(struct ksz_device *sw, int proc_num, uint n,
 	ruleset = &p->acl_info[p->acl_rule_index];
 
 	switch (proc_num) {
+	case PROC_SET_VLAN_MEMBER:
+		len += sprintf(buf + len, "%u\n",
+			sw_get_non_tag_vlan(sw, n));
+		type = SHOW_HELP_NONE;
+		break;
 	case PROC_SET_LINK_MD:
 		len += sprintf(buf + len, "%u:%u %u:%u %u:%u %u:%u %u:%u\n",
 			cable_info->length[0], cable_info->status[0],
@@ -1209,10 +1237,7 @@ static ssize_t sysfs_acl_read(struct ksz_device *sw, int proc_num, uint n,
 			CABLE_UNKNOWN, CABLE_GOOD, CABLE_OPEN,
 			CABLE_SHORT);
 		type = SHOW_HELP_NONE;
-		goto out;
-	}
-
-	switch (proc_num) {
+		break;
 	case PROC_SET_AUTHEN_MODE:
 		len += sprintf(buf + len, "%u\n",
 			port_get_authen_mode(sw, n));
@@ -1425,9 +1450,9 @@ static ssize_t sysfs_acl_read(struct ksz_device *sw, int proc_num, uint n,
 
 out:
 	return sysfs_show(len, buf, type, chk, note);
-}  /* sysfs_acl_read */
+}  /* sysfs_port_read */
 
-static int sysfs_acl_write(struct ksz_device *sw, int proc_num, uint n, int num,
+static int sysfs_port_write(struct ksz_device *sw, int proc_num, uint n, int num,
 	const char *buf)
 {
 	struct ksz_port *p;
@@ -1445,16 +1470,16 @@ static int sysfs_acl_write(struct ksz_device *sw, int proc_num, uint n, int num,
 	ruleset = &p->acl_info[p->acl_rule_index];
 
 	switch (proc_num) {
+	case PROC_SET_VLAN_MEMBER:
+		sw_cfg_non_tag_vlan(sw, n, num);
+		break;
 	case PROC_SET_LINK_MD:
 		if (num <= 0)
 			break;
 		mutex_lock(&p->linkmdlock);
 		sw_get_link_md(sw, n, cable_info);
 		mutex_unlock(&p->linkmdlock);
-		return processed;
-	}
-
-	switch (proc_num) {
+		break;
 	case PROC_SET_AUTHEN_MODE:
 		if (num > PORT_AUTHEN_TRAP)
 			break;
@@ -1701,7 +1726,7 @@ static int sysfs_acl_write(struct ksz_device *sw, int proc_num, uint n, int num,
 		break;
 	}
 	return processed;
-}  /* sysfs_acl_write */
+}  /* sysfs_port_write */
 
 static ssize_t show_sw(struct device *d, struct device_attribute *attr,
 	char *buf, unsigned long offset)
@@ -1726,7 +1751,7 @@ static ssize_t show_sw(struct device *d, struct device_attribute *attr,
 
 	len = 0;
 	num = offset / sizeof(int);
-	len = sysfs_acl_read(sw, num, port, len, buf);
+	len = sysfs_port_read(sw, num, port, len, buf);
 	if (len)
 		goto ksz_sw_sysfs_show_done;
 
@@ -1760,7 +1785,7 @@ static ssize_t store_sw(struct device *d, struct device_attribute *attr,
 	proc_num = offset / sizeof(int);
 	ret = count;
 
-	if (sysfs_acl_write(sw, proc_num, port, num, buf))
+	if (sysfs_port_write(sw, proc_num, port, num, buf))
 		goto ksz_sw_sysfs_store_done;
 
 ksz_sw_sysfs_store_done:
@@ -1800,6 +1825,7 @@ static SW_ATTR(name, S_IRUGO | S_IWUSR, show_sw_##name, store_sw_##name)
 
 
 NETSW_WR_ENTRY(linkmd);
+NETSW_WR_ENTRY(vlan_member);
 NETSW_WR_ENTRY(authen_mode);
 NETSW_WR_ENTRY(acl);
 NETSW_WR_ENTRY(acl_first_rule);
@@ -1838,6 +1864,7 @@ NETSW_WR_ENTRY(acl_table);
 
 static struct attribute *sw_attrs[] = {
 	&sw_attr_linkmd.attr,
+	&sw_attr_vlan_member.attr,
 	&sw_attr_authen_mode.attr,
 	&sw_attr_acl.attr,
 	&sw_attr_acl_first_rule.attr,

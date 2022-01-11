@@ -389,7 +389,7 @@ static void ksz9477_get_strings(struct dsa_switch *ds, int port,
 static void ksz9477_cfg_port_member(struct ksz_device *dev, int port,
 				    u8 member)
 {
-	ksz_pwrite32(dev, port, REG_PORT_VLAN_MEMBERSHIP__4, member);
+	ksz_pwrite32(dev, port, REG_PORT_VLAN_MEMBERSHIP__4, member & dev->ports[port].non_tag_vlan_member);
 	dev->ports[port].member = member;
 }
 
@@ -1263,6 +1263,7 @@ static void ksz9477_port_setup(struct ksz_device *dev, int port, bool cpu_port)
 			dev->live_ports |= (1 << port);
 	}
 	mutex_unlock(&dev->dev_mutex);
+	p->non_tag_vlan_member = dev->port_mask;
 	ksz9477_cfg_port_member(dev, port, member);
 
 	/* clear pending interrupts */
@@ -1374,7 +1375,7 @@ static int ksz9477_setup(struct dsa_switch *ds)
 	/* start switch */
 	ksz_cfg(dev, REG_SW_OPERATION, SW_START, true);
 
-	ksz_init_mib_timer(dev);
+	// ksz_init_mib_timer(dev);
 
 	return 0;
 }
@@ -1393,7 +1394,7 @@ static const struct dsa_switch_ops ksz9477_switch_ops = {
 	.port_bridge_join	= ksz_port_bridge_join,
 	.port_bridge_leave	= ksz_port_bridge_leave,
 	.port_stp_state_set	= ksz9477_port_stp_state_set,
-	.port_fast_age		= ksz_port_fast_age,
+	// .port_fast_age		= ksz_port_fast_age,
 	.port_vlan_filtering	= ksz9477_port_vlan_filtering,
 	.port_vlan_prepare	= ksz_port_vlan_prepare,
 	.port_vlan_add		= ksz9477_port_vlan_add,

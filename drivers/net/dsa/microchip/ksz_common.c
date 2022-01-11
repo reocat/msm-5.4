@@ -159,7 +159,7 @@ void ksz_adjust_link(struct dsa_switch *ds, int port,
 	/* Read all MIB counters when the link is going down. */
 	if (!phydev->link) {
 		p->read = true;
-		schedule_work(&dev->mib_read);
+		// schedule_work(&dev->mib_read);
 	}
 	mutex_lock(&dev->dev_mutex);
 	if (!phydev->link)
@@ -485,10 +485,10 @@ EXPORT_SYMBOL(ksz_switch_register);
 void ksz_switch_remove(struct ksz_device *dev)
 {
 	/* timer started */
-	if (dev->mib_read_timer.expires) {
-		del_timer_sync(&dev->mib_read_timer);
-		flush_work(&dev->mib_read);
-	}
+	// if (dev->mib_read_timer.expires) {
+	// 	del_timer_sync(&dev->mib_read_timer);
+	// 	flush_work(&dev->mib_read);
+	// }
 
 	dev->dev_ops->exit(dev);
 	dsa_unregister_switch(dev->ds);
