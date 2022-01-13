@@ -21,6 +21,7 @@
 #include <linux/of_graph.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
+#include <linux/delay.h>
 #include <media/v4l2-device.h>
 #include <linux/types.h>
 #include <linux/slab.h>
@@ -114,6 +115,7 @@ struct mxc_md {
 	struct media_device media_dev;
 	struct v4l2_device v4l2_dev;
 	struct platform_device *pdev;
+	struct delayed_work work;
 
 	struct v4l2_async_notifier subdev_notifier;
 	struct v4l2_async_subdev *async_subdevs[MXC_MAX_SENSORS];
@@ -956,6 +958,31 @@ static int register_sensor_entities(struct mxc_md *mxc_md)
 	return 0;
 }
 
+static void mxc_md_delayed_work(struct work_struct *work)
+{
+	int ret;
+	struct mxc_md *mxc_md =
+	container_of(to_delayed_work(work), struct mxc_md, work);
+	if (!mxc_md->link_status) {
+		if (mxc_md->valid_num_sensors > 0) {
+			ret = subdev_notifier_complete(&mxc_md->subdev_notifier);
+			if (ret < 0)
+				goto clean_ents;
+
+			mxc_md_clean_unlink_channels(mxc_md);
+		} else {
+			/* no sensors connected */
+			mxc_md_unregister_all(mxc_md);
+		}
+	}
+
+	return;
+clean_ents:
+	mxc_md_unregister_entities(mxc_md);
+	v4l2_device_unregister(&mxc_md->v4l2_dev);
+	media_device_cleanup(&mxc_md->media_dev);
+}
+
 static int mxc_md_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -1015,16 +1042,8 @@ static int mxc_md_probe(struct platform_device *pdev)
 		}
 
 		if (!mxc_md->link_status) {
-			if (mxc_md->valid_num_sensors > 0) {
-				ret = subdev_notifier_complete(&mxc_md->subdev_notifier);
-				if (ret < 0)
-					goto clean_ents;
-
-				mxc_md_clean_unlink_channels(mxc_md);
-			} else {
-				/* no sensors connected */
-				mxc_md_unregister_all(mxc_md);
-			}
+			INIT_DELAYED_WORK(&mxc_md->work, mxc_md_delayed_work);
+			schedule_delayed_work(&mxc_md->work, msecs_to_jiffies(500));
 		}
 	}
 
