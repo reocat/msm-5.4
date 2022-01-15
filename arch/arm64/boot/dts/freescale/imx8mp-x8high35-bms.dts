@@ -252,6 +252,7 @@
 			eee-broken-1000t;
 			eee-broken-100tx;
 			eee-broken-10gt;
+			enable-10bt-preamble;
 		};
 	};
 };
