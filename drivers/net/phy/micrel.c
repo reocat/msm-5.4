@@ -66,6 +66,10 @@
 #define MII_KSZPHY_EXTREG_WRITE                 0x0c
 #define MII_KSZPHY_EXTREG_READ                  0x0d
 
+/* PHY loopback register */
+#define MII_KSZPHY_REMOTE_LOOPBACK              0x11
+#define KSZPHY_ENABLE_10BT_PREAMBLE             BIT(2)
+
 /* Extended registers */
 #define MII_KSZPHY_CLK_CONTROL_PAD_SKEW         0x104
 #define MII_KSZPHY_RX_DATA_PAD_SKEW             0x105
@@ -867,6 +871,17 @@ static int ksz9131_config_rgmii_delay(struct phy_device *phydev)
 			      txcdll_val);
 }
 
+static int ksz9131_set_10bt_preable(struct phy_device *phydev)
+{
+	int ret;
+
+	ret = phy_read(phydev, MII_KSZPHY_REMOTE_LOOPBACK);
+	if (ret < 0)
+		return ret;
+	ret |= KSZPHY_ENABLE_10BT_PREAMBLE;
+	return phy_write(phydev, MII_KSZPHY_REMOTE_LOOPBACK, ret);
+}
+
 static int ksz9131_config_init(struct phy_device *phydev)
 {
 	const struct device *dev = &phydev->mdio.dev;
@@ -923,7 +938,10 @@ static int ksz9131_config_init(struct phy_device *phydev)
 	if (ret < 0)
 		return ret;
 
-	return 0;
+	if (of_property_read_bool(of_node, "enable-10bt-preamble"))
+		ret = ksz9131_set_10bt_preable(phydev);
+
+	return ret;
 }
 
 #define KSZ8873MLL_GLOBAL_CONTROL_4	0x06
