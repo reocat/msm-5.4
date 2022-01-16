@@ -36,7 +36,7 @@
 #define file_to_ctx(file)		\
 	container_of(file->private_data, struct mxc_isi_ctx, fh);
 
-#if defined(CONFIG_IMX8_ISI_CAPTURE)
+#if IS_ENABLED(CONFIG_IMX8_ISI_CAPTURE)
 extern struct mxc_isi_fmt mxc_isi_out_formats[9];
 #else
 static struct mxc_isi_fmt mxc_isi_out_formats[9] = {};
