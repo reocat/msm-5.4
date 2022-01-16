@@ -227,7 +227,7 @@ struct mxc_isi_fmt mxc_isi_out_formats[] = {
 		.mbus_code	= MEDIA_BUS_FMT_RGB888_1X24,
 	}
 };
-
+EXPORT_SYMBOL_GPL(mxc_isi_out_formats);
 /*
  * Pixel link input format
  */
