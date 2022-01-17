@@ -53,6 +53,20 @@
 		clock-output-names = "clk20m";
 	};
 
+	extcon_typec1: extcon_typec1 {
+		compatible = "linux,extcon-usb-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb1_vbus>;
+		vbus-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+	};
+
+	extcon_typec2: extcon_typec2 {
+		compatible = "linux,extcon-usb-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_usb2_vbus>;
+		vbus-gpios = <&gpio1 14 GPIO_ACTIVE_HIGH>;
+	};
+
 	firmware {
 		optee {
 			compatible = "linaro,optee-tz";
@@ -101,21 +115,10 @@
 		compatible = "regulator-fixed";
 		regulator-name = "usb1_vbus";
 		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_usb1_vbus>;
+		pinctrl-0 = <&pinctrl_usb1_otg_vbus>;
 		regulator-max-microvolt = <5000000>;
 		regulator-min-microvolt = <5000000>;
 		gpio = <&gpio2 10 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-	};
-
-	reg_usb2_vbus: regulator-usb1-vbus {
-		compatible = "regulator-fixed";
-		regulator-name = "usb2_vbus";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_usb2_vbus>;
-		regulator-max-microvolt = <5000000>;
-		regulator-min-microvolt = <5000000>;
-		gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
 		enable-active-high;
 	};
 
@@ -805,15 +808,21 @@
 		>;
 	};
 
-	pinctrl_usb1_vbus: usb1grp {
+	pinctrl_usb1_otg_vbus: usb1otggrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SD1_RESET_B__GPIO2_IO10	0x154
 		>;
 	};
 
+	pinctrl_usb1_vbus: usb1grp {
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO11__GPIO1_IO11	0x19
+		>;
+	};
+
 	pinctrl_usb2_vbus: usb2grp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x154
+			MX8MP_IOMUXC_GPIO1_IO14__GPIO1_IO14	0x19
 		>;
 	};
 
@@ -927,6 +936,7 @@
 
 &usb3_phy0 {
 	status = "okay";
+	vbus-supply = <&reg_usb1_vbus>;
 };
 
 &usb3_0 {
@@ -934,11 +944,10 @@
 };
 
 &usb_dwc3_0 {
-	dr_mode = "peripheral";
-	hnp-disable;
-	srp-disable;
-	adp-disable;
+	dr_mode = "host";
 	status = "okay";
+
+	extcon = <&extcon_typec1>;
 };
 
 &usb3_phy1 {
@@ -951,6 +960,7 @@
 
 &usb_dwc3_1 {
 	dr_mode = "peripheral";
+	extcon = <&extcon_typec2>;
 	hnp-disable;
 	srp-disable;
 	adp-disable;
