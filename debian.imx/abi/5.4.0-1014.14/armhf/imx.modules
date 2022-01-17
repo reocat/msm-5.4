@@ -431,7 +431,6 @@ brcmsmac
 brcmstb_nand
 brcmutil
 brd
-bridge
 bsd_comp
 btbcm
 btintel
@@ -765,7 +764,6 @@ ds2782_battery
 ds3000
 ds4424
 ds620
-dsa_core
 dsa_loop
 dsbr100
 dstr
@@ -1832,7 +1830,6 @@ lis3lv02d
 lis3lv02d_i2c
 lis3lv02d_spi
 lkkbd
-llc
 llc2
 lm25066
 lm3533-als
@@ -2459,7 +2456,6 @@ oxu210hp-hcd
 p54common
 p54spi
 p54usb
-p8022
 pa12203001
 palmas-pwrbutton
 palmas-regulator
@@ -2547,7 +2543,6 @@ phy-gpio-vbus-usb
 phy-isp1301
 phy-mxs-usb
 phy-tahvo
-phylink
 physmap
 pi3usb30532
 pi433
@@ -2607,7 +2602,6 @@ ps2-gpio
 ps2mult
 psample
 psmouse
-psnap
 psxpad-spi
 pt
 pulse8-cec
@@ -3510,7 +3504,6 @@ stmpe-adc
 stmpe-keypad
 stmpe-ts
 stowaway
-stp
 streamzap
 streebog_generic
 stts751
