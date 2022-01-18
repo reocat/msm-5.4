@@ -94,7 +94,7 @@
 		pinctrl-0 = <&pinctrl_flexcan1_reg>;
 		regulator-min-microvolt = <3300000>;
 		regulator-max-microvolt = <3300000>;
-		gpio = <&gpio1 8 GPIO_ACTIVE_HIGH>;
+		gpio = <&gpio1 10 GPIO_ACTIVE_HIGH>;
 		regulator-always-on;
 		enable-active-high;
 	};
@@ -716,7 +716,7 @@
 
 	pinctrl_flexcan1_reg: flexcan1reggrp {
 		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO08__GPIO1_IO08		0x154   /* CAN1_STBY */
+			MX8MP_IOMUXC_GPIO1_IO10__GPIO1_IO10		0x154   /* CAN1_STBY */
 		>;
 	};
 
