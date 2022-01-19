@@ -157,6 +157,11 @@
 	reg = <0x00901000 0xf000>;
 };
 
+&ocram_s {
+	/delete-property/compatible;
+	compatible = "fsl,lpm-sram";
+};
+
 &reg_vdd1p1 {
 	vin-supply = <&reg_vdd_3v3>;
 };
