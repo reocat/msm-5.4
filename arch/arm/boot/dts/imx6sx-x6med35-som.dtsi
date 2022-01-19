@@ -24,7 +24,7 @@
 	ocram_optee {
 		compatible = "fsl,optee-lpm-sram";
 		reg = <0x008f8000 0x4000>;
-		overw_reg = <&ocram 0x00904000 0x1000>,
+		overw_reg = <&ocram_s_ddr 0x00904000 0x1000>,
 					<&ocram 0x00905000 0x1b000>,
 					<&ocram_s 0x00900000 0x4000>;
 		overw_clock = <&ocram_s &clks IMX6SX_CLK_OCRAM>;
