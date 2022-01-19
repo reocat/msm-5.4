@@ -15,6 +15,12 @@
 		linux,usable-memory = <0x80000000 0x1ff00000>;
 	};
 
+	ocram_s_ddr: sram@900000 {
+		compatible = "fsl,ddr-lpm-sram";
+		reg = <0x900000 0x1000>;
+		clocks = <&clks IMX6SX_CLK_OCRAM>;
+	};
+
 	ocram_optee {
 		compatible = "fsl,optee-lpm-sram";
 		reg = <0x008f8000 0x4000>;
