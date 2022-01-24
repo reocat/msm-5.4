@@ -31,6 +31,7 @@ struct lcdifv3_soc {
 	void __iomem *base;
 	struct regmap *gpr;
 	atomic_t rpm_suspended;
+	bool skip_disp_off;
 
 	struct clk *clk_pix;
 	struct clk *clk_disp_axi;
@@ -506,6 +507,8 @@ void lcdifv3_disable_controller(struct lcdifv3_soc *lcdifv3)
 	 */
 	usleep_range(20000, 25000);
 
+	if (lcdifv3->skip_disp_off)
+		return;
 	/* disp off */
 	disp_para &= ~DISP_PARA_DISP_ON;
 	writel(disp_para, lcdifv3->base + LCDIFV3_DISP_PARA);
@@ -727,6 +730,9 @@ static int imx_lcdifv3_probe(struct platform_device *pdev)
 	lcdifv3->clk_disp_apb = devm_clk_get(dev, "disp-apb");
 	if (IS_ERR(lcdifv3->clk_disp_apb))
 		lcdifv3->clk_disp_apb = NULL;
+
+	if (of_property_read_bool(np, "skip-disp-off"))
+		lcdifv3->skip_disp_off = true;
 
 	lcdifv3->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(lcdifv3->base))

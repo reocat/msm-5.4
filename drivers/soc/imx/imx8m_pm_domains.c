@@ -26,6 +26,7 @@ struct imx8m_pm_domain {
 	u32 domain_index;
 	struct clk *clk[MAX_CLK_NUM];
 	unsigned int num_clks;
+	bool imx8m_skip_power_off;
 	struct regulator *reg;
 };
 
@@ -70,6 +71,9 @@ static int imx8m_pd_power_off(struct generic_pm_domain *genpd)
 	struct imx8m_pm_domain *domain = to_imx8m_pm_domain(genpd);
 	struct arm_smccc_res res;
 	int index, ret = 0;
+
+	if (domain->imx8m_skip_power_off)
+		return 0;
 
 	mutex_lock(&gpc_pd_mutex);
 	arm_smccc_smc(IMX_SIP_GPC, IMX_SIP_CONFIG_GPC_PM_DOMAIN, domain->domain_index,
@@ -183,7 +187,8 @@ static int imx8m_pm_domain_probe(struct platform_device *pdev)
 		domain->pd.flags |= GENPD_FLAG_ACTIVE_WAKEUP;
 	if (of_property_read_bool(np, "rpm-always-on"))
 		domain->pd.flags |= GENPD_FLAG_RPM_ALWAYS_ON;
-
+	if (of_property_read_bool(np, "skip-power-off"))
+		domain->imx8m_skip_power_off = true;
 	pm_genpd_init(&domain->pd, NULL, !(domain->pd.flags & GENPD_FLAG_RPM_ALWAYS_ON));
 
 	ret = of_genpd_add_provider_simple(np, &domain->pd);
