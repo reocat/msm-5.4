@@ -253,21 +253,6 @@ static int stmmac_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 				  100, 10000);
 }
 
-#ifdef CONFIG_KSZ_SMI
-/* These SMI access functions may require non-standard MDIO signal and so the
- * standard phy_read and phy_write functions cannot be used.
- */
-int stmmac_smi_read(struct mii_bus *bus, int phy_id, int regnum)
-{
-	return stmmac_mdio_read(bus, phy_id, regnum);
-}
-
-int stmmac_smi_write(struct mii_bus *bus, int phy_id, int regnum, u16 val)
-{
-	return stmmac_mdio_write(bus, phy_id, regnum, val);
-}
-#endif
-
 /**
  * stmmac_mdio_reset
  * @bus: points to the mii_bus structure
