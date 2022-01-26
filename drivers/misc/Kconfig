@@ -441,6 +441,14 @@ config PCI_ENDPOINT_TEST
            Enable this configuration option to enable the host side test driver
            for PCI Endpoint.
 
+config RPI_DISPLAY
+	tristate "RaspberryPi 7inch Display Power Controller"
+	default y
+	depends on I2C
+	help
+	  Attiny88 controlling the power of toshiba tc358762xbg chip
+	  and backlight of RaspberryPi 7inch display.
+
 config XILINX_SDFEC
 	tristate "Xilinx SDFEC 16"
 	depends on HAS_IOMEM
