@@ -131,6 +131,7 @@ int rpi_display_screen_power_up(void)
 	send_cmds(g_mcu_data->client, "8500");
 	msleep(800);
 	send_cmds(g_mcu_data->client, "8501");
+	msleep(10);
 	send_cmds(g_mcu_data->client, "8104");
 
 	return 0;
