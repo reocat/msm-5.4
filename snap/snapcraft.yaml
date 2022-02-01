@@ -33,9 +33,17 @@ parts:
     kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
+      if [ ! -d  ${SNAPCRAFT_PART_BUILD}/zfs ]; then
+        git clone --depth=1 https://github.com/openzfs/zfs ${SNAPCRAFT_PART_BUILD}/zfs -b master
+      fi
       snapcraftctl build
       kernel_version="$(git --git-dir=${SNAPCRAFT_PART_SRC}/.git describe --tags  | cut -c 14-)"
       snapcraftctl set-version ${kernel_version}
+      cd ${SNAPCRAFT_PART_BUILD}/zfs
+      ./autogen.sh
+      ./configure --with-linux=${SNAPCRAFT_PART_SRC} --with-linux-obj=${SNAPCRAFT_PART_BUILD} --with-config=kernel
+      make -j$(nproc)
+      make install DESTDIR=${SNAPCRAFT_PART_INSTALL}
     stage:
       - dtbs
       - System.map-*
@@ -129,3 +137,4 @@ build-packages:
     - wget
     - gcc-aarch64-linux-gnu
     - libjson-c-dev:arm64
+    - libblkid-dev
