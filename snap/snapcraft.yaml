@@ -34,10 +34,24 @@ parts:
     kernel-initrd-configured-modules:
       - atl1c
       - phy-qcom-qusb2
+    override-pull: |
+      snapcraftctl pull
+      git clone --depth=1 https://github.com/openzfs/zfs ${SNAPCRAFT_PART_SRC}/zfs -b master
     override-build: |
       snapcraftctl build
       kernel_version="$(git --git-dir=${SNAPCRAFT_PART_SRC}/.git describe --tags  | cut -c 14-)"
       snapcraftctl set-version ${kernel_version}
+      ln -sf ${SNAPCRAFT_PART_SRC}/zfs ${SNAPCRAFT_PART_BUILD}/zfs
+      cd ${SNAPCRAFT_PART_BUILD}/zfs
+      ./autogen.sh
+      ./configure --with-linux=${SNAPCRAFT_PART_SRC} --with-linux-obj=${SNAPCRAFT_PART_BUILD} --with-config=kernel
+      make -j$(nproc)
+      make install DESTDIR=${SNAPCRAFT_PART_INSTALL}/zfs
+      release_version="$(ls ${SNAPCRAFT_PART_INSTALL}/modules)"
+      mv ${SNAPCRAFT_PART_INSTALL}/zfs/lib/modules/${release_version}/extra \
+         ${SNAPCRAFT_PART_INSTALL}/modules/${release_version}
+      # rebuild module dependencies
+      depmod -b ${SNAPCRAFT_PART_INSTALL} ${release_version}
     stage:
       - dtbs
       - System.map-*
@@ -128,3 +142,8 @@ build-packages:
     - wget
     - gcc-aarch64-linux-gnu
     - libjson-c-dev:arm64
+    - autoconf
+    - automake
+    - libblkid-dev
+    - libtool
+    - python3
