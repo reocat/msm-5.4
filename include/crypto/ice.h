@@ -79,6 +79,17 @@ static inline int qcom_ice_setup_ice_hw(const char *storage_type, int enable)
 static inline void qcom_ice_set_fde_flag(int flag) {}
 #endif
 
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+unsigned char *qcom_ice_get_partition_name_from_pwd(unsigned char *hash32);
+int qcom_ice_get_key_slot(unsigned  char *partition_name);
+int qcom_ice_map_key_partition(uint8_t slot, unsigned char *partition_name,
+			       unsigned char *hash32);
+int qcom_ice_umap_key_partition(uint8_t slot,
+				unsigned char *partition_name);
+struct qseecom_wipe_req_info qcom_ice_get_wipe_info(void);
+int qcom_ice_free_key_slot(int8_t slot);
+#endif
+
 struct qcom_ice_variant_ops {
 	const char *name;
 	int	(*reset)(struct platform_device *);
