@@ -21,6 +21,7 @@ parts:
       - snappy_defconfig
     kernel-with-firmware: false
     kernel-image-target: Image.gz
+    kernel-enable-zfs-support: true
     kernel-initrd-compression: zstd
     kernel-initrd-stage-firmware: true
     kernel-initrd-modules:
