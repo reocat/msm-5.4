@@ -22,6 +22,7 @@ parts:
     kdefconfig: [ "snappy_defconfig" ]
     kernel-with-firmware: false
     kernel-image-target: Image.gz
+    kernel-enable-zfs-support: true
     kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
