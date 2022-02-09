@@ -1127,6 +1127,7 @@
 &mipi_dsi {
 	status = "okay";
 
+	check_rpi_panel;
         panel@0 {
                 compatible = "rpi,tc358762";
                 reg = <0>;

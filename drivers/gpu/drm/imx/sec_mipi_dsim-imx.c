@@ -30,6 +30,9 @@
 #include <drm/drm_bridge.h>
 #include <drm/drm_encoder.h>
 #include <drm/drm_modeset_helper_vtables.h>
+#if IS_ENABLED(CONFIG_RPI_DISPLAY)
+#include <drm/rpi_display.h>
+#endif
 
 #include "imx-drm.h"
 #include "sec_mipi_dphy_ln14lpp.h"
@@ -286,17 +289,19 @@ static int imx_sec_dsim_bind(struct device *dev, struct device *master,
 							   dev);
 	const struct sec_mipi_dsim_plat_data *pdata;
 	struct drm_encoder *encoder;
-
 	dev_dbg(dev, "%s: dsim bind begin\n", __func__);
 
 	if (!of_id)
 		return -ENODEV;
 	pdata = of_id->data;
 
+#if IS_ENABLED(CONFIG_RPI_DISPLAY)
+	if (of_property_read_bool(np, "check_rpi_panel") && !rpi_display_is_connected())
+	    return 0;
+#endif
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!res)
 		return -ENODEV;
-
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0)
 		return -ENODEV;
