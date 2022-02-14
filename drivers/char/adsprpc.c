@@ -397,6 +397,15 @@ struct fastrpc_perf {
 	uint64_t tid;
 };
 
+struct virtual_invoke_ctx {
+	struct hlist_node hn;
+	struct fastrpc_file *fl;
+	int pid;
+	int tid;
+	int *fds;
+	unsigned int fds_num;
+};
+
 struct smq_invoke_ctx {
 	struct hlist_node hn;
 	/* Async node to add to async job ctx list */
@@ -444,6 +453,7 @@ struct smq_invoke_ctx {
 struct fastrpc_ctx_lst {
 	struct hlist_head pending;
 	struct hlist_head interrupted;
+	struct hlist_head virtual;
 	/* Number of active contexts queued to DSP */
 	uint32_t num_active_ctxs;
 	/* Queue which holds all async job contexts of process */
@@ -2320,6 +2330,7 @@ static void context_list_ctor(struct fastrpc_ctx_lst *me)
 {
 	INIT_HLIST_HEAD(&me->interrupted);
 	INIT_HLIST_HEAD(&me->pending);
+	INIT_HLIST_HEAD(&me->virtual);
 	me->num_active_ctxs = 0;
 	INIT_LIST_HEAD(&me->async_queue);
 }
@@ -2716,7 +2727,43 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 	PERF_END);
 
 	for (i = bufs; ctx->fds && rpra && i < bufs + handles; i++) {
-		rpra[i].dma.fd = ctx->fds[i];
+		if (ctx->fl->mode == FASTRPC_MODE_VIRTUAL) {
+			/* replace dma fd by guest vm fd */
+			struct fastrpc_ctx_lst *clst = &ctx->fl->clst;
+			struct virtual_invoke_ctx *ictx = NULL, *vctx = NULL;
+			struct hlist_node *n;
+			unsigned int index;
+
+			spin_lock(&ctx->fl->hlock);
+			hlist_for_each_entry_safe(ictx, n, &clst->virtual, hn) {
+				if (ictx->pid == ctx->tgid &&
+						ictx->tid == ctx->pid) {
+					vctx = ictx;
+					break;
+				}
+			}
+			spin_unlock(&ctx->fl->hlock);
+			if (!vctx) {
+				ADSPRPC_ERR(
+					"can't find virtual ctx for pid %d,tid %d\n",
+					ctx->tgid, ctx->pid);
+				err = -EFAULT;
+				goto bail;
+			}
+
+			index = i - bufs;
+			if (index >= vctx->fds_num) {
+				ADSPRPC_ERR(
+					"dma handle index is out of range for pid %d,tid %d\n",
+					ctx->tgid, ctx->pid);
+				err = -EFAULT;
+				goto bail;
+			}
+
+			rpra[i].dma.fd = vctx->fds[index];
+		} else {
+			rpra[i].dma.fd = ctx->fds[i];
+		}
 		rpra[i].dma.len = (uint32_t)lpra[i].buf.len;
 		rpra[i].dma.offset =
 				(uint32_t)(uintptr_t)lpra[i].buf.pv;
@@ -3446,6 +3493,7 @@ static int fastrpc_internal_invoke2(struct fastrpc_file *fl,
 		struct fastrpc_ioctl_invoke_async_no_perf inv3;
 		struct fastrpc_ioctl_async_response async_res;
 		uint32_t user_concurrency;
+		struct fastrpc_ioctl_invoke_virtual vinv;
 	} p;
 	struct fastrpc_dsp_capabilities *dsp_cap_ptr = NULL;
 	uint32_t size = 0;
@@ -3512,6 +3560,55 @@ static int fastrpc_internal_invoke2(struct fastrpc_file *fl,
 		err = fastrpc_create_persistent_headers(fl,
 				p.user_concurrency);
 		break;
+	case FASTRPC_INVOKE2_VIRTUAL:
+	{
+		struct virtual_invoke_ctx *ctx = NULL;
+		struct fastrpc_ctx_lst *clst = &fl->clst;
+
+		size = sizeof(struct fastrpc_ioctl_invoke_virtual);
+		if ((fl->mode != FASTRPC_MODE_VIRTUAL) ||
+				(inv2->size != size)) {
+			err = -EBADE;
+			goto bail;
+		}
+
+		K_COPY_FROM_USER(err, 0, &p.vinv, (void *)inv2->invparam, size);
+		if (err)
+			goto bail;
+		if (p.vinv.gvm_fds && p.vinv.gvm_fds_num) {
+			size = p.vinv.gvm_fds_num * sizeof(int);
+			VERIFY(err, NULL != (ctx = kzalloc(sizeof(*ctx) + size, GFP_KERNEL)));
+			if (err) {
+				err = -ENOMEM;
+				goto bail;
+			}
+
+			INIT_HLIST_NODE(&ctx->hn);
+			hlist_add_fake(&ctx->hn);
+			ctx->fl = fl;
+			ctx->pid = fl->tgid;
+			ctx->tid = current->pid;
+			ctx->fds = (int *)(&ctx[1]);
+			ctx->fds_num = p.vinv.gvm_fds_num;
+			K_COPY_FROM_USER(err, 0, ctx->fds, (void *)p.vinv.gvm_fds, size);
+			if (err) {
+				kfree(ctx);
+				goto bail;
+			}
+			spin_lock(&fl->hlock);
+			hlist_add_head(&ctx->hn, &clst->virtual);
+			spin_unlock(&fl->hlock);
+		}
+		memcpy(&p.inv, &p.vinv, sizeof(struct fastrpc_ioctl_invoke_async));
+		err = fastrpc_internal_invoke(fl, fl->mode, USER_MSG, &p.inv);
+		if (ctx) {
+			spin_lock(&fl->hlock);
+			hlist_del_init(&ctx->hn);
+			spin_unlock(&fl->hlock);
+			kfree(ctx);
+		}
+		break;
+	}
 	default:
 		err = -ENOTTY;
 		break;
@@ -5862,6 +5959,7 @@ static int fastrpc_setmode(unsigned long ioctl_param,
 	switch ((uint32_t)ioctl_param) {
 	case FASTRPC_MODE_PARALLEL:
 	case FASTRPC_MODE_SERIAL:
+	case FASTRPC_MODE_VIRTUAL:
 		fl->mode = (uint32_t)ioctl_param;
 		break;
 	case FASTRPC_MODE_PROFILE:
@@ -5883,6 +5981,15 @@ static int fastrpc_setmode(unsigned long ioctl_param,
 	}
 bail:
 	return err;
+}
+
+static int fastrpc_setpid(unsigned long ioctl_param,
+				struct fastrpc_file *fl)
+{
+	if (fl->mode != FASTRPC_MODE_VIRTUAL)
+		return -ENOTTY;
+	fl->tgid = (int)ioctl_param;
+	return 0;
 }
 
 static int fastrpc_control(struct fastrpc_ioctl_control *cp,
@@ -6146,6 +6253,9 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 		break;
 	case FASTRPC_IOCTL_SETMODE:
 		err = fastrpc_setmode(ioctl_param, fl);
+		break;
+	case FASTRPC_IOCTL_SETPID:
+		err = fastrpc_setpid(ioctl_param, fl);
 		break;
 	case FASTRPC_IOCTL_CONTROL:
 		err = fastrpc_control(&p.cp, param, fl);
