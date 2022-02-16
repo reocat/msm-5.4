@@ -46,7 +46,7 @@ enum {
 #define BR_GROUPFWD_8021AD	0xB801u
 
 /* Path to usermode spanning tree program */
-#define BR_STP_PROG	"/sbin/bridge-stp"
+#define BR_STP_PROG	CONFIG_BRIDGE_STP_PATH
 
 typedef struct bridge_id bridge_id;
 typedef struct mac_addr mac_addr;

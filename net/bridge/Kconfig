@@ -61,3 +61,11 @@ config BRIDGE_VLAN_FILTERING
 	  Say N to exclude this support and reduce the binary size.
 
 	  If unsure, say Y.
+
+config BRIDGE_STP_PATH
+	string "path to userspace STP program"
+	depends on BRIDGE
+	default "/sbin/bridge-stp"
+	---help---
+	  Specify the path to the userspace application optionally used for
+	  managing STP.
