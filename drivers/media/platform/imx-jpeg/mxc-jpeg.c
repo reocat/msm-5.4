@@ -1450,7 +1450,7 @@ static int mxc_jpeg_parse(struct mxc_jpeg_ctx *ctx, struct vb2_buffer *vb)
 	ctx->header_parsed = true;
 
 	if (!v4l2_m2m_num_src_bufs_ready(ctx->fh.m2m_ctx))
-		mxc_jpeg_source_change(ctx, jpeg_src_buf);
+	mxc_jpeg_bytesperline(q_data_cap, header.frame.precision);
 
 	return 0;
 }
