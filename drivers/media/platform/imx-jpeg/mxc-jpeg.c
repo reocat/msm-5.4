@@ -1093,6 +1093,20 @@ end:
 	spin_unlock_irqrestore(&ctx->mxc_jpeg->hw_lock, flags);
 }
 
+static void mxc_jpeg_set_last_buffer_dequeued(struct mxc_jpeg_ctx *ctx)
+{
+	struct vb2_queue *q;
+
+	ctx->stopped = 1;
+	q = v4l2_m2m_get_dst_vq(ctx->fh.m2m_ctx);
+	if (!list_empty(&q->done_list))
+		return;
+
+	q->last_buffer_dequeued = true;
+	wake_up(&q->done_wq);
+	ctx->stopped = 0;
+}
+
 static int mxc_jpeg_decoder_cmd(struct file *file, void *priv,
 				struct v4l2_decoder_cmd *cmd)
 {
@@ -1114,6 +1128,7 @@ static int mxc_jpeg_decoder_cmd(struct file *file, void *priv,
 	if (cmd->cmd == V4L2_DEC_CMD_STOP &&
 	    v4l2_m2m_has_stopped(fh->m2m_ctx)) {
 		notify_eos(ctx);
+			mxc_jpeg_set_last_buffer_dequeued(ctx);
 		ctx->header_parsed = false;
 	}
 
@@ -1145,6 +1160,7 @@ static int mxc_jpeg_encoder_cmd(struct file *file, void *priv,
 	if (cmd->cmd == V4L2_ENC_CMD_STOP &&
 	    v4l2_m2m_has_stopped(fh->m2m_ctx))
 		notify_eos(ctx);
+			mxc_jpeg_set_last_buffer_dequeued(ctx);
 
 	if (cmd->cmd == V4L2_ENC_CMD_START &&
 	    v4l2_m2m_has_stopped(fh->m2m_ctx))
@@ -1244,6 +1260,10 @@ static void mxc_jpeg_stop_streaming(struct vb2_queue *q)
 	}
 
 	pm_runtime_put_sync(&ctx->mxc_jpeg->pdev->dev);
+	if (V4L2_TYPE_IS_OUTPUT(q->type)) {
+		ctx->stopping = 0;
+		ctx->stopped = 0;
+	}
 }
 
 static int mxc_jpeg_valid_comp_id(struct device *dev,
@@ -1512,12 +1532,29 @@ static int mxc_jpeg_buf_prepare(struct vb2_buffer *vb)
 	return 0;
 }
 
+static void mxc_jpeg_buf_finish(struct vb2_buffer *vb)
+{
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+	struct mxc_jpeg_ctx *ctx = vb2_get_drv_priv(vb->vb2_queue);
+	struct vb2_queue *q = vb->vb2_queue;
+
+	if (V4L2_TYPE_IS_OUTPUT(vb->type))
+		return;
+	if (!ctx->stopped)
+		return;
+	if (list_empty(&q->done_list)) {
+		vbuf->flags |= V4L2_BUF_FLAG_LAST;
+		ctx->stopped = 0;
+	}
+}
+
 static const struct vb2_ops mxc_jpeg_qops = {
 	.queue_setup		= mxc_jpeg_queue_setup,
 	.wait_prepare		= vb2_ops_wait_prepare,
 	.wait_finish		= vb2_ops_wait_finish,
 	.buf_out_validate	= mxc_jpeg_buf_out_validate,
 	.buf_prepare		= mxc_jpeg_buf_prepare,
+	.buf_finish             = mxc_jpeg_buf_finish,
 	.start_streaming	= mxc_jpeg_start_streaming,
 	.stop_streaming		= mxc_jpeg_stop_streaming,
 	.buf_queue		= mxc_jpeg_buf_queue,
