@@ -32,6 +32,8 @@ parts:
       - firmware/imx/sdma/sdma-imx7d.bin
       - firmware/regulatory.db
       - firmware/regulatory.db.p7s
+    build-environment:
+      - PATH: "/usr/lib/ccache:${PATH}"
     override-build: |
       craftctl default
       craftctl set version=$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
