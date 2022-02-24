@@ -20,6 +20,8 @@ architectures:
 
 parts:
     kernel:
+        after:
+            - firmware
         plugin: x-kernel
         kdefconfig: [ "snappy_defconfig" ]
         kernel-with-firmware: false
@@ -28,6 +30,10 @@ parts:
             armhf: zImage
         kernel-initrd-channel: beta
         kernel-initrd-compression: gz
+        kernel-initrd-firmware:
+            - firmware/imx/sdma/sdma-imx7d.bin
+            - firmware/regulatory.db
+            - firmware/regulatory.db.p7s
         override-build: |
             snapcraftctl build
             snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
