@@ -262,6 +262,8 @@ parts:
         plugin: nil
         source: ${SNAPCRAFT_STAGE}/optee-uc-fde
         source-type: local
+        stage-packages:
+            - libjson-c-dev
         override-build: |
             # we are not using TA build here (early TA is used), so
             # it does not matter what key is used to sign built TA
@@ -323,10 +325,9 @@ build-packages:
     - python3-serial
     - u-boot-tools
     - wget
+    - libjson-c-dev
     - to armhf:
         - binutils-arm-linux-gnueabi
         - gcc-arm-linux-gnueabi
-        - libjson-c-dev:armhf
     - to arm64:
         - gcc-aarch64-linux-gnu
-        - libjson-c-dev:arm64
