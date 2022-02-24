@@ -34,6 +34,8 @@ parts:
             - firmware/imx/sdma/sdma-imx7d.bin
             - firmware/regulatory.db
             - firmware/regulatory.db.p7s
+        build-environment:
+            - PATH: "/usr/lib/ccache:${PATH}"
         override-build: |
             snapcraftctl build
             snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
