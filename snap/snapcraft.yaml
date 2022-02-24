@@ -49,6 +49,8 @@ parts:
         kernel-initrd-addons:
             - usr/bin/fde-reveal-key
             - usr/lib/libteec.so*
+        build-environment:
+            - PATH: "/usr/lib/ccache:${PATH}"
         override-build: |
             snapcraftctl build
             snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
