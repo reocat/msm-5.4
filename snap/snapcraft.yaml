@@ -30,6 +30,7 @@ hooks:
 
 parts:
     kernel:
+            - firmware
             - optee-uc-fde-client
         plugin: x-kernel
         source: .
@@ -40,6 +41,10 @@ parts:
             armhf: zImage
         kernel-initrd-channel: beta
         kernel-initrd-compression: gz
+        kernel-initrd-firmware:
+            - firmware/imx/sdma/sdma-imx7d.bin
+            - firmware/regulatory.db
+            - firmware/regulatory.db.p7s
         kernel-initrd-addons:
             - usr/bin/fde-reveal-key
             - usr/lib/libteec.so*
