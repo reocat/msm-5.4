@@ -1352,7 +1352,8 @@ mt7530_port_bridge_leave(struct dsa_switch *ds, int port,
 
 static int
 mt7530_port_fdb_add(struct dsa_switch *ds, int port,
-		    const unsigned char *addr, u16 vid)
+		    const unsigned char *addr, u16 vid,
+		    struct dsa_db db)
 {
 	struct mt7530_priv *priv = ds->priv;
 	int ret;
@@ -1368,7 +1369,8 @@ mt7530_port_fdb_add(struct dsa_switch *ds, int port,
 
 static int
 mt7530_port_fdb_del(struct dsa_switch *ds, int port,
-		    const unsigned char *addr, u16 vid)
+		    const unsigned char *addr, u16 vid,
+		    struct dsa_db db)
 {
 	struct mt7530_priv *priv = ds->priv;
 	int ret;
@@ -1419,7 +1421,8 @@ err:
 
 static int
 mt7530_port_mdb_add(struct dsa_switch *ds, int port,
-		    const struct switchdev_obj_port_mdb *mdb)
+		    const struct switchdev_obj_port_mdb *mdb,
+		    struct dsa_db db)
 {
 	struct mt7530_priv *priv = ds->priv;
 	const u8 *addr = mdb->addr;
@@ -1445,7 +1448,8 @@ mt7530_port_mdb_add(struct dsa_switch *ds, int port,
 
 static int
 mt7530_port_mdb_del(struct dsa_switch *ds, int port,
-		    const struct switchdev_obj_port_mdb *mdb)
+		    const struct switchdev_obj_port_mdb *mdb,
+		    struct dsa_db db)
 {
 	struct mt7530_priv *priv = ds->priv;
 	const u8 *addr = mdb->addr;

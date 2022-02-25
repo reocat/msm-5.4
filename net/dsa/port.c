@@ -810,7 +810,18 @@ int dsa_port_fdb_add(struct dsa_port *dp, const unsigned char *addr,
 		.port = dp->index,
 		.addr = addr,
 		.vid = vid,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	/* Refcounting takes bridge.num as a key, and should be global for all
+	 * bridges in the absence of FDB isolation, and per bridge otherwise.
+	 * Force the bridge.num to zero here in the absence of FDB isolation.
+	 */
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_FDB_ADD, &info);
 }
@@ -823,8 +834,14 @@ int dsa_port_fdb_del(struct dsa_port *dp, const unsigned char *addr,
 		.port = dp->index,
 		.addr = addr,
 		.vid = vid,
-
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_FDB_DEL, &info);
 }
@@ -837,6 +854,10 @@ int dsa_port_host_fdb_add(struct dsa_port *dp, const unsigned char *addr,
 		.port = dp->index,
 		.addr = addr,
 		.vid = vid,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
 	struct dsa_port *cpu_dp = dp->cpu_dp;
 	int err;
@@ -851,6 +872,9 @@ int dsa_port_host_fdb_add(struct dsa_port *dp, const unsigned char *addr,
 			return err;
 	}
 
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
+
 	return dsa_port_notify(dp, DSA_NOTIFIER_HOST_FDB_ADD, &info);
 }
 
@@ -862,6 +886,10 @@ int dsa_port_host_fdb_del(struct dsa_port *dp, const unsigned char *addr,
 		.port = dp->index,
 		.addr = addr,
 		.vid = vid,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
 	struct dsa_port *cpu_dp = dp->cpu_dp;
 	int err;
@@ -871,6 +899,9 @@ int dsa_port_host_fdb_del(struct dsa_port *dp, const unsigned char *addr,
 		if (err)
 			return err;
 	}
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_HOST_FDB_DEL, &info);
 }
@@ -882,7 +913,14 @@ int dsa_port_lag_fdb_add(struct dsa_port *dp, const unsigned char *addr,
 		.lag = dp->lag,
 		.addr = addr,
 		.vid = vid,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_LAG_FDB_ADD, &info);
 }
@@ -894,7 +932,14 @@ int dsa_port_lag_fdb_del(struct dsa_port *dp, const unsigned char *addr,
 		.lag = dp->lag,
 		.addr = addr,
 		.vid = vid,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_LAG_FDB_DEL, &info);
 }
@@ -917,7 +962,14 @@ int dsa_port_mdb_add(const struct dsa_port *dp,
 		.sw_index = dp->ds->index,
 		.port = dp->index,
 		.mdb = mdb,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_MDB_ADD, &info);
 }
@@ -929,7 +981,14 @@ int dsa_port_mdb_del(const struct dsa_port *dp,
 		.sw_index = dp->ds->index,
 		.port = dp->index,
 		.mdb = mdb,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_MDB_DEL, &info);
 }
@@ -941,6 +1000,10 @@ int dsa_port_host_mdb_add(const struct dsa_port *dp,
 		.sw_index = dp->ds->index,
 		.port = dp->index,
 		.mdb = mdb,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
 	struct dsa_port *cpu_dp = dp->cpu_dp;
 	int err;
@@ -948,6 +1011,9 @@ int dsa_port_host_mdb_add(const struct dsa_port *dp,
 	err = dev_mc_add(cpu_dp->master, mdb->addr);
 	if (err)
 		return err;
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_HOST_MDB_ADD, &info);
 }
@@ -959,6 +1025,10 @@ int dsa_port_host_mdb_del(const struct dsa_port *dp,
 		.sw_index = dp->ds->index,
 		.port = dp->index,
 		.mdb = mdb,
+		.db = {
+			.type = DSA_DB_BRIDGE,
+			.bridge = *dp->bridge,
+		},
 	};
 	struct dsa_port *cpu_dp = dp->cpu_dp;
 	int err;
@@ -966,6 +1036,9 @@ int dsa_port_host_mdb_del(const struct dsa_port *dp,
 	err = dev_mc_del(cpu_dp->master, mdb->addr);
 	if (err)
 		return err;
+
+	if (!dp->ds->fdb_isolation)
+		info.db.bridge.num = 0;
 
 	return dsa_port_notify(dp, DSA_NOTIFIER_HOST_MDB_DEL, &info);
 }
