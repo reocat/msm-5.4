@@ -53,6 +53,7 @@
 					 | IMX6SX_SW_M4C_RST)
 
 #define IMX_RPROC_MEM_MAX		32
+#define IMX_RPROC_CLK_MAX		3
 
 #define IMX_SIP_RPROC			0xC2000005
 #define IMX_SIP_RPROC_START		0x00
@@ -82,7 +83,7 @@ struct imx_rproc {
 	struct rproc			*rproc;
 	const struct imx_rproc_dcfg	*dcfg;
 	struct imx_rproc_mem		mem[IMX_RPROC_MEM_MAX];
-	struct clk			*clk;
+	struct clk			*clk[IMX_RPROC_CLK_MAX];
 	struct mbox_client		cl;
 	struct mbox_chan		*tx_ch;
 	struct mbox_chan		*rx_ch;
@@ -710,26 +711,36 @@ static int imx_rproc_clk_enable(struct imx_rproc *priv)
 {
 	const struct imx_rproc_dcfg *dcfg = priv->dcfg;
 	struct device *dev = priv->dev;
-	int ret;
+	int ret, i;
 
 	/* Remote core is not under control of Linux */
 	if (dcfg->method == IMX_RPROC_NONE)
 		return 0;
 
-	priv->clk = devm_clk_get(dev, NULL);
-	if (IS_ERR(priv->clk)) {
-		dev_err(dev, "Failed to get clock\n");
-		return PTR_ERR(priv->clk);
+	for (i = 0; i < IMX_RPROC_CLK_MAX; i++) {
+		struct clk *clk = of_clk_get(dev->of_node, i);
+		if (IS_ERR(clk))
+			break;
+
+		priv->clk[i] = clk;
 	}
 
 	/*
 	 * clk for M4 block including memory. Should be
 	 * enabled before .start for FW transfer.
 	 */
-	ret = clk_prepare_enable(priv->clk);
-	if (ret) {
-		dev_err(dev, "Failed to enable clock\n");
-		return ret;
+
+	for (i = 0; i < IMX_RPROC_CLK_MAX; i++) {
+		if (priv->clk[i]) {
+			ret = clk_prepare_enable(priv->clk[i]);
+			if (ret) {
+				int j;
+				for (j = 0; j < i; j++)
+					clk_disable_unprepare(priv->clk[j]);
+				dev_err(dev, "Failed to enable clock\n");
+				return ret;
+			}
+		}
 	}
 
 	return 0;
@@ -742,7 +753,7 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	struct imx_rproc *priv;
 	struct rproc *rproc;
 	const struct imx_rproc_dcfg *dcfg;
-	int ret;
+	int ret, i;
 
 	/* set some other name then imx */
 	rproc = rproc_alloc(dev, "imx-rproc", &imx_rproc_ops,
@@ -801,7 +812,9 @@ static int imx_rproc_probe(struct platform_device *pdev)
 	return 0;
 
 err_put_clk:
-	clk_disable_unprepare(priv->clk);
+	for (i = 0; i < IMX_RPROC_CLK_MAX; i++)
+		if (priv->clk[i])
+			clk_disable_unprepare(priv->clk[i]);
 err_put_mbox:
 	imx_rproc_free_mbox(rproc);
 err_put_wkq:
@@ -816,8 +829,11 @@ static int imx_rproc_remove(struct platform_device *pdev)
 {
 	struct rproc *rproc = platform_get_drvdata(pdev);
 	struct imx_rproc *priv = rproc->priv;
+	int i;
 
-	clk_disable_unprepare(priv->clk);
+	for (i = 0; i < IMX_RPROC_CLK_MAX; i++)
+		if (priv->clk[i])
+			clk_disable_unprepare(priv->clk[i]);
 	rproc_del(rproc);
 	imx_rproc_free_mbox(rproc);
 	destroy_workqueue(priv->workqueue);
