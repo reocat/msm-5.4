@@ -189,7 +189,7 @@ static void ptn5150_conn_poll(struct timer_list *t)
 	schedule_work(&info->irq_work);
 
 	mod_timer(&info->timer,
-		jiffies + jiffies_to_msecs(CABLE_ATTACH_TIMEOUT));
+		jiffies + msecs_to_jiffies(CABLE_ATTACH_TIMEOUT));
 }
 
 static int ptn5150_init_dev_type(struct ptn5150_info *info)
