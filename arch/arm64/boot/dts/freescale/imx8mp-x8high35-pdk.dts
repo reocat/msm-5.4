@@ -869,7 +869,7 @@
 		compatible = "regulator-fixed";
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinctrl_usb2_vbus>;
-		regulator-name = "usb1_host_vbus";
+		regulator-name = "usb2_host_vbus";
 		regulator-min-microvolt = <5000000>;
 		regulator-max-microvolt = <5000000>;
 		gpio = <&gpio1 14 GPIO_ACTIVE_HIGH>;
@@ -1833,6 +1833,8 @@
 
 &usb_dwc3_0 {
 	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-extcon;
 	status = "okay";
 
 	extcon = <&typec_1>;
@@ -1847,8 +1849,12 @@
 };
 
 &usb_dwc3_1 {
-	dr_mode = "host";
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-extcon;
 	status = "okay";
+
+	extcon = <&typec_2>;
 };
 
 &usdhc1 {
