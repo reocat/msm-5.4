@@ -46,7 +46,6 @@
 #include <linux/workqueue.h>
 #include <linux/bitops.h>
 #include <linux/io.h>
-#include <linux/iopoll.h>
 #include <linux/irq.h>
 #include <linux/clk.h>
 #include <linux/crc32.h>
@@ -62,18 +61,45 @@
 #include <linux/regulator/consumer.h>
 #include <linux/if_vlan.h>
 #include <linux/pinctrl/consumer.h>
+#include <linux/pm_runtime.h>
+#include <linux/busfreq-imx.h>
 #include <linux/prefetch.h>
+#include <soc/imx/cpuidle.h>
 #include <linux/mfd/syscon.h>
 #include <linux/regmap.h>
-#include <soc/imx/cpuidle.h>
 
 #include <asm/cacheflush.h>
 
-#include "fec.h"
+#if defined(CONFIG_LAN937X_SWITCH)
+#define CONFIG_KSZ_SWITCH
+
+#if defined(CONFIG_LAN937X_SWITCH_EMBEDDED)
+#define CONFIG_KSZ_SWITCH_EMBEDDED
+#endif
+
+#if defined(CONFIG_SMI_LAN937X)
+#define CONFIG_KSZ_SMI
+#endif
+#if defined(CONFIG_LAN937X_MRP)
+#define CONFIG_KSZ_MRP
+#endif
+#if defined(CONFIG_LAN937X_NO_MDIO_BUS)
+#define CONFIG_KSZ_NO_MDIO_BUS
+#endif
+#endif
+
+#if defined(CONFIG_KSZ_SWITCH)
+#define HAVE_KSZ_SWITCH
+#endif
+
+#if defined(CONFIG_IBA_KSZ9897) || defined(CONFIG_IBA_LAN937X)
+#define CONFIG_KSZ_IBA_ONLY
+#endif
 
 #if defined(CONFIG_KSZ_SWITCH_EMBEDDED)
 #include <linux/of_irq.h>
 #include <linux/spi/spi.h>
+#include <linux/crc32.h>
 #include <linux/ip.h>
 #include <net/ip.h>
 #include <net/ipv6.h>
@@ -113,9 +139,21 @@ static void copy_old_skb(struct sk_buff *old, struct sk_buff *skb);
 #elif defined(CONFIG_HAVE_LAN937X)
 #include "../microchip/spi-lan937x.c"
 #endif
+#elif defined(CONFIG_HAVE_KSZ9897)
+#include "../micrel/ksz_cfg_9897.h"
+#elif defined(CONFIG_HAVE_KSZ8795)
+#include "../micrel/ksz_cfg_8795.h"
+#elif defined(CONFIG_HAVE_KSZ8895)
+#include "../micrel/ksz_cfg_8895.h"
+#elif defined(CONFIG_HAVE_KSZ8863)
+#include "../micrel/ksz_cfg_8863.h"
+#elif defined(CONFIG_HAVE_KSZ8463)
+#include "../micrel/ksz_cfg_8463.h"
+#elif defined(CONFIG_HAVE_LAN937X)
+#include "../microchip/lan937x_cfg.h"
 #endif
 
-#if defined(CONFIG_KSZ_SWITCH) && !defined(CONFIG_KSZ_SWITCH_EMBEDDED)
+#if defined(HAVE_KSZ_SWITCH) && !defined(CONFIG_KSZ_SWITCH_EMBEDDED)
 #ifdef CONFIG_HAVE_LAN937X
 #include "../microchip/lan937x_dev.h"
 #else
@@ -123,7 +161,10 @@ static void copy_old_skb(struct sk_buff *old, struct sk_buff *skb);
 #endif
 #endif
 
-#ifdef CONFIG_KSZ_SWITCH
+#include "fec.h"
+
+ 
+#ifdef HAVE_KSZ_SWITCH
 
 #if !defined(get_sysfs_data) || defined(CONFIG_KSZ_SWITCH_EMBEDDED)
 static void get_sysfs_data_(struct net_device *dev,
@@ -161,13 +202,12 @@ static void get_sysfs_data_(struct net_device *dev,
 #endif
 
 #ifdef CONFIG_1588_PTP
-#if defined(CONFIG_HAVE_KSZ9897)
-#include "../micrel/ksz_ptp_sysfs.c"
-#elif defined(CONFIG_HAVE_LAN937X)
+#ifdef CONFIG_HAVE_LAN937X
 #include "../microchip/lan937x_ptp_sysfs.c"
+#else
+#include "../micrel/ksz_ptp_sysfs.c"
 #endif
 #endif
-
 #ifdef CONFIG_KSZ_DLR
 #include "../micrel/ksz_dlr_sysfs.c"
 #endif
@@ -195,7 +235,9 @@ static void copy_old_skb(struct sk_buff *old, struct sk_buff *skb)
 
 	dev_kfree_skb_any(old);
 }  /* copy_old_skb */
+#endif
 
+#ifdef CONFIG_KSZ_SWITCH
 static int fec_enet_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
@@ -264,7 +306,7 @@ static int fec_enet_sw_chk(struct fec_enet_private *fep)
 #endif
 
 #if defined(CONFIG_KSZ_IBA_ONLY) || defined(CONFIG_KSZ_SMI)
-static int get_sw_irq(struct fec_enet_private *fep, struct device **ext_dev)
+static int get_sw_irq(struct fec_enet_private *fep)
 {
 	struct device *dev;
 	int spi_bus;
@@ -278,187 +320,12 @@ static int get_sw_irq(struct fec_enet_private *fep, struct device **ext_dev)
 		if (dev && dev->of_node) {
 			int irq = of_irq_get(dev->of_node, 0);
 
-			if (ext_dev)
-				*ext_dev = dev;
 			return irq;
 		}
 	}
 	return -1;
 }  /* get_sw_irq */
 #endif
-
-static void stop_dev_queues(struct ksz_sw *sw, struct net_device *hw_dev,
-			    struct fec_enet_private *fep, u16 qid)
-{
-	if (sw_is_switch(sw)) {
-		int dev_count = sw->dev_count + sw->dev_offset;
-		struct netdev_queue *nq;
-		struct net_device *dev;
-		int p;
-
-		for (p = 0; p < dev_count; p++) {
-			dev = sw->netdev[p];
-			if (!dev || dev == hw_dev)
-				continue;
-			if (netif_running(dev) || dev == fep->netdev) {
-				nq = netdev_get_tx_queue(dev, qid);
-				netif_tx_stop_queue(nq);
-			}
-		}
-	}
-}  /* stop_dev_queues */
-
-static void wake_dev_queues(struct ksz_sw *sw, struct net_device *hw_dev,
-			    u16 qid)
-{
-	if (sw_is_switch(sw)) {
-		int dev_count = sw->dev_count + sw->dev_offset;
-		struct netdev_queue *nq;
-		struct net_device *dev;
-		int p;
-
-		for (p = 0; p < dev_count; p++) {
-			dev = sw->netdev[p];
-			if (!dev || dev == hw_dev)
-				continue;
-			if (netif_running(dev)) {
-				nq = netdev_get_tx_queue(dev, qid);
-				if (netif_tx_queue_stopped(nq))
-					netif_tx_wake_queue(nq);
-			}
-		}
-		wake_up_interruptible(&sw->queue);
-	}
-}  /* wake_dev_queues */
-
-#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
-static int priv_multi(void *ptr)
-{
-	struct fec_enet_private *priv = ptr;
-
-	return (priv->multi & 1);
-}  /* priv_multi */
-#endif
-
-static int priv_promisc(void *ptr)
-{
-	struct fec_enet_private *priv = ptr;
-
-	return priv->promisc;
-}  /* priv_promisc */
-
-#if !defined(CONFIG_HAVE_KSZ9897) && !defined(CONFIG_HAVE_LAN937X)
-static int priv_match_multi(void *ptr, u8 *data)
-{
-	struct netdev_hw_addr *ha;
-	struct fec_enet_private *fep = ptr;
-	int drop = true;
-
-	netdev_for_each_mc_addr(ha, fep->netdev) {
-		if (!memcmp(data, ha->addr, ETH_ALEN)) {
-			drop = false;
-			break;
-		}
-	}
-	return drop;
-}  /* priv_match_multi */
-#endif
-
-static struct net_device *sw_rx_proc(struct ksz_sw *sw, struct sk_buff *skb,
-				     __u8 *data)
-{
-	struct net_device *dev;
-	struct fec_enet_private *fep;
-	int len = skb->len;
-	int rx_port = 0;
-#if defined(CONFIG_KSZ_SWITCH) || defined(CONFIG_1588_PTP)
-	int forward = 0;
-	int tag = 0;
-	void *ptr = NULL;
-	void (*rx_tstamp)(void *ptr, struct sk_buff *skb) = NULL;
-#endif
-#ifdef CONFIG_1588_PTP
-	struct ptp_info *ptp = &sw->ptp_hw;
-	int ptp_tag = 0;
-#endif
-	struct net_device *parent_dev = NULL;
-	struct sk_buff *parent_skb = NULL;
-
-	dev = sw->net_ops->rx_dev(sw, data, &len, &tag, &rx_port);
-	if (!dev) {
-		dev_kfree_skb_any(skb);
-		return NULL;
-	}
-
-	/* vlan_get_tag requires network device in socket buffer. */
-	skb->dev = dev;
-
-	/* skb_put is already used. */
-	if (len != skb->len) {
-		int diff = skb->len - len;
-
-		skb->len -= diff;
-		skb->tail -= diff;
-	}
-
-	fep = netdev_priv(dev);
-
-	/* Internal packets handled by the switch. */
-	if (!sw->net_ops->drv_rx(sw, skb, rx_port)) {
-		dev->stats.rx_packets++;
-		dev->stats.rx_bytes += skb->len;
-		return NULL;
-	}
-
-	if (!sw->net_ops->match_pkt(sw, &dev, (void **) &fep, priv_promisc,
-#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
-	    priv_multi,
-#else
-	    priv_match_multi,
-#endif
-	    skb, fep->hw_priv->hw_promisc)) {
-		dev_kfree_skb_irq(skb);
-		return NULL;
-	}
-
-#ifdef CONFIG_1588_PTP
-	ptr = ptp;
-	if (sw->features & PTP_HW) {
-		if (ptp->ops->drop_pkt(ptp, skb, sw->vlan_id, &tag, &ptp_tag,
-				       &forward)) {
-			dev_kfree_skb_any(skb);
-			return NULL;
-		}
-		if (ptp_tag)
-			rx_tstamp = ptp->ops->get_rx_tstamp;
-	}
-#endif
-
-#if defined(CONFIG_KSZ_SWITCH)
-	/* Need to forward to VLAN devices for PAE messages. */
-	if (!forward) {
-		struct ethhdr *eth = (struct ethhdr *) data;
-
-		if (eth->h_proto == htons(0x888E))
-			forward = FWD_VLAN_DEV | FWD_STP_DEV;
-	}
-
-	/* No VLAN port forwarding; need to send to parent. */
-	if ((forward & FWD_VLAN_DEV) && !tag)
-		forward &= ~FWD_VLAN_DEV;
-	dev = sw->net_ops->parent_rx(sw, dev, skb, &forward, &parent_dev,
-		&parent_skb);
-
-	/* dev may change. */
-	if (dev != skb->dev) {
-		skb->dev = dev;
-	}
-
-	sw->net_ops->port_vlan_rx(sw, dev, parent_dev, skb,
-		forward, tag, ptr, rx_tstamp);
-#endif
-	return dev;
-}  /* sw_rx_proc */
 #endif
 
 static void set_multicast_list(struct net_device *ndev);
@@ -466,7 +333,8 @@ static void fec_enet_itr_coal_init(struct net_device *ndev);
 
 #define DRIVER_NAME	"fec"
 
-static const u16 fec_enet_vlan_pri_to_queue[8] = {0, 0, 1, 1, 1, 2, 2, 2};
+#define FEC_ENET_GET_QUQUE(_x) ((_x == 0) ? 1 : ((_x == 1) ? 2 : 0))
+static const u16 fec_enet_vlan_pri_to_queue[8] = {1, 1, 1, 1, 2, 2, 2, 2};
 
 /* Pause frame feild and FIFO threshold */
 #define FEC_ENET_FCE	(1 << 5)
@@ -477,72 +345,6 @@ static const u16 fec_enet_vlan_pri_to_queue[8] = {0, 0, 1, 1, 1, 2, 2, 2};
 #define FEC_ENET_OPD_V	0xFFF0
 #define FEC_MDIO_PM_TIMEOUT  100 /* ms */
 
-struct fec_devinfo {
-	u32 quirks;
-};
-
-static const struct fec_devinfo fec_imx25_info = {
-	.quirks = FEC_QUIRK_USE_GASKET | FEC_QUIRK_MIB_CLEAR |
-		  FEC_QUIRK_HAS_FRREG,
-};
-
-static const struct fec_devinfo fec_imx27_info = {
-	.quirks = FEC_QUIRK_MIB_CLEAR | FEC_QUIRK_HAS_FRREG,
-};
-
-static const struct fec_devinfo fec_imx28_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_SWAP_FRAME |
-		  FEC_QUIRK_SINGLE_MDIO | FEC_QUIRK_HAS_RACC |
-		  FEC_QUIRK_HAS_FRREG | FEC_QUIRK_CLEAR_SETUP_MII |
-		  FEC_QUIRK_NO_HARD_RESET,
-};
-
-static const struct fec_devinfo fec_imx6q_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
-		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
-		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_ERR006358 |
-		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_CLEAR_SETUP_MII,
-};
-
-static const struct fec_devinfo fec_mvf600_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_RACC,
-};
-
-static const struct fec_devinfo fec_imx6x_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
-		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
-		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
-		  FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
-		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE |
-		  FEC_QUIRK_CLEAR_SETUP_MII | FEC_QUIRK_HAS_MULTI_QUEUES,
-};
-
-static const struct fec_devinfo fec_imx6ul_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
-		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
-		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_ERR007885 |
-		  FEC_QUIRK_BUG_CAPTURE | FEC_QUIRK_HAS_RACC |
-		  FEC_QUIRK_HAS_COALESCE | FEC_QUIRK_CLEAR_SETUP_MII,
-};
-
-static const struct fec_devinfo fec_imx8mq_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
-		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
-		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
-		  FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
-		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE |
-		  FEC_QUIRK_HAS_EEE,
-};
-
-static const struct fec_devinfo fec_imx8qm_info = {
-	.quirks = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
-		  FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
-		  FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
-		  FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
-		  FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE |
-		  FEC_QUIRK_DELAYED_CLKS_SUPPORT,
-};
-
 static struct platform_device_id fec_devtype[] = {
 	{
 		/* keep it for coldfire */
@@ -550,31 +352,61 @@ static struct platform_device_id fec_devtype[] = {
 		.driver_data = 0,
 	}, {
 		.name = "imx25-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx25_info,
+		.driver_data = FEC_QUIRK_USE_GASKET | FEC_QUIRK_MIB_CLEAR |
+			       FEC_QUIRK_HAS_FRREG,
 	}, {
 		.name = "imx27-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx27_info,
+		.driver_data = FEC_QUIRK_MIB_CLEAR | FEC_QUIRK_HAS_FRREG,
 	}, {
 		.name = "imx28-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx28_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_SWAP_FRAME |
+				FEC_QUIRK_SINGLE_MDIO | FEC_QUIRK_HAS_RACC |
+				FEC_QUIRK_HAS_FRREG,
 	}, {
 		.name = "imx6q-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx6q_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_ERR006358 |
+				FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_PMQOS,
 	}, {
 		.name = "mvf600-fec",
-		.driver_data = (kernel_ulong_t)&fec_mvf600_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_RACC,
 	}, {
 		.name = "imx6sx-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx6x_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
+				FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
+				FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE,
 	}, {
 		.name = "imx6ul-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx6ul_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_ERR007885 |
+				FEC_QUIRK_BUG_CAPTURE | FEC_QUIRK_HAS_RACC |
+				FEC_QUIRK_HAS_COALESCE,
 	}, {
 		.name = "imx8mq-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx8mq_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
+				FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
+				FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE |
+				FEC_QUIRK_HAS_EEE,
 	}, {
 		.name = "imx8qm-fec",
-		.driver_data = (kernel_ulong_t)&fec_imx8qm_info,
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
+				FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE |
+				FEC_QUIRK_HAS_RACC | FEC_QUIRK_HAS_COALESCE |
+				FEC_QUIRK_DELAYED_CLKS_SUPPORT,
+	}, {
+		.name = "s32v234-fec",
+		.driver_data = FEC_QUIRK_ENET_MAC | FEC_QUIRK_HAS_GBIT |
+				FEC_QUIRK_HAS_BUFDESC_EX | FEC_QUIRK_HAS_CSUM |
+				FEC_QUIRK_HAS_VLAN | FEC_QUIRK_HAS_AVB |
+				FEC_QUIRK_ERR007885 | FEC_QUIRK_BUG_CAPTURE,
 	}, {
 		/* sentinel */
 	}
@@ -591,6 +423,7 @@ enum imx_fec_type {
 	IMX6UL_FEC,
 	IMX8MQ_FEC,
 	IMX8QM_FEC,
+	S32V234_FEC,
 };
 
 static const struct of_device_id fec_dt_ids[] = {
@@ -603,6 +436,7 @@ static const struct of_device_id fec_dt_ids[] = {
 	{ .compatible = "fsl,imx6ul-fec", .data = &fec_devtype[IMX6UL_FEC], },
 	{ .compatible = "fsl,imx8mq-fec", .data = &fec_devtype[IMX8MQ_FEC], },
 	{ .compatible = "fsl,imx8qm-fec", .data = &fec_devtype[IMX8QM_FEC], },
+	{ .compatible = "fsl,s32v234-fec", .data = &fec_devtype[S32V234_FEC], },
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, fec_dt_ids);
@@ -763,9 +597,10 @@ static void fec_dump(struct net_device *ndev)
 	struct fec_enet_priv_tx_q *txq;
 	int index = 0;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	fep = fep->hw_priv;
 #endif
+
 	netdev_info(ndev, "TX ring dump\n");
 	pr_info("Nr     SC     addr       len  SKB\n");
 
@@ -826,9 +661,6 @@ fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 	dma_addr_t addr;
 	int i;
 
-#ifdef CONFIG_KSZ_SWITCH
-	fep = fep->hw_priv;
-#endif
 	for (frag = 0; frag < nr_frags; frag++) {
 		this_frag = &skb_shinfo(skb)->frags[frag];
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
@@ -842,14 +674,12 @@ fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 		/* Handle the last BD specially */
 		if (frag == nr_frags - 1) {
 			status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
-#ifndef CONFIG_1588_PTP
 			if (fep->bufdesc_ex) {
 				estatus |= BD_ENET_TX_INT;
 				if (unlikely(skb_shinfo(skb)->tx_flags &
 					SKBTX_HW_TSTAMP && fep->hwts_tx_en))
 					estatus |= BD_ENET_TX_TS;
 			}
-#endif
 		}
 
 		if (fep->bufdesc_ex) {
@@ -857,7 +687,6 @@ fec_enet_txq_submit_frag_skb(struct fec_enet_priv_tx_q *txq,
 				estatus |= FEC_TX_BD_FTYPE(txq->bd.qid);
 			if (skb->ip_summed == CHECKSUM_PARTIAL)
 				estatus |= BD_ENET_TX_PINS | BD_ENET_TX_IINS;
-
 			ebdp->cbd_bdu = 0;
 			ebdp->cbd_esc = cpu_to_fec32(estatus);
 		}
@@ -916,7 +745,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 	unsigned int index;
 	int entries_free;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct ksz_sw *sw = fep->port.sw;
 #endif
 
@@ -928,7 +757,7 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		return NETDEV_TX_OK;
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (sw_is_switch(sw)) {
 		struct ksz_port *port = &fep->port;
 		int len = skb->len;
@@ -953,14 +782,13 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		}
 	}
 #endif
-
 	/* Protocol checksum off-load for TCP and UDP. */
 	if (fec_enet_clear_csum(skb, ndev)) {
 		dev_kfree_skb_any(skb);
 		return NETDEV_TX_OK;
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (sw_is_switch(sw)) {
 		skb = sw->net_ops->final_skb(sw, skb, ndev, &fep->port);
 		if (!skb)
@@ -969,7 +797,6 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		fep = fep->hw_priv;
 	}
 #endif
-
 	/* Fill in a Tx ring entry */
 	bdp = txq->bd.cur;
 	last_bdp = bdp;
@@ -1009,14 +836,12 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 		}
 	} else {
 		status |= (BD_ENET_TX_INTR | BD_ENET_TX_LAST);
-#ifndef CONFIG_1588_PTP
 		if (fep->bufdesc_ex) {
 			estatus = BD_ENET_TX_INT;
 			if (unlikely(skb_shinfo(skb)->tx_flags &
 				SKBTX_HW_TSTAMP && fep->hwts_tx_en))
 				estatus |= BD_ENET_TX_TS;
 		}
-#endif
 	}
 	bdp->cbd_bufaddr = cpu_to_fec32(addr);
 	bdp->cbd_datlen = cpu_to_fec16(buflen);
@@ -1025,11 +850,9 @@ static int fec_enet_txq_submit_skb(struct fec_enet_priv_tx_q *txq,
 
 		struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
 
-#ifndef CONFIG_1588_PTP
 		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP &&
 			fep->hwts_tx_en))
 			skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
-#endif
 
 		if (fep->quirks & FEC_QUIRK_HAS_AVB)
 			estatus |= FEC_TX_BD_FTYPE(txq->bd.qid);
@@ -1124,10 +947,8 @@ fec_enet_txq_put_data_tso(struct fec_enet_priv_tx_q *txq, struct sk_buff *skb,
 		status |= (BD_ENET_TX_LAST | BD_ENET_TX_TC);
 	if (is_last) {
 		status |= BD_ENET_TX_INTR;
-#ifndef CONFIG_1588_PTP
 		if (fep->bufdesc_ex)
 			ebdp->cbd_esc |= cpu_to_fec32(BD_ENET_TX_INT);
-#endif
 	}
 
 	bdp->cbd_sc = cpu_to_fec16(status);
@@ -1274,6 +1095,52 @@ err_release:
 	return ret;
 }
 
+#ifdef HAVE_KSZ_SWITCH
+static void stop_dev_queues(struct ksz_sw *sw, struct net_device *hw_dev,
+			    struct fec_enet_private *fep, u16 qid)
+{
+	if (sw_is_switch(sw)) {
+		int dev_count = sw->dev_count + sw->dev_offset;
+		struct netdev_queue *nq;
+		struct net_device *dev;
+		int p;
+
+		for (p = 0; p < dev_count; p++) {
+			dev = sw->netdev[p];
+			if (!dev || dev == hw_dev)
+				continue;
+			if (netif_running(dev) || dev == fep->netdev) {
+				nq = netdev_get_tx_queue(dev, qid);
+				netif_tx_stop_queue(nq);
+			}
+		}
+	}
+}  /* stop_dev_queues */
+
+static void wake_dev_queues(struct ksz_sw *sw, struct net_device *hw_dev,
+			    u16 qid)
+{
+	if (sw_is_switch(sw)) {
+		int dev_count = sw->dev_count + sw->dev_offset;
+		struct netdev_queue *nq;
+		struct net_device *dev;
+		int p;
+
+		for (p = 0; p < dev_count; p++) {
+			dev = sw->netdev[p];
+			if (!dev || dev == hw_dev)
+				continue;
+			if (netif_running(dev)) {
+				nq = netdev_get_tx_queue(dev, qid);
+				if (netif_tx_queue_stopped(nq))
+					netif_tx_wake_queue(nq);
+			}
+		}
+		wake_up_interruptible(&sw->queue);
+	}
+}  /* wake_dev_queues */
+#endif
+
 static netdev_tx_t
 fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
@@ -1284,18 +1151,19 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	struct netdev_queue *nq;
 	int ret;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct fec_enet_private *pfep = fep;
 	unsigned long flags;
 
 	fep = fep->hw_priv;
 #endif
 
+
 	queue = skb_get_queue_mapping(skb);
 	txq = fep->tx_queue[queue];
 	nq = netdev_get_tx_queue(ndev, queue);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	/* May be called from switch driver. */
 	if (netif_tx_queue_stopped(nq))
 		return NETDEV_TX_BUSY;
@@ -1303,15 +1171,17 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	spin_lock_irqsave(&fep->tx_lock, flags);
 #endif
 
+
 	if (skb_is_gso(skb))
 		ret = fec_enet_txq_submit_tso(txq, skb, ndev);
 	else
 		ret = fec_enet_txq_submit_skb(txq, skb, ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (ret)
 		spin_unlock_irqrestore(&fep->tx_lock, flags);
 #endif
+
 	if (ret)
 		return ret;
 
@@ -1319,7 +1189,7 @@ fec_enet_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (entries_free <= txq->tx_stop_threshold)
 		netif_tx_stop_queue(nq);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (netif_tx_queue_stopped(nq))
 		stop_dev_queues(pfep->port.sw, ndev, pfep, queue);
 	spin_unlock_irqrestore(&fep->tx_lock, flags);
@@ -1456,16 +1326,16 @@ static void
 fec_restart(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	u32 val;
 	u32 temp_mac[2];
 	u32 rcntl = OPT_FRAME_SIZE | 0x04;
-	u32 ecntl = 0x2; /* ETHEREN */
+	u32 ecntl = FEC_ENET_ETHEREN; /* ETHEREN */
 
 	/* Whack a reset.  We should wait for this.
 	 * For i.MX6SX SOC, enet use AXI bus, we use disable MAC
 	 * instead of reset MAC itself.
 	 */
-	if (fep->quirks & FEC_QUIRK_HAS_MULTI_QUEUES ||
-	    ((fep->quirks & FEC_QUIRK_NO_HARD_RESET) && fep->link)) {
+	if (fep->quirks & FEC_QUIRK_HAS_AVB) {
 		writel(0, fep->hwp + FEC_ECNTRL);
 	} else {
 		writel(1, fep->hwp + FEC_ECNTRL);
@@ -1482,8 +1352,8 @@ fec_restart(struct net_device *ndev)
 	writel((__force u32)cpu_to_be32(temp_mac[1]),
 	       fep->hwp + FEC_ADDR_HIGH);
 
-	/* Clear any outstanding interrupt, except MDIO. */
-	writel((0xffffffff & ~FEC_ENET_MII), fep->hwp + FEC_IEVENT);
+	/* Clear any outstanding interrupt. */
+	writel(0xffffffff, fep->hwp + FEC_IEVENT);
 
 	fec_enet_bd_init(ndev);
 
@@ -1507,8 +1377,7 @@ fec_restart(struct net_device *ndev)
 
 #if !defined(CONFIG_M5272)
 	if (fep->quirks & FEC_QUIRK_HAS_RACC) {
-		u32 val = readl(fep->hwp + FEC_RACC);
-
+		val = readl(fep->hwp + FEC_RACC);
 		/* align IP header */
 		val |= FEC_RACC_SHIFT16;
 		if (fep->csum_flags & FLAG_RX_CSUM_ENABLED)
@@ -1614,6 +1483,13 @@ fec_restart(struct net_device *ndev)
 	if (fep->bufdesc_ex)
 		ecntl |= (1 << 4);
 
+	if (fep->quirks & FEC_QUIRK_DELAYED_CLKS_SUPPORT &&
+		fep->rgmii_txc_dly)
+		ecntl |= FEC_ENET_TXC_DLY;
+	if (fep->quirks & FEC_QUIRK_DELAYED_CLKS_SUPPORT &&
+		fep->rgmii_rxc_dly)
+		ecntl |= FEC_ENET_RXC_DLY;
+
 #ifndef CONFIG_M5272
 	/* Enable the MIB statistic event counters */
 	writel(0 << 31, fep->hwp + FEC_MIB_CTRLSTAT);
@@ -1623,38 +1499,89 @@ fec_restart(struct net_device *ndev)
 	writel(ecntl, fep->hwp + FEC_ECNTRL);
 	fec_enet_active_rxring(ndev);
 
-#ifndef CONFIG_1588_PTP
 	if (fep->bufdesc_ex)
 		fec_ptp_start_cyclecounter(ndev);
-#endif
 
 	/* Enable interrupts we wish to service */
 	if (fep->link)
 		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 	else
-		writel(0, fep->hwp + FEC_IMASK);
+		writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
 
 	/* Init the interrupt coalescing */
 	fec_enet_itr_coal_init(ndev);
 
 }
 
-static void fec_enet_stop_mode(struct fec_enet_private *fep, bool enabled)
+#ifdef CONFIG_IMX_SCU_SOC
+static int fec_enet_ipc_handle_init(struct fec_enet_private *fep)
+{
+	if (!(of_machine_is_compatible("fsl,imx8qm") ||
+	    of_machine_is_compatible("fsl,imx8qxp") ||
+	    of_machine_is_compatible("fsl,imx8dxl")))
+		return 0;
+
+	return imx_scu_get_handle(&fep->ipc_handle);
+}
+
+static void fec_enet_ipg_stop_set(struct fec_enet_private *fep, bool enabled)
+{
+	struct device_node *np = fep->pdev->dev.of_node;
+	u32 rsrc_id, val;
+	int idx;
+
+	if (!np || !fep->ipc_handle)
+		return;
+
+	idx = of_alias_get_id(np, "ethernet");
+	if (idx < 0)
+		idx = 0;
+	rsrc_id = idx ? IMX_SC_R_ENET_1 : IMX_SC_R_ENET_0;
+
+	val = enabled ? 1 : 0;
+	imx_sc_misc_set_control(fep->ipc_handle, rsrc_id, IMX_SC_C_IPG_STOP, val);
+}
+#else
+static int fec_enet_ipc_handle_init(struct fec_enet_private *fep)
+{
+	return 0;
+}
+
+static void fec_enet_ipg_stop_set(struct fec_enet_private *fep, bool enabled) {}
+#endif
+
+static void fec_enet_enter_stop_mode(struct fec_enet_private *fep)
 {
 	struct fec_platform_data *pdata = fep->pdev->dev.platform_data;
-	struct fec_stop_mode_gpr *stop_gpr = &fep->stop_gpr;
 
-	if (stop_gpr->gpr) {
-		if (enabled)
-			regmap_update_bits(stop_gpr->gpr, stop_gpr->reg,
-					   BIT(stop_gpr->bit),
-					   BIT(stop_gpr->bit));
-		else
-			regmap_update_bits(stop_gpr->gpr, stop_gpr->reg,
-					   BIT(stop_gpr->bit), 0);
-	} else if (pdata && pdata->sleep_mode_enable) {
-		pdata->sleep_mode_enable(enabled);
-	}
+	if (!IS_ERR_OR_NULL(fep->lpm.gpr))
+		regmap_update_bits(fep->lpm.gpr, fep->lpm.req_gpr,
+				   1 << fep->lpm.req_bit,
+				   1 << fep->lpm.req_bit);
+	else if (pdata && pdata->sleep_mode_enable)
+		pdata->sleep_mode_enable(true);
+	else
+		fec_enet_ipg_stop_set(fep, true);
+}
+
+static void fec_enet_exit_stop_mode(struct fec_enet_private *fep)
+{
+	struct fec_platform_data *pdata = fep->pdev->dev.platform_data;
+
+	if (!IS_ERR_OR_NULL(fep->lpm.gpr))
+		regmap_update_bits(fep->lpm.gpr, fep->lpm.req_gpr,
+				   1 << fep->lpm.req_bit, 0);
+	else if (pdata && pdata->sleep_mode_enable)
+		pdata->sleep_mode_enable(false);
+	else
+		fec_enet_ipg_stop_set(fep, false);
+}
+
+static inline void fec_irqs_disable(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+
+	writel(0, fep->hwp + FEC_IMASK);
 }
 
 static void
@@ -1677,7 +1604,7 @@ fec_stop(struct net_device *ndev)
 	 * instead of reset MAC itself.
 	 */
 	if (!(fep->wol_flag & FEC_WOL_FLAG_SLEEP_ON)) {
-		if (fep->quirks & FEC_QUIRK_HAS_MULTI_QUEUES) {
+		if (fep->quirks & FEC_QUIRK_HAS_AVB) {
 			writel(0, fep->hwp + FEC_ECNTRL);
 		} else {
 			writel(1, fep->hwp + FEC_ECNTRL);
@@ -1689,7 +1616,6 @@ fec_stop(struct net_device *ndev)
 		val = readl(fep->hwp + FEC_ECNTRL);
 		val |= (FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 		writel(val, fep->hwp + FEC_ECNTRL);
-		fec_enet_stop_mode(fep, true);
 	}
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
 
@@ -1707,7 +1633,7 @@ fec_timeout(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	fep = fep->hw_priv;
 #endif
 	fec_dump(ndev);
@@ -1729,7 +1655,7 @@ static void fec_enet_timeout_work(struct work_struct *work)
 		netif_tx_lock_bh(ndev);
 		fec_restart(ndev);
 		netif_tx_wake_all_queues(ndev);
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 		wake_dev_queues(fep->port.sw, fep->netdev, 0);
 #endif
 		netif_tx_unlock_bh(ndev);
@@ -1738,7 +1664,6 @@ static void fec_enet_timeout_work(struct work_struct *work)
 	rtnl_unlock();
 }
 
-#ifndef CONFIG_1588_PTP
 static void
 fec_enet_hwtstamp(struct fec_enet_private *fep, unsigned ts,
 	struct skb_shared_hwtstamps *hwtstamps)
@@ -1753,7 +1678,6 @@ fec_enet_hwtstamp(struct fec_enet_private *fep, unsigned ts,
 	memset(hwtstamps, 0, sizeof(*hwtstamps));
 	hwtstamps->hwtstamp = ns_to_ktime(ns);
 }
-#endif
 
 static void
 fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
@@ -1768,6 +1692,8 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 	int	entries_free;
 
 	fep = netdev_priv(ndev);
+
+	queue_id = FEC_ENET_GET_QUQUE(queue_id);
 
 	txq = fep->tx_queue[queue_id];
 	/* get next bdp of dirty_tx */
@@ -1813,7 +1739,7 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 			if (status & BD_ENET_TX_CSL) /* Carrier lost */
 				ndev->stats.tx_carrier_errors++;
 		} else {
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 			skb->dev->stats.tx_packets++;
 			skb->dev->stats.tx_bytes += skb->len;
 #else
@@ -1822,7 +1748,6 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 #endif
 		}
 
-#ifndef CONFIG_1588_PTP
 		if (unlikely(skb_shinfo(skb)->tx_flags & SKBTX_IN_PROGRESS) &&
 			fep->bufdesc_ex) {
 			struct skb_shared_hwtstamps shhwtstamps;
@@ -1831,7 +1756,6 @@ fec_enet_tx_queue(struct net_device *ndev, u16 queue_id)
 			fec_enet_hwtstamp(fep, fec32_to_cpu(ebdp->ts), &shhwtstamps);
 			skb_tstamp_tx(skb, &shhwtstamps);
 		}
-#endif
 
 		/* Deferred means some collisions occurred during transmit,
 		 * but we eventually sent the packet OK.
@@ -1854,7 +1778,7 @@ skb_done:
 		/* Since we have freed up a buffer, the ring is no longer full
 		 */
 		if (netif_tx_queue_stopped(nq)) {
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 			unsigned long flags;
 
 			/* Need to block transmit when manipulating the
@@ -1865,7 +1789,7 @@ skb_done:
 			entries_free = fec_enet_get_free_txdesc_num(txq);
 			if (entries_free >= txq->tx_wake_threshold)
 				netif_tx_wake_queue(nq);
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 			if (!netif_tx_queue_stopped(nq))
 				wake_dev_queues(fep->port.sw, fep->netdev,
 						queue_id);
@@ -1880,14 +1804,17 @@ skb_done:
 		writel(0, txq->bd.reg_desc_active);
 }
 
-static void fec_enet_tx(struct net_device *ndev)
+static void
+fec_enet_tx(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int i;
-
-	/* Make sure that AVB queues are processed first. */
-	for (i = fep->num_tx_queues - 1; i >= 0; i--)
-		fec_enet_tx_queue(ndev, i);
+	u16 queue_id;
+	/* First process class A queue, then Class B and Best Effort queue */
+	for_each_set_bit(queue_id, &fep->work_tx, FEC_ENET_MAX_TX_QS) {
+		clear_bit(queue_id, &fep->work_tx);
+		fec_enet_tx_queue(ndev, queue_id);
+	}
+	return;
 }
 
 static int
@@ -1936,6 +1863,137 @@ static bool fec_enet_copybreak(struct net_device *ndev, struct sk_buff **skb,
 	return true;
 }
 
+#ifdef HAVE_KSZ_SWITCH
+#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
+static int priv_multi(void *ptr)
+{
+	struct fec_enet_private *priv = ptr;
+
+	return (priv->multi & 1);
+}  /* priv_multi */
+#endif
+
+static int priv_promisc(void *ptr)
+{
+	struct fec_enet_private *priv = ptr;
+
+	return priv->promisc;
+}  /* priv_promisc */
+
+#if !defined(CONFIG_HAVE_KSZ9897) && !defined(CONFIG_HAVE_LAN937X)
+static int priv_match_multi(void *ptr, u8 *data)
+{
+	struct netdev_hw_addr *ha;
+	struct fec_enet_private *fep = ptr;
+	int drop = true;
+
+	netdev_for_each_mc_addr(ha, fep->netdev) {
+		if (!memcmp(data, ha->addr, ETH_ALEN)) {
+			drop = false;
+			break;
+		}
+	}
+	return drop;
+}  /* priv_match_multi */
+#endif
+
+static struct net_device *sw_rx_proc(struct ksz_sw *sw, struct sk_buff *skb,
+				     __u8 *data)
+{
+	struct net_device *dev;
+	struct fec_enet_private *fep;
+	int len = skb->len;
+	int rx_port = 0;
+#if defined(CONFIG_KSZ_SWITCH) || defined(CONFIG_1588_PTP)
+	int forward = 0;
+	int tag = 0;
+	void *ptr = NULL;
+	void (*rx_tstamp)(void *ptr, struct sk_buff *skb) = NULL;
+#endif
+#ifdef CONFIG_1588_PTP
+	struct ptp_info *ptp = &sw->ptp_hw;
+	int ptp_tag = 0;
+#endif
+	struct net_device *parent_dev = NULL;
+	struct sk_buff *parent_skb = NULL;
+
+	dev = sw->net_ops->rx_dev(sw, data, &len, &tag, &rx_port);
+	if (!dev) {
+		dev_kfree_skb_any(skb);
+		return NULL;
+	}
+
+	/* vlan_get_tag requires network device in socket buffer. */
+	skb->dev = dev;
+
+	/* skb_put is already used. */
+	if (len != skb->len) {
+		int diff = skb->len - len;
+
+		skb->len -= diff;
+		skb->tail -= diff;
+	}
+
+	fep = netdev_priv(dev);
+
+	/* Internal packets handled by the switch. */
+	if (!sw->net_ops->drv_rx(sw, skb, rx_port)) {
+		dev->stats.rx_packets++;
+		dev->stats.rx_bytes += skb->len;
+		return NULL;
+	}
+
+	if (!sw->net_ops->match_pkt(sw, &dev, (void **) &fep, priv_promisc,
+#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
+	    priv_multi,
+#else
+	    priv_match_multi,
+#endif
+	    skb, fep->hw_priv->hw_promisc)) {
+		dev_kfree_skb_irq(skb);
+		return NULL;
+	}
+
+#ifdef CONFIG_1588_PTP
+	ptr = ptp;
+	if (sw->features & PTP_HW) {
+		if (ptp->ops->drop_pkt(ptp, skb, sw->vlan_id, &tag, &ptp_tag,
+				       &forward)) {
+			dev_kfree_skb_any(skb);
+			return NULL;
+		}
+		if (ptp_tag)
+			rx_tstamp = ptp->ops->get_rx_tstamp;
+	}
+#endif
+
+#if defined(CONFIG_KSZ_SWITCH)
+	/* Need to forward to VLAN devices for PAE messages. */
+	if (!forward) {
+		struct ethhdr *eth = (struct ethhdr *) data;
+
+		if (eth->h_proto == htons(0x888E))
+			forward = FWD_VLAN_DEV | FWD_STP_DEV;
+	}
+
+	/* No VLAN port forwarding; need to send to parent. */
+	if ((forward & FWD_VLAN_DEV) && !tag)
+		forward &= ~FWD_VLAN_DEV;
+	dev = sw->net_ops->parent_rx(sw, dev, skb, &forward, &parent_dev,
+		&parent_skb);
+
+	/* dev may change. */
+	if (dev != skb->dev) {
+		skb->dev = dev;
+	}
+
+	sw->net_ops->port_vlan_rx(sw, dev, parent_dev, skb,
+		forward, tag, ptr, rx_tstamp);
+#endif
+	return dev;
+}  /* sw_rx_proc */
+#endif
+
 /* During a receive, the bd_rx.cur points to the current incoming buffer.
  * When we update through the ring, if the next incoming buffer has
  * not been given to the system, we just set the empty indicator,
@@ -1960,14 +2018,14 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 	bool	is_copybreak;
 	bool	need_swap = fep->quirks & FEC_QUIRK_SWAP_FRAME;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct ksz_sw *sw = fep->port.sw;
-	struct net_device *orig_dev = ndev;
 #endif
 
 #ifdef CONFIG_M532x
 	flush_cache_all();
 #endif
+	queue_id = FEC_ENET_GET_QUQUE(queue_id);
 	rxq = fep->rx_queue[queue_id];
 
 	/* First, grab all of the stats for the incoming packet.
@@ -2010,11 +2068,11 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 		}
 
 		/* Process the incoming frame. */
-#ifndef CONFIG_KSZ_SWITCH
+#ifndef HAVE_KSZ_SWITCH
 		ndev->stats.rx_packets++;
 #endif
 		pkt_len = fec16_to_cpu(bdp->cbd_datlen);
-#ifndef CONFIG_KSZ_SWITCH
+#ifndef HAVE_KSZ_SWITCH
 		ndev->stats.rx_bytes += pkt_len;
 #endif
 
@@ -2051,7 +2109,7 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 			data = skb_pull_inline(skb, 2);
 #endif
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 		if (sw_is_switch(sw)) {
 			struct net_device *dev;
 
@@ -2087,12 +2145,10 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 
 		skb->protocol = eth_type_trans(skb, ndev);
 
-#ifndef CONFIG_1588_PTP
 		/* Get receive timestamp from the skb */
 		if (fep->hwts_rx_en && fep->bufdesc_ex)
 			fec_enet_hwtstamp(fep, fec32_to_cpu(ebdp->ts),
 					  skb_hwtstamps(skb));
-#endif
 
 		if (fep->bufdesc_ex &&
 		    (fep->csum_flags & FLAG_RX_CSUM_ENABLED)) {
@@ -2110,13 +2166,11 @@ fec_enet_rx_queue(struct net_device *ndev, int budget, u16 queue_id)
 					       htons(ETH_P_8021Q),
 					       vlan_tag);
 
-		skb_record_rx_queue(skb, queue_id);
 		napi_gro_receive(&fep->napi, skb);
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 rx_done:
-		ndev = orig_dev;
 #endif
+
 		if (is_copybreak) {
 			dma_sync_single_for_device(&fep->pdev->dev,
 						   fec32_to_cpu(bdp->cbd_bufaddr),
@@ -2160,30 +2214,48 @@ rx_processing_done:
 	return pkt_received;
 }
 
-static int fec_enet_rx(struct net_device *ndev, int budget)
+static int
+fec_enet_rx(struct net_device *ndev, int budget)
 {
+	int     pkt_received = 0;
+	u16	queue_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int i, done = 0;
 
-	/* Make sure that AVB queues are processed first. */
-	for (i = fep->num_rx_queues - 1; i >= 0; i--)
-		done += fec_enet_rx_queue(ndev, budget - done, i);
+	for_each_set_bit(queue_id, &fep->work_rx, FEC_ENET_MAX_RX_QS) {
+		int ret;
 
-	return done;
+		ret = fec_enet_rx_queue(ndev,
+					budget - pkt_received, queue_id);
+
+		if (ret < budget - pkt_received)
+			clear_bit(queue_id, &fep->work_rx);
+
+		pkt_received += ret;
+	}
+	return pkt_received;
 }
 
-static bool fec_enet_collect_events(struct fec_enet_private *fep)
+static bool
+fec_enet_collect_events(struct fec_enet_private *fep, uint int_events)
 {
-	uint int_events;
+	if (int_events == 0)
+		return false;
 
-	int_events = readl(fep->hwp + FEC_IEVENT);
+	if (int_events & FEC_ENET_RXF_0)
+		fep->work_rx |= (1 << 2);
+	if (int_events & FEC_ENET_RXF_1)
+		fep->work_rx |= (1 << 0);
+	if (int_events & FEC_ENET_RXF_2)
+		fep->work_rx |= (1 << 1);
 
-	/* Don't clear MDIO events, we poll for those */
-	int_events &= ~FEC_ENET_MII;
+	if (int_events & FEC_ENET_TXF_0)
+		fep->work_tx |= (1 << 2);
+	if (int_events & FEC_ENET_TXF_1)
+		fep->work_tx |= (1 << 0);
+	if (int_events & FEC_ENET_TXF_2)
+		fep->work_tx |= (1 << 1);
 
-	writel(int_events, fep->hwp + FEC_IEVENT);
-
-	return int_events != 0;
+	return true;
 }
 
 static irqreturn_t
@@ -2191,18 +2263,27 @@ fec_enet_interrupt(int irq, void *dev_id)
 {
 	struct net_device *ndev = dev_id;
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	uint int_events;
 	irqreturn_t ret = IRQ_NONE;
 
-	if (fec_enet_collect_events(fep) && fep->link) {
+	int_events = readl(fep->hwp + FEC_IEVENT);
+	writel(int_events, fep->hwp + FEC_IEVENT);
+	fec_enet_collect_events(fep, int_events);
+
+	if ((fep->work_tx || fep->work_rx) && fep->link) {
 		ret = IRQ_HANDLED;
 
 		if (napi_schedule_prep(&fep->napi)) {
-			/* Disable interrupts */
-			writel(0, fep->hwp + FEC_IMASK);
+			/* Disable the NAPI interrupts */
+			writel(FEC_NAPI_IMASK, fep->hwp + FEC_IMASK);
 			__napi_schedule(&fep->napi);
 		}
 	}
 
+	if (int_events & FEC_ENET_MII) {
+		ret = IRQ_HANDLED;
+		complete(&fep->mdio_done);
+	}
 	return ret;
 }
 
@@ -2210,25 +2291,24 @@ static int fec_enet_rx_napi(struct napi_struct *napi, int budget)
 {
 	struct net_device *ndev = napi->dev;
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int done = 0;
+	int pkts;
 
-	do {
-		done += fec_enet_rx(ndev, budget - done);
-		fec_enet_tx(ndev);
-	} while ((done < budget) && fec_enet_collect_events(fep));
+	pkts = fec_enet_rx(ndev, budget);
 
-	if (done < budget) {
-		napi_complete_done(napi, done);
+	fec_enet_tx(ndev);
+
+	if (pkts < budget) {
+		napi_complete_done(napi, pkts);
 		writel(FEC_DEFAULT_IMASK, fep->hwp + FEC_IMASK);
 	}
-
-	return done;
+	return pkts;
 }
 
 /* ------------------------------------------------------------------------- */
-static void fec_get_mac(struct net_device *ndev)
+static int fec_get_mac(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct fec_platform_data *pdata = dev_get_platdata(&fep->pdev->dev);
 	unsigned char *iap, tmpaddr[ETH_ALEN];
 
 	/*
@@ -2248,6 +2328,8 @@ static void fec_get_mac(struct net_device *ndev)
 			const char *mac = of_get_mac_address(np);
 			if (!IS_ERR(mac))
 				iap = (unsigned char *) mac;
+			else if (PTR_ERR(mac) == -EPROBE_DEFER)
+				return -EPROBE_DEFER;
 		}
 	}
 
@@ -2259,8 +2341,6 @@ static void fec_get_mac(struct net_device *ndev)
 		if (FEC_FLASHMAC)
 			iap = (unsigned char *)FEC_FLASHMAC;
 #else
-		struct fec_platform_data *pdata = dev_get_platdata(&fep->pdev->dev);
-
 		if (pdata)
 			iap = (unsigned char *)&pdata->mac;
 #endif
@@ -2286,7 +2366,7 @@ static void fec_get_mac(struct net_device *ndev)
 		eth_hw_addr_random(ndev);
 		dev_info(&fep->pdev->dev, "Using random MAC address: %pM\n",
 			 ndev->dev_addr);
-		return;
+		return 0;
 	}
 
 	memcpy(ndev->dev_addr, iap, ETH_ALEN);
@@ -2294,6 +2374,8 @@ static void fec_get_mac(struct net_device *ndev)
 	/* Adjust MAC if using macaddr */
 	if (iap == macaddr)
 		 ndev->dev_addr[ETH_ALEN-1] = macaddr[ETH_ALEN-1] + fep->dev_id;
+
+	return 0;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -2339,8 +2421,8 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 			netif_tx_unlock_bh(ndev);
 			napi_enable(&fep->napi);
 		}
-#ifdef CONFIG_KSZ_SWITCH
-		fep->port.ready = netif_running(ndev);
+#ifdef HAVE_KSZ_SWITCH
+		fep->ready = netif_running(ndev);
 #endif
 	} else {
 		if (fep->link) {
@@ -2358,30 +2440,20 @@ static void fec_enet_adjust_link(struct net_device *ndev)
 		phy_print_status(phy_dev);
 }
 
-static int fec_enet_mdio_wait(struct fec_enet_private *fep)
-{
-	uint ievent;
-	int ret;
-
-	ret = readl_poll_timeout_atomic(fep->hwp + FEC_IEVENT, ievent,
-					ievent & FEC_ENET_MII, 2, 30000);
-
-	if (!ret)
-		writel(FEC_ENET_MII, fep->hwp + FEC_IEVENT);
-
-	return ret;
-}
-
 static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 {
 	struct fec_enet_private *fep = bus->priv;
 	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
+	uint int_events;
 	int ret = 0, frame_start, frame_addr, frame_op;
 	bool is_c45 = !!(regnum & MII_ADDR_C45);
 
-	ret = pm_runtime_resume_and_get(dev);
+	ret = pm_runtime_get_sync(dev);
 	if (ret < 0)
 		return ret;
+
+	reinit_completion(&fep->mdio_done);
 
 	if (is_c45) {
 		frame_start = FEC_MMFR_ST_C45;
@@ -2394,9 +2466,11 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 		       fep->hwp + FEC_MII_DATA);
 
 		/* wait for end of transfer */
-		ret = fec_enet_mdio_wait(fep);
-		if (ret) {
+		time_left = wait_for_completion_timeout(&fep->mdio_done,
+				usecs_to_jiffies(FEC_MII_TIMEOUT));
+		if (time_left == 0) {
 			netdev_err(fep->netdev, "MDIO address write timeout\n");
+			ret = -ETIMEDOUT;
 			goto out;
 		}
 
@@ -2415,10 +2489,15 @@ static int fec_enet_mdio_read(struct mii_bus *bus, int mii_id, int regnum)
 		FEC_MMFR_TA, fep->hwp + FEC_MII_DATA);
 
 	/* wait for end of transfer */
-	ret = fec_enet_mdio_wait(fep);
-	if (ret) {
-		netdev_err(fep->netdev, "MDIO read timeout\n");
-		goto out;
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
+		int_events = readl(fep->hwp + FEC_IEVENT);
+		if (!(int_events & FEC_ENET_MII)) {
+			netdev_err(fep->netdev, "MDIO read timeout\n");
+			ret = -ETIMEDOUT;
+			goto out;
+		}
 	}
 
 	ret = FEC_MMFR_DATA(readl(fep->hwp + FEC_MII_DATA));
@@ -2435,12 +2514,17 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 {
 	struct fec_enet_private *fep = bus->priv;
 	struct device *dev = &fep->pdev->dev;
+	unsigned long time_left;
 	int ret, frame_start, frame_addr;
 	bool is_c45 = !!(regnum & MII_ADDR_C45);
 
-	ret = pm_runtime_resume_and_get(dev);
+	ret = pm_runtime_get_sync(dev);
 	if (ret < 0)
 		return ret;
+	else
+		ret = 0;
+
+	reinit_completion(&fep->mdio_done);
 
 	if (is_c45) {
 		frame_start = FEC_MMFR_ST_C45;
@@ -2453,9 +2537,11 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 		       fep->hwp + FEC_MII_DATA);
 
 		/* wait for end of transfer */
-		ret = fec_enet_mdio_wait(fep);
-		if (ret) {
+		time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+		if (time_left == 0) {
 			netdev_err(fep->netdev, "MDIO address write timeout\n");
+			ret = -ETIMEDOUT;
 			goto out;
 		}
 	} else {
@@ -2471,9 +2557,12 @@ static int fec_enet_mdio_write(struct mii_bus *bus, int mii_id, int regnum,
 		fep->hwp + FEC_MII_DATA);
 
 	/* wait for end of transfer */
-	ret = fec_enet_mdio_wait(fep);
-	if (ret)
+	time_left = wait_for_completion_timeout(&fep->mdio_done,
+			usecs_to_jiffies(FEC_MII_TIMEOUT));
+	if (time_left == 0) {
 		netdev_err(fep->netdev, "MDIO write timeout\n");
+		ret  = -ETIMEDOUT;
+	}
 
 out:
 	pm_runtime_mark_last_busy(dev);
@@ -2482,26 +2571,18 @@ out:
 	return ret;
 }
 
-static void fec_enet_phy_reset_after_clk_enable(struct net_device *ndev)
+#ifdef CONFIG_KSZ_SMI
+static int smi_read(struct mii_bus *bus, int phy_id, int regnum)
 {
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct phy_device *phy_dev = ndev->phydev;
-
-	if (phy_dev) {
-		phy_reset_after_clk_enable(phy_dev);
-	} else if (fep->phy_node) {
-		/*
-		 * If the PHY still is not bound to the MAC, but there is
-		 * OF PHY node and a matching PHY device instance already,
-		 * use the OF PHY node to obtain the PHY device instance,
-		 * and then use that PHY device instance when triggering
-		 * the PHY reset.
-		 */
-		phy_dev = of_phy_find_device(fep->phy_node);
-		phy_reset_after_clk_enable(phy_dev);
-		put_device(&phy_dev->mdio.dev);
-	}
+	return fec_enet_mdio_read(bus, phy_id, regnum);
 }
+
+static int smi_write(struct mii_bus *bus, int phy_id, int regnum, u16 val)
+{
+	return fec_enet_mdio_write(bus, phy_id, regnum, val);
+}
+#endif
+
 
 static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 {
@@ -2529,7 +2610,11 @@ static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 		if (ret)
 			goto failed_clk_ref;
 
-		fec_enet_phy_reset_after_clk_enable(ndev);
+		ret = clk_prepare_enable(fep->clk_2x_txclk);
+		if (ret)
+			goto failed_clk_2x_txclk;
+
+		phy_reset_after_clk_enable(ndev->phydev);
 	} else {
 		clk_disable_unprepare(fep->clk_enet_out);
 		if (fep->clk_ptp) {
@@ -2539,21 +2624,41 @@ static int fec_enet_clk_enable(struct net_device *ndev, bool enable)
 			mutex_unlock(&fep->ptp_clk_mutex);
 		}
 		clk_disable_unprepare(fep->clk_ref);
+		clk_disable_unprepare(fep->clk_2x_txclk);
 	}
 
 	return 0;
 
+failed_clk_2x_txclk:
+	if (fep->clk_ref)
+		clk_disable_unprepare(fep->clk_ref);
 failed_clk_ref:
-	if (fep->clk_ptp) {
-		mutex_lock(&fep->ptp_clk_mutex);
+	if (fep->clk_ptp)
 		clk_disable_unprepare(fep->clk_ptp);
-		fep->ptp_clk_on = false;
-		mutex_unlock(&fep->ptp_clk_mutex);
-	}
 failed_clk_ptp:
-	clk_disable_unprepare(fep->clk_enet_out);
+	if (fep->clk_enet_out)
+		clk_disable_unprepare(fep->clk_enet_out);
 
 	return ret;
+}
+
+static int fec_restore_mii_bus(struct net_device *ndev)
+{
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	int ret;
+
+	ret = pm_runtime_get_sync(&fep->pdev->dev);
+	if (ret < 0)
+		return ret;
+
+	writel(0xffc00000, fep->hwp + FEC_IEVENT);
+	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
+	writel(FEC_ENET_MII, fep->hwp + FEC_IMASK);
+	writel(FEC_ENET_ETHEREN, fep->hwp + FEC_ECNTRL);
+
+	pm_runtime_mark_last_busy(&fep->pdev->dev);
+	pm_runtime_put_autosuspend(&fep->pdev->dev);
+	return 0;
 }
 
 static int fec_enet_mii_probe(struct net_device *ndev)
@@ -2565,13 +2670,14 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 	int phy_id;
 	int dev_id = fep->dev_id;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct ksz_sw *sw = fep->port.sw;
 
 	if (sw_is_switch(sw)) {
 		phy_dev = ndev->phydev;
 	} else
 #endif
+
 	if (fep->phy_node) {
 		phy_dev = of_phy_connect(ndev, fep->phy_node,
 					 &fec_enet_adjust_link, 0,
@@ -2631,13 +2737,12 @@ static int fec_enet_mii_probe(struct net_device *ndev)
 static int fec_enet_mii_init(struct platform_device *pdev)
 {
 	static struct mii_bus *fec0_mii_bus;
+	static bool *fec_mii_bus_share;
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	bool suppress_preamble = false;
 	struct device_node *node;
 	int err = -ENXIO;
 	u32 mii_speed, holdtime;
-	u32 bus_freq;
 
 	/*
 	 * The i.MX28 dual fec interfaces are not equal.
@@ -2659,29 +2764,22 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 		/* fec1 uses fec0 mii_bus */
 		if (mii_cnt && fec0_mii_bus) {
 			fep->mii_bus = fec0_mii_bus;
+			*fec_mii_bus_share = true;
 			mii_cnt++;
 			return 0;
 		}
 		return -ENOENT;
 	}
 
-	bus_freq = 2500000; /* 2.5MHz by default */
-	node = of_get_child_by_name(pdev->dev.of_node, "mdio");
-	if (node) {
-		of_property_read_u32(node, "clock-frequency", &bus_freq);
-		suppress_preamble = of_property_read_bool(node,
-							  "suppress-preamble");
-	}
-
 	/*
-	 * Set MII speed (= clk_get_rate() / 2 * phy_speed)
+	 * Set MII speed to 2.5 MHz (= clk_get_rate() / 2 * phy_speed)
 	 *
 	 * The formula for FEC MDC is 'ref_freq / (MII_SPEED x 2)' while
 	 * for ENET-MAC is 'ref_freq / ((MII_SPEED + 1) x 2)'.  The i.MX28
 	 * Reference Manual has an error on this, and gets fixed on i.MX6Q
 	 * document.
 	 */
-	mii_speed = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), bus_freq * 2);
+	mii_speed = DIV_ROUND_UP(clk_get_rate(fep->clk_ipg), 5000000);
 	if (fep->quirks & FEC_QUIRK_ENET_MAC)
 		mii_speed--;
 	if (mii_speed > 63) {
@@ -2708,25 +2806,7 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 
 	fep->phy_speed = mii_speed << 1 | holdtime << 8;
 
-	if (suppress_preamble)
-		fep->phy_speed |= BIT(7);
-
-	if (fep->quirks & FEC_QUIRK_CLEAR_SETUP_MII) {
-		/* Clear MMFR to avoid to generate MII event by writing MSCR.
-		 * MII event generation condition:
-		 * - writing MSCR:
-		 *	- mmfr[31:0]_not_zero & mscr[7:0]_is_zero &
-		 *	  mscr_reg_data_in[7:0] != 0
-		 * - writing MMFR:
-		 *	- mscr[7:0]_not_zero
-		 */
-		writel(0, fep->hwp + FEC_MII_DATA);
-	}
-
 	writel(fep->phy_speed, fep->hwp + FEC_MII_SPEED);
-
-	/* Clear any pending transaction complete indication */
-	writel(FEC_ENET_MII, fep->hwp + FEC_IEVENT);
 
 	fep->mii_bus = mdiobus_alloc();
 	if (fep->mii_bus == NULL) {
@@ -2742,23 +2822,25 @@ static int fec_enet_mii_init(struct platform_device *pdev)
 	fep->mii_bus->priv = fep;
 	fep->mii_bus->parent = &pdev->dev;
 
+	node = of_get_child_by_name(pdev->dev.of_node, "mdio");
 	err = of_mdiobus_register(fep->mii_bus, node);
+	of_node_put(node);
 	if (err)
 		goto err_out_free_mdiobus;
-	of_node_put(node);
 
 	mii_cnt++;
 
 	/* save fec0 mii_bus */
-	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO)
+	if (fep->quirks & FEC_QUIRK_SINGLE_MDIO) {
 		fec0_mii_bus = fep->mii_bus;
+		fec_mii_bus_share = &fep->mii_bus_share;
+	}
 
 	return 0;
 
 err_out_free_mdiobus:
 	mdiobus_free(fep->mii_bus);
 err_out:
-	of_node_put(node);
 	return err;
 }
 
@@ -2852,15 +2934,15 @@ static void fec_enet_get_regs(struct net_device *ndev,
 	u32 *buf = (u32 *)regbuf;
 	u32 i, off;
 	int ret;
-
-	ret = pm_runtime_resume_and_get(dev);
-	if (ret < 0)
-		return;
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
+	ret = pm_runtime_get_sync(dev);
+	if (ret < 0)
+		return;
+
 	regs->version = fec_enet_register_version;
 
 	memset(buf, 0, regs->len);
@@ -2894,6 +2976,7 @@ static int fec_enet_get_ts_info(struct net_device *ndev,
 		return ptp->ops->get_ts_info(ptp, ndev, info);
 	}
 #endif
+
 	if (fep->bufdesc_ex) {
 
 		info->so_timestamping = SOF_TIMESTAMPING_TX_SOFTWARE |
@@ -2925,10 +3008,11 @@ static void fec_enet_get_pauseparam(struct net_device *ndev,
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	pause->autoneg = (fep->pause_flag & FEC_PAUSE_FLAG_AUTONEG) != 0;
 	pause->tx_pause = (fep->pause_flag & FEC_PAUSE_FLAG_ENABLE) != 0;
 	pause->rx_pause = pause->tx_pause;
@@ -2938,6 +3022,11 @@ static int fec_enet_set_pauseparam(struct net_device *ndev,
 				   struct ethtool_pauseparam *pause)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+
+#ifdef HAVE_KSZ_SWITCH
+	if (fep != fep->hw_priv)
+		fep = fep->hw_priv;
+#endif
 
 	if (!ndev->phydev)
 		return -ENODEV;
@@ -3046,11 +3135,11 @@ static void fec_enet_update_ethtool_stats(struct net_device *dev)
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
 	int i;
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	for (i = 0; i < ARRAY_SIZE(fec_stats); i++)
 		fep->ethtool_stats[i] = readl(fep->hwp + fec_stats[i].offset);
 }
@@ -3060,7 +3149,7 @@ static void fec_enet_get_ethtool_stats(struct net_device *dev,
 {
 	struct fec_enet_private *fep = netdev_priv(dev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv) {
 		fep = fep->hw_priv;
 
@@ -3071,6 +3160,7 @@ static void fec_enet_get_ethtool_stats(struct net_device *dev,
 			dev = fep->netdev;
 	}
 #endif
+
 	if (netif_running(dev))
 		fec_enet_update_ethtool_stats(dev);
 
@@ -3105,10 +3195,11 @@ static void fec_enet_clear_ethtool_stats(struct net_device *dev)
 	struct fec_enet_private *fep = netdev_priv(dev);
 	int i;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	/* Disable MIB statistics counters */
 	writel(FEC_MIB_CTRLSTAT_DISABLE, fep->hwp + FEC_MIB_CTRLSTAT);
 
@@ -3169,7 +3260,7 @@ static void fec_enet_itr_coal_set(struct net_device *ndev)
 
 	writel(tx_itr, fep->hwp + FEC_TXIC0);
 	writel(rx_itr, fep->hwp + FEC_RXIC0);
-	if (fep->quirks & FEC_QUIRK_HAS_MULTI_QUEUES) {
+	if (fep->quirks & FEC_QUIRK_HAS_AVB) {
 		writel(tx_itr, fep->hwp + FEC_TXIC1);
 		writel(rx_itr, fep->hwp + FEC_RXIC1);
 		writel(tx_itr, fep->hwp + FEC_TXIC2);
@@ -3182,10 +3273,11 @@ fec_enet_get_coalesce(struct net_device *ndev, struct ethtool_coalesce *ec)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	if (!(fep->quirks & FEC_QUIRK_HAS_COALESCE))
 		return -EOPNOTSUPP;
 
@@ -3205,10 +3297,11 @@ fec_enet_set_coalesce(struct net_device *ndev, struct ethtool_coalesce *ec)
 	struct device *dev = &fep->pdev->dev;
 	unsigned int cycle;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	if (!(fep->quirks & FEC_QUIRK_HAS_COALESCE))
 		return -EOPNOTSUPP;
 
@@ -3265,10 +3358,11 @@ static int fec_enet_get_tunable(struct net_device *netdev,
 	struct fec_enet_private *fep = netdev_priv(netdev);
 	int ret = 0;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	switch (tuna->id) {
 	case ETHTOOL_RX_COPYBREAK:
 		*(u32 *)data = fep->rx_copybreak;
@@ -3287,11 +3381,11 @@ static int fec_enet_set_tunable(struct net_device *netdev,
 {
 	struct fec_enet_private *fep = netdev_priv(netdev);
 	int ret = 0;
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	switch (tuna->id) {
 	case ETHTOOL_RX_COPYBREAK:
 		fep->rx_copybreak = *(u32 *)data;
@@ -3395,10 +3489,11 @@ fec_enet_get_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	if (fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET) {
 		wol->supported = WAKE_MAGIC;
 		wol->wolopts = fep->wol_flag & FEC_WOL_FLAG_ENABLE ? WAKE_MAGIC : 0;
@@ -3412,10 +3507,11 @@ fec_enet_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (fep != fep->hw_priv)
 		fep = fep->hw_priv;
 #endif
+
 	if (!(fep->wol_flag & FEC_WOL_HAS_MAGIC_PACKET))
 		return -EINVAL;
 
@@ -3423,15 +3519,10 @@ fec_enet_set_wol(struct net_device *ndev, struct ethtool_wolinfo *wol)
 		return -EINVAL;
 
 	device_set_wakeup_enable(&ndev->dev, wol->wolopts & WAKE_MAGIC);
-	if (device_may_wakeup(&ndev->dev)) {
+	if (device_may_wakeup(&ndev->dev))
 		fep->wol_flag |= FEC_WOL_FLAG_ENABLE;
-		if (fep->irq[0] > 0)
-			enable_irq_wake(fep->irq[0]);
-	} else {
+	else
 		fep->wol_flag &= (~FEC_WOL_FLAG_ENABLE);
-		if (fep->irq[0] > 0)
-			disable_irq_wake(fep->irq[0]);
-	}
 
 	return 0;
 }
@@ -3462,7 +3553,7 @@ static const struct ethtool_ops fec_enet_ethtool_ops = {
 	.set_link_ksettings	= phy_ethtool_set_link_ksettings,
 };
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 #define SIOCDEVDEBUG			(SIOCDEVPRIVATE + 10)
 #endif
 
@@ -3470,8 +3561,7 @@ static int fec_enet_ioctl(struct net_device *ndev, struct ifreq *rq, int cmd)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	struct phy_device *phydev = ndev->phydev;
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	int result;
 	struct ksz_sw *sw = fep->port.sw;
 #ifdef CONFIG_1588_PTP
@@ -3568,6 +3658,7 @@ static void fec_enet_free_buffers(struct net_device *ndev)
 
 	for (q = 0; q < fep->num_tx_queues; q++) {
 		txq = fep->tx_queue[q];
+		bdp = txq->bd.base;
 		for (i = 0; i < txq->bd.ring_size; i++) {
 			kfree(txq->tx_bounce[i]);
 			txq->tx_bounce[i] = NULL;
@@ -3709,12 +3800,10 @@ fec_enet_alloc_txq_buffers(struct net_device *ndev, unsigned int queue)
 		bdp->cbd_sc = cpu_to_fec16(0);
 		bdp->cbd_bufaddr = cpu_to_fec32(0);
 
-#ifndef CONFIG_1588_PTP
 		if (fep->bufdesc_ex) {
 			struct bufdesc_ex *ebdp = (struct bufdesc_ex *)bdp;
 			ebdp->cbd_esc = cpu_to_fec32(BD_ENET_TX_INT);
 		}
-#endif
 
 		bdp = fec_enet_get_nextdesc(bdp, &txq->bd);
 	}
@@ -3745,16 +3834,37 @@ static int fec_enet_alloc_buffers(struct net_device *ndev)
 	return 0;
 }
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 static void priv_adjust_link(struct net_device *dev)
 {}
+
+static u8 get_priv_state(struct net_device *dev)
+{
+	struct fec_enet_private *priv = netdev_priv(dev);
+
+	return priv->state;
+}  /* get_priv_state */
+
+static void set_priv_state(struct net_device *dev, u8 state)
+{
+	struct fec_enet_private *priv = netdev_priv(dev);
+
+	priv->state = state;
+}  /* set_priv_state */
+
+static struct ksz_port *get_priv_port(struct net_device *dev)
+{
+	struct fec_enet_private *priv = netdev_priv(dev);
+
+	return &priv->port;
+}  /* get_priv_port */
 
 #if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
 static int get_net_ready(struct net_device *dev)
 {
 	struct fec_enet_private *priv = netdev_priv(dev);
 
-	return priv->hw_priv->port.ready;
+	return priv->hw_priv->ready;
 }  /* get_net_ready */
 #endif
 
@@ -3861,332 +3971,10 @@ static void fec_enet_set_mac_addr(struct net_device *dev)
 	}
 }  /* fec_enet_set_mac_addr */
 
-static void prep_sw_first(struct ksz_sw *sw, int *port_count,
-	int *mib_port_count, int *dev_count, char *dev_name)
-{
-	*port_count = 1;
-	*mib_port_count = 1;
-	*dev_count = 1;
-	dev_name[0] = '\0';
-#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
-	sw->net_ops->get_ready = get_net_ready;
-#endif
-	sw->net_ops->setup_special(sw, port_count, mib_port_count, dev_count,
-				   NULL);
-	sw_update_csum(sw);
-}  /* prep_sw_first */
-
-static void prep_sw_dev(struct ksz_sw *sw, struct fec_enet_private *fep, int i,
-	int port_count, int mib_port_count, char *dev_name)
-{
-	int phy_mode;
-	char phy_id[MII_BUS_ID_SIZE];
-	char bus_id[MII_BUS_ID_SIZE];
-
-	fep->phy_addr = sw->net_ops->setup_dev(sw, fep->netdev, dev_name,
-		&fep->port, i, port_count, mib_port_count);
-
-	phy_mode = fep->phy_interface;
-	snprintf(bus_id, MII_BUS_ID_SIZE, "sw.%d", sw->id);
-	snprintf(phy_id, MII_BUS_ID_SIZE, PHY_ID_FMT, bus_id, fep->phy_addr);
-	if (!fep->netdev->phydev)
-		phy_attach(fep->netdev, phy_id, phy_mode);
-}  /* prep_sw_dev */
-
-static int fec_enet_sw_init(struct fec_enet_private *fep)
-{
-	struct ksz_sw *sw;
-	int err;
-	int i;
-	int port_count;
-	int dev_count;
-	int mib_port_count;
-	char dev_label[IFNAMSIZ];
-	struct fec_enet_private *hw_priv;
-	struct net_device *dev;
-	struct net_device *main_dev;
-	struct platform_device *pdev;
-	netdev_features_t features;
-
-	sw = fep->port.sw;
-
-	/* This is the main private structure holding hardware information. */
-	hw_priv = fep;
-	hw_priv->parent = sw->dev;
-	main_dev = fep->netdev;
-	pdev = fep->pdev;
-	features = main_dev->features;
-
-	prep_sw_first(sw, &port_count, &mib_port_count, &dev_count, dev_label);
-
-	/* The main switch phydev will not be attached. */
-	if (dev_count > 1) {
-		struct phy_device *phydev = sw->phy[0];
-
-		phydev->interface = fep->phy_interface;
-	}
-
-	/* Save the base device name. */
-	strlcpy(dev_label, hw_priv->netdev->name, IFNAMSIZ);
-
-#ifndef CONFIG_KSZ_SMI
-	if (sw->net_ops->setup_mdiobus)
-		sw->net_ops->setup_mdiobus(sw, fep->mii_bus);
-#endif
-	prep_sw_dev(sw, fep, 0, port_count, mib_port_count, dev_label);
-
-	/* Only the main one needs to set adjust_link for configuration. */
-	if (fep->netdev->phydev->mdio.bus &&
-	    !fep->netdev->phydev->adjust_link) {
-		fep->netdev->phydev->adjust_link = fec_enet_adjust_link;
-
-		fep->link = 0;
-		fep->speed = 0;
-		fep->full_duplex = 0;
-	}
-
-	INIT_DELAYED_WORK(&hw_priv->promisc_reset, promisc_reset_work);
-
-	for (i = 1; i < dev_count; i++) {
-		dev = alloc_etherdev_mqs(sizeof(struct fec_enet_private) +
-					 FEC_STATS_SIZE,
-					 hw_priv->num_tx_queues,
-					 hw_priv->num_rx_queues);
-		if (!dev)
-			break;
-
-		fep = netdev_priv(dev);
-		fep->pdev = pdev;
-		fep->netdev = dev;
-		fep->num_rx_queues = hw_priv->num_rx_queues;
-		fep->num_tx_queues = hw_priv->num_tx_queues;
-		fep->hwp = hw_priv->hwp;
-
-		fep->hw_priv = hw_priv;
-		fep->phy_interface = hw_priv->phy_interface;
-
-		spin_lock_init(&fep->tx_lock);
-
-		dev->watchdog_timeo = TX_TIMEOUT;
-		dev->netdev_ops = main_dev->netdev_ops;
-		dev->ethtool_ops = main_dev->ethtool_ops;
-
-		dev->base_addr = main_dev->base_addr;
-		memcpy(dev->dev_addr, main_dev->dev_addr, ETH_ALEN);
-
-		dev->hw_features = main_dev->hw_features;
-		dev->features = features;
-
-		SET_NETDEV_DEV(dev, &pdev->dev);
-
-		prep_sw_dev(sw, fep, i, port_count, mib_port_count, dev_label);
-		if (fep->netdev->phydev->mdio.bus)
-			fep->netdev->phydev->adjust_link = priv_adjust_link;
-
-		err = register_netdev(dev);
-		if (err) {
-			free_netdev(dev);
-			break;
-		}
-
-		netif_carrier_off(dev);
-	}
-
-#if !defined(CONFIG_KSZ_IBA_ONLY)
-	/*
-	 * Adding sysfs support is optional for network device.  It is more
-	 * convenient to locate eth0 more or less than spi<bus>.<select>,
-	 * especially when the bus number is auto assigned which results in a
-	 * very big number.
-	 */
-	err = init_sw_sysfs(sw, &hw_priv->sysfs, &main_dev->dev);
-
-#ifdef CONFIG_1588_PTP
-	if (sw->features & PTP_HW)
-		err = init_ptp_sysfs(&hw_priv->ptp_sysfs, &main_dev->dev);
-#endif
-#ifdef CONFIG_KSZ_DLR
-	if (sw->features & DLR_HW)
-		err = init_dlr_sysfs(&main_dev->dev);
-#endif
-#endif
-
-	sw_device_seen++;
-
-	return 0;
-}
-
 #if defined(CONFIG_KSZ_IBA_ONLY)
-/**
- * netdev_start_iba - Start using IBA for register access
- *
- * This routine starts using IBA for register access.
- */
-static void netdev_start_iba(struct work_struct *work)
-{
-	struct delayed_work *dwork = to_delayed_work(work);
-	struct ksz_sw *sw = container_of(dwork, struct ksz_sw, set_ops);
-	struct ksz_iba_info *iba = &sw->info->iba;
-	struct net_device *dev = sw->main_dev;
-	struct ksz_port *port = sw->main_port;
-	struct fec_enet_private *fep;
-	int rx_mode;
-
-	if (2 != iba->use_iba)
-		return;
-
-	/* Communication is not ready if a cable connection is used. */
-	if (!port->ready) {
-		port->iba_ready = false;
-		schedule_delayed_work(&sw->set_ops, 1);
-		return;
-	}
-
-	/* Need some time after link is established. */
-	if (!port->iba_ready) {
-		port->iba_ready = true;
-		schedule_delayed_work(&sw->set_ops, 10);
-		return;
-	}
-
-	fep = netdev_priv(dev);
-
-	sw->reg = &sw_iba_ops;
-	iba->cnt = 0;
-	if (ksz_probe_next(sw->dev)) {
-		fep->parent = NULL;
-		fep->port.sw = NULL;
-		return;
-	}
-
-#ifdef CONFIG_1588_PTP
-	sw->ptp_hw.reg = &ptp_iba_ops;
+static int create_sw_dev(struct net_device *dev, struct fec_enet_private *fep);
 #endif
 
-	fec_enet_sw_init(fep);
-
-	fep->multi = false;
-	fep->promisc = false;
-
-	fep->hw_multi = 0;
-	fep->hw_promisc = 0;
-
-#if 1
-	/* Clear MIB counters for debugging. */
-	memset(&fep->ethtool_stats, 0, FEC_STATS_SIZE);
-#endif
-	rx_mode = sw->net_ops->open_dev(sw, dev, &fep->port, dev->dev_addr);
-	if (rx_mode & 1) {
-		fep->hw_multi = 1;
-		hw_set_multicast(fep, fep->hw_multi);
-	}
-	if (rx_mode & 2) {
-		fep->hw_promisc = 1;
-		hw_set_promisc(fep, fep->hw_promisc);
-	}
-	sw->net_ops->open(sw);
-
-	sw->net_ops->open_port(sw, dev, &fep->port);
-	fep->opened++;
-
-	/* Signal IBA initialization is complete. */
-	if (2 == sw->info->iba.use_iba)
-		sw->info->iba.use_iba = 3;
-}  /* netdev_start_iba */
-
-static int create_sw_dev(struct net_device *dev, struct fec_enet_private *fep)
-{
-	struct sw_priv *ks;
-	struct ksz_sw *sw;
-
-	/*
-	 * Stop normal traffic from going out until the switch is
-	 * configured to block looping frames.
-	 */
-	netif_carrier_off(dev);
-
-	ks = kzalloc(sizeof(struct sw_priv), GFP_KERNEL);
-	if (!ks)
-		return -ENOMEM;
-	ks->hw_dev = dev;
-	ks->dev = &dev->dev;
-
-	ks->irq = get_sw_irq(fep, &ks->of_dev);
-	if (ks->irq == fep->netdev->phydev->irq)
-		ks->irq = 0;
-
-	intr_mode = 1;
-	sw_device_present = 0;
-	sw = &ks->sw;
-	ksz_probe_prep(ks, dev);
-
-	sw->net_ops->get_ready = get_net_ready;
-	sw->netdev[0] = dev;
-	sw->netport[0] = &fep->port;
-	sw->main_dev = dev;
-	sw->main_port = &fep->port;
-	sw->dev_count = 1;
-
-	INIT_DELAYED_WORK(&sw->set_ops, netdev_start_iba);
-
-	sw_set_dev(sw, dev, dev->dev_addr);
-
-	fep->parent = sw->dev;
-	fep->port.sw = sw;
-
-	sw->main_port->iba_ready = true;
-
-#ifdef DEBUG_MSG
-	init_dbg();
-#endif
-	return 0;
-}  /* create_sw_dev */
-#endif
-
-static void fec_enet_sw_exit(struct fec_enet_private *fep)
-{
-	struct net_device *dev = fep->netdev;
-	struct ksz_sw *sw = fep->port.sw;
-	int i;
-
-#if !defined(CONFIG_KSZ_IBA_ONLY)
-#ifdef CONFIG_KSZ_DLR
-	if (sw->features & DLR_HW)
-		exit_dlr_sysfs(&dev->dev);
-#endif
-#ifdef CONFIG_1588_PTP
-	if (sw->features & PTP_HW)
-		exit_ptp_sysfs(&fep->ptp_sysfs, &dev->dev);
-#endif
-	exit_sw_sysfs(sw, &fep->sysfs, &dev->dev);
-#endif
-	for (i = 1; i < sw->dev_count + sw->dev_offset; i++) {
-		dev = sw->netdev[i];
-		if (!dev)
-			continue;
-		fep = netdev_priv(dev);
-		flush_work(&fep->port.link_update);
-		unregister_netdev(dev);
-		if (dev->phydev->mdio.bus)
-			phy_detach(dev->phydev);
-		free_netdev(dev);
-	}
-}
-#endif
-
-#ifdef CONFIG_KSZ_SMI
-/* These SMI access functions may require non-standard MDIO signal and so the
- * standard phy_read and phy_write functions cannot be used.
- */
-static int smi_read(struct mii_bus *bus, int phy_id, int regnum)
-{
-	return fec_enet_mdio_read(bus, phy_id, regnum);
-}
-
-static int smi_write(struct mii_bus *bus, int phy_id, int regnum, u16 val)
-{
-	return fec_enet_mdio_write(bus, phy_id, regnum, val);
-}
 #endif
 
 static int
@@ -4196,7 +3984,7 @@ fec_enet_open(struct net_device *ndev)
 	int ret;
 	bool reset_again;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct net_device *pndev = ndev;
 	struct fec_enet_private *pfep = fep;
 	struct ksz_sw *sw = fep->port.sw;
@@ -4217,7 +4005,7 @@ fec_enet_open(struct net_device *ndev)
 	}
 #endif
 
-	ret = pm_runtime_resume_and_get(&fep->pdev->dev);
+	ret = pm_runtime_get_sync(&fep->pdev->dev);
 	if (ret < 0)
 		return ret;
 
@@ -4248,29 +4036,32 @@ fec_enet_open(struct net_device *ndev)
 	/* Init MAC prior to mii bus probe */
 	fec_restart(ndev);
 
-	/* Call phy_reset_after_clk_enable() again if it failed during
-	 * phy_reset_after_clk_enable() before because the PHY wasn't probed.
-	 */
-	if (reset_again)
-		fec_enet_phy_reset_after_clk_enable(ndev);
-
 	/* Probe and connect to PHY when open the interface */
 	ret = fec_enet_mii_probe(ndev);
 	if (ret)
 		goto err_enet_mii_probe;
 
+	/* Call phy_reset_after_clk_enable() again if it failed during
+	 * phy_reset_after_clk_enable() before because the PHY wasn't probed.
+	 */
+	if (reset_again)
+		phy_reset_after_clk_enable(ndev->phydev);
+
 	if (fep->quirks & FEC_QUIRK_ERR006687)
 		imx6q_cpuidle_fec_irqs_used();
+	if (fep->quirks & FEC_QUIRK_HAS_PMQOS)
+		pm_qos_add_request(&fep->pm_qos_req,
+				   PM_QOS_CPU_DMA_LATENCY,
+				   0);
 
 	napi_enable(&fep->napi);
-
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (sw_is_switch(sw)) {
 		if (0 == fep->opened) {
 			int rx_mode = 0;
 
 			/* Need to wait for adjust_link to start operation. */
-			fep->port.ready = false;
+			fep->ready = false;
 			fep->hw_multi = 0;
 			fep->hw_promisc = 0;
 
@@ -4278,7 +4069,7 @@ fec_enet_open(struct net_device *ndev)
 			/* Clear MIB counters for debugging. */
 			memset(&fep->ethtool_stats, 0, FEC_STATS_SIZE);
 #endif
-			rx_mode = sw->net_ops->open_dev(sw, ndev, &pfep->port,
+			rx_mode = sw->net_ops->open_dev(sw, ndev,
 				ndev->dev_addr);
 			if (rx_mode & 1) {
 				fep->hw_multi = 1;
@@ -4292,22 +4083,23 @@ fec_enet_open(struct net_device *ndev)
 		}
 
 skip_hw:
-		sw->net_ops->open_port(sw, pndev, &pfep->port);
+		sw->net_ops->open_port(sw, pndev, &pfep->port, &pfep->state);
 		fep->opened++;
 	}
+#endif
+#ifdef HAVE_KSZ_SWITCH
 	if (!sw_is_switch(sw))
 #endif
+
 	phy_start(ndev->phydev);
 	netif_tx_start_all_queues(ndev);
 
 	device_set_wakeup_enable(&ndev->dev, fep->wol_flag &
 				 FEC_WOL_FLAG_ENABLE);
-
 #if defined(CONFIG_KSZ_IBA_ONLY)
 	if (!sw_is_switch(sw))
 		create_sw_dev(ndev, fep);
 #endif
-
 	return 0;
 
 err_enet_mii_probe:
@@ -4317,7 +4109,8 @@ err_enet_alloc:
 clk_enable:
 	pm_runtime_mark_last_busy(&fep->pdev->dev);
 	pm_runtime_put_autosuspend(&fep->pdev->dev);
-	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+	if (!fep->mii_bus_share)
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	return ret;
 }
 
@@ -4326,7 +4119,7 @@ fec_enet_close(struct net_device *ndev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct net_device *pndev = ndev;
 	struct fec_enet_private *pfep = fep;
 	struct ksz_sw *sw = fep->port.sw;
@@ -4376,10 +4169,11 @@ fec_enet_close(struct net_device *ndev)
 	}
 
 	/* Reset ready indication. */
-	fep->port.ready = false;
+	fep->ready = false;
 
 	if (!sw_is_switch(sw))
 #endif
+
 	phy_stop(ndev->phydev);
 
 	if (netif_device_present(ndev)) {
@@ -4388,10 +4182,12 @@ fec_enet_close(struct net_device *ndev)
 		fec_stop(ndev);
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	if (!sw_is_switch(sw))
 #endif
+
 	phy_disconnect(ndev->phydev);
+	ndev->phydev = NULL;
 
 	if (fep->quirks & FEC_QUIRK_ERR006687)
 		imx6q_cpuidle_fec_irqs_unused();
@@ -4399,7 +4195,10 @@ fec_enet_close(struct net_device *ndev)
 	fec_enet_update_ethtool_stats(ndev);
 
 	fec_enet_clk_enable(ndev, false);
-	pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+	if (fep->quirks & FEC_QUIRK_HAS_PMQOS)
+		pm_qos_remove_request(&fep->pm_qos_req);
+	if (!fep->mii_bus_share)
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	pm_runtime_mark_last_busy(&fep->pdev->dev);
 	pm_runtime_put_autosuspend(&fep->pdev->dev);
 
@@ -4428,7 +4227,7 @@ static void set_multicast_list(struct net_device *ndev)
 	unsigned char hash;
 	unsigned int hash_high = 0, hash_low = 0;
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	struct ksz_sw *sw = fep->port.sw;
 	int multicast = ((ndev->flags & IFF_ALLMULTI) == IFF_ALLMULTI);
 	bool do_hash = false;
@@ -4478,7 +4277,7 @@ static void set_multicast_list(struct net_device *ndev)
 		return;
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 multicast_hash:
 #endif
 
@@ -4515,10 +4314,11 @@ fec_set_mac_address(struct net_device *ndev, void *p)
 		memcpy(ndev->dev_addr, addr->sa_data, ndev->addr_len);
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
-	if (sw_is_switch(fep->port.sw))
-		fec_enet_set_mac_addr(ndev);
+#ifdef HAVE_KSZ_SWITCH
+		if (sw_is_switch(fep->port.sw))
+			fec_enet_set_mac_addr(ndev);
 #endif
+
 	/* Add netif status check here to avoid system hang in below case:
 	 * ifconfig ethx down; ifconfig ethx hw ether xx:xx:xx:xx:xx:xx;
 	 * After ethx down, fec all clocks are gated off and then register
@@ -4597,12 +4397,12 @@ static int fec_set_features(struct net_device *netdev,
 	return 0;
 }
 
-static u16 fec_enet_get_raw_vlan_tci(struct sk_buff *skb)
+u16 fec_enet_get_raw_vlan_tci(struct sk_buff *skb)
 {
 	struct vlan_ethhdr *vhdr;
 	unsigned short vlan_TCI = 0;
 
-	if (skb->protocol == htons(ETH_P_ALL)) {
+	if (skb->protocol == ntohs(ETH_P_ALL)) {
 		vhdr = (struct vlan_ethhdr *)(skb->data);
 		vlan_TCI = ntohs(vhdr->h_vlan_TCI);
 	}
@@ -4610,20 +4410,22 @@ static u16 fec_enet_get_raw_vlan_tci(struct sk_buff *skb)
 	return vlan_TCI;
 }
 
-static u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
-				 struct net_device *sb_dev)
+u16 fec_enet_select_queue(struct net_device *ndev, struct sk_buff *skb,
+			  struct net_device *sb_dev)
 {
 	struct fec_enet_private *fep = netdev_priv(ndev);
+	const struct platform_device_id *id_entry =
+			platform_get_device_id(fep->pdev);
 	u16 vlan_tag;
 
-	if (!(fep->quirks & FEC_QUIRK_HAS_AVB))
+	if (!(id_entry->driver_data & FEC_QUIRK_HAS_AVB))
 		return netdev_pick_tx(ndev, skb, NULL);
 
 	vlan_tag = fec_enet_get_raw_vlan_tci(skb);
 	if (!vlan_tag)
 		return vlan_tag;
 
-	return fec_enet_vlan_pri_to_queue[vlan_tag >> 13];
+	return  fec_enet_vlan_pri_to_queue[vlan_tag >> 13];
 }
 
 static const struct net_device_ops fec_netdev_ops = {
@@ -4701,7 +4503,10 @@ static int fec_enet_init(struct net_device *ndev)
 	}
 
 	/* Get the Ethernet address */
-	fec_get_mac(ndev);
+	ret = fec_get_mac(ndev);
+	if (ret)
+		goto free_queue_mem;
+
 	/* make sure MAC we just acquired is programmed into the hw */
 	fec_set_mac_address(ndev, NULL);
 
@@ -4760,12 +4565,12 @@ static int fec_enet_init(struct net_device *ndev)
 		fep->csum_flags |= FLAG_RX_CSUM_ENABLED;
 	}
 
-	if (fep->quirks & FEC_QUIRK_HAS_MULTI_QUEUES) {
+	if (fep->quirks & FEC_QUIRK_HAS_AVB) {
 		fep->tx_align = 0;
 		fep->rx_align = 0x3f;
 	}
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 
 	/* Point to real private structure holding hardware information. */
 	fep->hw_priv = fep;
@@ -4903,39 +4708,373 @@ static int fec_enet_get_irq_cnt(struct platform_device *pdev)
 	return irq_cnt;
 }
 
-static int fec_enet_init_stop_mode(struct fec_enet_private *fep,
-				   struct device_node *np)
+#ifdef HAVE_KSZ_SWITCH
+static void prep_sw_first(struct ksz_sw *sw, int *port_count,
+	int *mib_port_count, int *dev_count, char *dev_name)
 {
-	struct device_node *gpr_np;
+	*port_count = 1;
+	*mib_port_count = 1;
+	*dev_count = 1;
+	dev_name[0] = '\0';
+	sw->net_ops->get_state = get_priv_state;
+	sw->net_ops->set_state = set_priv_state;
+	sw->net_ops->get_priv_port = get_priv_port;
+#if defined(CONFIG_HAVE_KSZ9897) || defined(CONFIG_HAVE_LAN937X)
+	sw->net_ops->get_ready = get_net_ready;
+#endif
+	sw->net_ops->setup_special(sw, port_count, mib_port_count, dev_count);
+	sw_update_csum(sw);
+}  /* prep_sw_first */
+
+static void prep_sw_dev(struct ksz_sw *sw, struct fec_enet_private *fep, int i,
+	int port_count, int mib_port_count, char *dev_name)
+{
+#ifndef CONFIG_KSZ_NO_MDIO_BUS
+	int phy_mode;
+	char phy_id[MII_BUS_ID_SIZE];
+	char bus_id[MII_BUS_ID_SIZE];
+	struct phy_device *phydev;
+#endif
+
+	fep->phy_addr = sw->net_ops->setup_dev(sw, fep->netdev, dev_name,
+		&fep->port, i, port_count, mib_port_count);
+
+#ifndef CONFIG_KSZ_NO_MDIO_BUS
+	phy_mode = fep->phy_interface;
+	snprintf(bus_id, MII_BUS_ID_SIZE, "sw.%d", sw->id);
+	snprintf(phy_id, MII_BUS_ID_SIZE, PHY_ID_FMT, bus_id, fep->phy_addr);
+	phydev = phy_attach(fep->netdev, phy_id, phy_mode);
+	if (!IS_ERR(phydev)) {
+		fep->netdev->phydev = phydev;
+	}
+#endif
+}  /* prep_sw_dev */
+
+static int fec_enet_sw_init(struct fec_enet_private *fep)
+{
+	struct ksz_sw *sw;
+	int err;
+	int i;
+	int port_count;
+	int dev_count;
+	int mib_port_count;
+	char dev_label[IFNAMSIZ];
+	struct fec_enet_private *hw_priv;
+	struct net_device *dev;
+	struct net_device *main_dev;
+	struct platform_device *pdev;
+	netdev_features_t features;
+
+	sw = fep->port.sw;
+
+	/* This is the main private structure holding hardware information. */
+	hw_priv = fep;
+	hw_priv->parent = sw->dev;
+	main_dev = fep->netdev;
+	pdev = fep->pdev;
+	features = main_dev->features;
+
+	prep_sw_first(sw, &port_count, &mib_port_count, &dev_count, dev_label);
+
+	/* The main switch phydev will not be attached. */
+	if (dev_count > 1) {
+		struct phy_device *phydev = sw->phy[0];
+
+		phydev->interface = fep->phy_interface;
+	}
+
+	/* Save the base device name. */
+	strlcpy(dev_label, hw_priv->netdev->name, IFNAMSIZ);
+
+#ifndef CONFIG_KSZ_SMI
+	if (sw->net_ops->setup_mdiobus)
+		sw->net_ops->setup_mdiobus(sw, fep->mii_bus);
+#endif
+	prep_sw_dev(sw, fep, 0, port_count, mib_port_count, dev_label);
+
+	/* Only the main one needs to set adjust_link for configuration. */
+	if (fep->netdev->phydev->mdio.bus &&
+	    !fep->netdev->phydev->adjust_link) {
+		fep->netdev->phydev->adjust_link = fec_enet_adjust_link;
+
+		fep->link = 0;
+		fep->speed = 0;
+		fep->full_duplex = 0;
+	}
+
+	INIT_DELAYED_WORK(&hw_priv->promisc_reset, promisc_reset_work);
+
+	for (i = 1; i < dev_count; i++) {
+		dev = alloc_etherdev_mqs(sizeof(struct fec_enet_private) +
+					 FEC_STATS_SIZE,
+					 hw_priv->num_tx_queues,
+					 hw_priv->num_rx_queues);
+		if (!dev)
+			break;
+
+		fep = netdev_priv(dev);
+		fep->pdev = pdev;
+		fep->netdev = dev;
+		fep->num_rx_queues = hw_priv->num_rx_queues;
+		fep->num_tx_queues = hw_priv->num_tx_queues;
+		fep->hwp = hw_priv->hwp;
+
+		fep->hw_priv = hw_priv;
+		fep->phy_interface = hw_priv->phy_interface;
+		dev->phydev = &fep->dummy_phy;
+		dev->phydev->duplex = 1;
+		dev->phydev->speed = SPEED_1000;
+		dev->phydev->autoneg = 1;
+
+		spin_lock_init(&fep->tx_lock);
+
+		dev->watchdog_timeo = TX_TIMEOUT;
+		dev->netdev_ops = &fec_netdev_ops;
+		dev->ethtool_ops = &fec_enet_ethtool_ops;
+
+		dev->base_addr = main_dev->base_addr;
+		memcpy(dev->dev_addr, main_dev->dev_addr, ETH_ALEN);
+
+		dev->hw_features = main_dev->hw_features;
+		dev->features = features;
+
+		SET_NETDEV_DEV(dev, &pdev->dev);
+
+		prep_sw_dev(sw, fep, i, port_count, mib_port_count, dev_label);
+		if (fep->netdev->phydev->mdio.bus)
+			fep->netdev->phydev->adjust_link = priv_adjust_link;
+
+		err = register_netdev(dev);
+		if (err) {
+			free_netdev(dev);
+			break;
+		}
+
+		netif_carrier_off(dev);
+	}
+
+#if !defined(CONFIG_KSZ_IBA_ONLY)
+	/*
+	 * Adding sysfs support is optional for network device.  It is more
+	 * convenient to locate eth0 more or less than spi<bus>.<select>,
+	 * especially when the bus number is auto assigned which results in a
+	 * very big number.
+	 */
+	err = init_sw_sysfs(sw, &hw_priv->sysfs, &main_dev->dev);
+
+#ifdef CONFIG_1588_PTP
+	if (sw->features & PTP_HW)
+		err = init_ptp_sysfs(&hw_priv->ptp_sysfs, &main_dev->dev);
+#endif
+#ifdef CONFIG_KSZ_DLR
+	if (sw->features & DLR_HW)
+		err = init_dlr_sysfs(&main_dev->dev);
+#endif
+#endif
+
+#if defined(CONFIG_KSZ_IBA_ONLY) && !defined(CONFIG_KSZ_NO_MDIO_BUS)
+	if (fep->netdev->phydev->mdio.bus) {
+		struct phy_device *phydev = fep->netdev->phydev;
+
+		phy_attached_info(phydev);
+	}
+#endif
+	sw_device_seen++;
+
+	return 0;
+}
+
+#if defined(CONFIG_KSZ_IBA_ONLY)
+static int not_ready;
+
+/**
+ * netdev_start_iba - Start using IBA for register access
+ *
+ * This routine starts using IBA for register access.
+ */
+static void netdev_start_iba(struct work_struct *work)
+{
+	struct delayed_work *dwork = to_delayed_work(work);
+	struct ksz_sw *sw = container_of(dwork, struct ksz_sw, set_ops);
+	struct ksz_iba_info *iba = &sw->info->iba;
+	struct net_device *dev;
+	struct fec_enet_private *fep;
+	int rx_mode;
+
+	if (2 != iba->use_iba)
+		return;
+
+	/* Communication is not ready if a cable connection is used. */
+	if (sw->net_ops->get_ready && !sw->net_ops->get_ready(iba->dev)) {
+		not_ready = true;
+		schedule_delayed_work(&sw->set_ops, 1);
+		return;
+	}
+
+	/* Need some time after link is established. */
+	if (not_ready) {
+		not_ready = false;
+		schedule_delayed_work(&sw->set_ops, 10);
+		return;
+	}
+
+	dev = sw->netdev[0];
+	fep = netdev_priv(dev);
+
+	sw->reg = &sw_iba_ops;
+	iba->cnt = 0;
+	if (ksz_probe_next(sw->dev)) {
+		fep->parent = NULL;
+		fep->port.sw = NULL;
+		return;
+	}
+
+#ifdef CONFIG_1588_PTP
+	sw->ptp_hw.reg = &ptp_iba_ops;
+#endif
+
+	fec_enet_sw_init(fep);
+
+	fep->multi = false;
+	fep->promisc = false;
+
+	fep->hw_multi = 0;
+	fep->hw_promisc = 0;
+
+#if 1
+	/* Clear MIB counters for debugging. */
+	memset(&fep->ethtool_stats, 0, FEC_STATS_SIZE);
+#endif
+	rx_mode = sw->net_ops->open_dev(sw, dev, dev->dev_addr);
+	if (rx_mode & 1) {
+		fep->hw_multi = 1;
+		hw_set_multicast(fep, fep->hw_multi);
+	}
+	if (rx_mode & 2) {
+		fep->hw_promisc = 1;
+		hw_set_promisc(fep, fep->hw_promisc);
+	}
+	sw->net_ops->open(sw);
+
+	sw->net_ops->open_port(sw, dev, &fep->port, &fep->state);
+	fep->opened++;
+
+	/* Signal IBA initialization is complete. */
+	sw->info->iba.use_iba = 3;
+}  /* netdev_start_iba */
+
+static int create_sw_dev(struct net_device *dev, struct fec_enet_private *fep)
+{
+	struct sw_priv *ks;
+	struct ksz_sw *sw;
+
+	/*
+	 * Stop normal traffic from going out until the switch is
+	 * configured to block looping frames.
+	 */
+	netif_carrier_off(dev);
+
+	ks = kzalloc(sizeof(struct sw_priv), GFP_KERNEL);
+	ks->hw_dev = dev;
+	ks->dev = &dev->dev;
+
+	ks->irq = get_sw_irq(fep);
+	if (ks->irq == fep->netdev->phydev->irq)
+		ks->irq = 0;
+
+	intr_mode = 1;
+	sw_device_present = 0;
+	sw = &ks->sw;
+	ksz_probe_prep(ks, dev);
+
+	sw->net_ops->get_state = get_priv_state;
+	sw->net_ops->set_state = set_priv_state;
+	sw->net_ops->get_priv_port = get_priv_port;
+	sw->net_ops->get_ready = get_net_ready;
+	sw->netdev[0] = dev;
+	sw->dev_count = 1;
+
+	INIT_DELAYED_WORK(&sw->set_ops, netdev_start_iba);
+
+	sw_set_dev(sw, dev, dev->dev_addr);
+
+	fep->parent = sw->dev;
+	fep->port.sw = sw;
+
+	not_ready = false;
+
+#ifdef DEBUG_MSG
+	init_dbg();
+#endif
+	return 0;
+}  /* create_sw_dev */
+#endif
+
+static void fec_enet_sw_exit(struct fec_enet_private *fep)
+{
+	struct net_device *dev = fep->netdev;
+	struct ksz_sw *sw = fep->port.sw;
+	int i;
+
+#if !defined(CONFIG_KSZ_IBA_ONLY)
+#ifdef CONFIG_KSZ_DLR
+	if (sw->features & DLR_HW)
+		exit_dlr_sysfs(&dev->dev);
+#endif
+#ifdef CONFIG_1588_PTP
+	if (sw->features & PTP_HW)
+		exit_ptp_sysfs(&fep->ptp_sysfs, &dev->dev);
+#endif
+	exit_sw_sysfs(sw, &fep->sysfs, &dev->dev);
+#endif
+	for (i = 1; i < sw->dev_count + sw->dev_offset; i++) {
+		dev = sw->netdev[i];
+		if (!dev)
+			continue;
+		fep = netdev_priv(dev);
+		flush_work(&fep->port.link_update);
+		unregister_netdev(dev);
+		if (dev->phydev->mdio.bus)
+			phy_detach(dev->phydev);
+		free_netdev(dev);
+	}
+}
+#endif
+
+
+static void fec_enet_of_parse_stop_mode(struct platform_device *pdev)
+{
+	struct net_device *dev = platform_get_drvdata(pdev);
+	struct device_node *np = pdev->dev.of_node;
+	struct fec_enet_private *fep = netdev_priv(dev);
+	struct device_node *node;
+	phandle phandle;
 	u32 out_val[3];
-	int ret = 0;
+	int ret;
 
-	gpr_np = of_parse_phandle(np, "fsl,stop-mode", 0);
-	if (!gpr_np)
-		return 0;
-
-	ret = of_property_read_u32_array(np, "fsl,stop-mode", out_val,
-					 ARRAY_SIZE(out_val));
+	ret = of_property_read_u32_array(np, "stop-mode", out_val, 3);
 	if (ret) {
-		dev_dbg(&fep->pdev->dev, "no stop mode property\n");
-		return ret;
+		dev_dbg(&pdev->dev, "no stop-mode property\n");
+		return;
 	}
 
-	fep->stop_gpr.gpr = syscon_node_to_regmap(gpr_np);
-	if (IS_ERR(fep->stop_gpr.gpr)) {
-		dev_err(&fep->pdev->dev, "could not find gpr regmap\n");
-		ret = PTR_ERR(fep->stop_gpr.gpr);
-		fep->stop_gpr.gpr = NULL;
-		goto out;
+	phandle = *out_val;
+	node = of_find_node_by_phandle(phandle);
+	if (!node) {
+		dev_dbg(&pdev->dev, "could not find gpr node by phandle\n");
+		return;
 	}
 
-	fep->stop_gpr.reg = out_val[1];
-	fep->stop_gpr.bit = out_val[2];
+	fep->lpm.gpr = syscon_node_to_regmap(node);
+	if (IS_ERR(fep->lpm.gpr)) {
+		dev_dbg(&pdev->dev, "could not find gpr regmap\n");
+		return;
+	}
 
-out:
-	of_node_put(gpr_np);
+	of_node_put(node);
 
-	return ret;
+	fep->lpm.req_gpr = out_val[1];
+	fep->lpm.req_bit = out_val[2];
 }
 
 static int
@@ -4952,7 +5091,6 @@ fec_probe(struct platform_device *pdev)
 	int num_rx_qs;
 	char irq_name[8];
 	int irq_cnt;
-	struct fec_devinfo *dev_info;
 
 	fec_enet_get_queue_num(pdev, &num_tx_qs, &num_rx_qs);
 
@@ -4970,9 +5108,7 @@ fec_probe(struct platform_device *pdev)
 	of_id = of_match_device(fec_dt_ids, &pdev->dev);
 	if (of_id)
 		pdev->id_entry = of_id->data;
-	dev_info = (struct fec_devinfo *)pdev->id_entry->driver_data;
-	if (dev_info)
-		fep->quirks = dev_info->quirks;
+	fep->quirks = pdev->id_entry->driver_data;
 
 	fep->netdev = ndev;
 	fep->num_rx_queues = num_rx_qs;
@@ -5003,12 +5139,19 @@ fec_probe(struct platform_device *pdev)
 	    !of_property_read_bool(np, "fsl,err006687-workaround-present"))
 		fep->quirks |= FEC_QUIRK_ERR006687;
 
+	fec_enet_of_parse_stop_mode(pdev);
+	ret = fec_enet_ipc_handle_init(fep);
+	if (ret)
+		goto failed_ipc_init;
+
 	if (of_get_property(np, "fsl,magic-packet", NULL))
 		fep->wol_flag |= FEC_WOL_HAS_MAGIC_PACKET;
 
-	ret = fec_enet_init_stop_mode(fep, np);
-	if (ret)
-		goto failed_stop_mode;
+	if (of_get_property(np, "fsl,rgmii_txc_dly", NULL))
+		fep->rgmii_txc_dly = true;
+
+	if (of_get_property(np, "fsl,rgmii_rxc_dly", NULL))
+		fep->rgmii_rxc_dly = true;
 
 	phy_node = of_parse_phandle(np, "phy-handle", 0);
 	if (!phy_node && of_phy_is_fixed_link(np)) {
@@ -5032,6 +5175,8 @@ fec_probe(struct platform_device *pdev)
 	} else {
 		fep->phy_interface = ret;
 	}
+
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	fep->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
 	if (IS_ERR(fep->clk_ipg)) {
@@ -5060,6 +5205,11 @@ fec_probe(struct platform_device *pdev)
 	if (IS_ERR(fep->clk_ref))
 		fep->clk_ref = NULL;
 	fep->clk_ref_rate = clk_get_rate(fep->clk_ref);
+
+	/* clk_2x_txclk is optional, depends on board */
+	fep->clk_2x_txclk = devm_clk_get(&pdev->dev, "enet_2x_txclk");
+	if (IS_ERR(fep->clk_2x_txclk))
+		fep->clk_2x_txclk = NULL;
 
 	fep->bufdesc_ex = fep->quirks & FEC_QUIRK_HAS_BUFDESC_EX;
 	fep->clk_ptp = devm_clk_get(&pdev->dev, "ptp");
@@ -5106,10 +5256,8 @@ fec_probe(struct platform_device *pdev)
 		goto failed_reset;
 
 	irq_cnt = fec_enet_get_irq_cnt(pdev);
-#ifndef CONFIG_1588_PTP
 	if (fep->bufdesc_ex)
 		fec_ptp_init(pdev, irq_cnt);
-#endif
 
 	ret = fec_enet_init(ndev);
 	if (ret)
@@ -5132,16 +5280,26 @@ fec_probe(struct platform_device *pdev)
 		fep->irq[i] = irq;
 	}
 
+	/* get wake up irq */
+	ret = of_property_read_u32(np, "fsl,wakeup_irq", &irq);
+	if (!ret && irq < irq_cnt)
+		fep->wake_irq = fep->irq[irq];
+	else
+		fep->wake_irq = fep->irq[0];
+
+	init_completion(&fep->mdio_done);
+	/* board only enable one mii bus in default */
+	if (!of_get_property(np, "fsl,mii-exclusive", NULL))
+		fep->quirks |= FEC_QUIRK_SINGLE_MDIO;
 	ret = fec_enet_mii_init(pdev);
 	if (ret)
 		goto failed_mii_init;
 
 #ifdef CONFIG_KSZ_SMI
 	if (!ret) {
-		int irq = get_sw_irq(fep, NULL);
+		int irq = get_sw_irq(fep);
 
-		ret = smi_probe(&fep->sw_pdev, fep->mii_bus, irq,
-				smi_read, smi_write);
+		ret = smi_probe(&fep->sw_pdev, fep->mii_bus, irq);
 		if (ret)
 			goto failed_register;
 	}
@@ -5160,7 +5318,7 @@ fec_probe(struct platform_device *pdev)
 	lan937x_init();
 #endif
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 #if !defined(CONFIG_KSZ_IBA_ONLY)
 	ret = fec_enet_sw_chk(fep);
 	if (!ret) {
@@ -5175,8 +5333,6 @@ fec_probe(struct platform_device *pdev)
 	fec_enet_clk_enable(ndev, false);
 	pinctrl_pm_select_sleep_state(&pdev->dev);
 
-	ndev->max_mtu = PKT_MAXBUF_SIZE - ETH_HLEN - ETH_FCS_LEN;
-
 	ret = register_netdev(ndev);
 	if (ret)
 		goto failed_register;
@@ -5184,15 +5340,13 @@ fec_probe(struct platform_device *pdev)
 	device_init_wakeup(&ndev->dev, fep->wol_flag &
 			   FEC_WOL_HAS_MAGIC_PACKET);
 
-#ifndef CONFIG_1588_PTP
 	if (fep->bufdesc_ex && fep->ptp_clock)
 		netdev_info(ndev, "registered PHC device %d\n", fep->dev_id);
-#endif
 
 	fep->rx_copybreak = COPYBREAK_DEFAULT;
 	INIT_WORK(&fep->tx_timeout_work, fec_enet_timeout_work);
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 #if !defined(CONFIG_KSZ_IBA_ONLY)
 	if (fep->port.sw)
 		ret = fec_enet_sw_init(fep);
@@ -5222,10 +5376,11 @@ failed_clk_ahb:
 failed_clk_ipg:
 	fec_enet_clk_enable(ndev, false);
 failed_clk:
+	release_bus_freq(BUS_FREQ_HIGH);
 	if (of_phy_is_fixed_link(np))
 		of_phy_deregister_fixed_link(np);
 	of_node_put(phy_node);
-failed_stop_mode:
+failed_ipc_init:
 failed_phy:
 	dev_id--;
 failed_ioremap:
@@ -5234,7 +5389,7 @@ failed_ioremap:
 	return ret;
 }
 
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 static void
 fec_drv_shutdown(struct platform_device *pdev)
 {
@@ -5262,48 +5417,63 @@ fec_drv_shutdown(struct platform_device *pdev)
 		}
 	}
 }
+#endif
 
-static void
-fec_drv_sw_remove(struct net_device *ndev, struct fec_enet_private *fep)
+static int
+fec_drv_remove(struct platform_device *pdev)
 {
-	struct ksz_sw *sw = fep->port.sw;
-	bool do_exit = true;
+	struct net_device *ndev = platform_get_drvdata(pdev);
+	struct fec_enet_private *fep = netdev_priv(ndev);
+	struct device_node *np = pdev->dev.of_node;
+	int ret;
 
-	if (!sw_is_switch(sw))
-		return;
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0)
+		return ret;
+
+#ifdef HAVE_KSZ_SWITCH
+	struct ksz_sw *sw = fep->port.sw;
+
+	if (sw_is_switch(sw)) {
 
 #if defined(CONFIG_KSZ_IBA_ONLY)
 
-	/* Still under initialization in IBA-only mode. */
-	if (2 == sw->info->iba.use_iba) {
-		cancel_delayed_work_sync(&sw->set_ops);
-
-		/* May not started yet. */
+		/* Still under initialization in IBA-only mode. */
 		if (2 == sw->info->iba.use_iba) {
-			kfree(sw->dev);
-			fep->port.sw = NULL;
-			return;
-		}
-		do_exit = false;
-	}
+			cancel_delayed_work_sync(&sw->set_ops);
+
+			/* May not started yet. */
+			if (2 == sw->info->iba.use_iba) {
+				kfree(sw->dev);
+				fep->port.sw = NULL;
+				sw = NULL;
+			}
+		} else
 #endif
-	if (do_exit) {
-		flush_work(&fep->port.link_update);
 		fec_enet_sw_exit(fep);
 	}
+#endif
+#ifdef HAVE_KSZ_SWITCH
+	if (fep->mii_bus) {
+
 #ifdef CONFIG_KSZ_SMI
-	if (fep->sw_pdev)
 		smi_remove(fep->sw_pdev);
 #endif
-	sw->net_ops->leave_dev(sw);
-	if (ndev->phydev) {
-		if (ndev->phydev->mdio.bus)
-			phy_detach(ndev->phydev);
-		ndev->phydev = NULL;
 	}
-#if defined(CONFIG_KSZ_IBA_ONLY) && defined(DEBUG_MSG)
-	exit_dbg();
 #endif
+#ifdef HAVE_KSZ_SWITCH
+	if (sw_is_switch(sw)) {
+		flush_work(&fep->port.link_update);
+		sw->net_ops->leave_dev(sw);
+		if (ndev->phydev) {
+			if (ndev->phydev->mdio.bus)
+				phy_detach(ndev->phydev);
+			ndev->phydev = NULL;
+		}
+#if defined(CONFIG_KSZ_IBA_ONLY) && defined(DEBUG_MSG)
+		exit_dbg();
+#endif
+	}
 #ifdef CONFIG_KSZ8795_EMBEDDED
 	ksz8795_exit();
 #endif
@@ -5316,23 +5486,6 @@ fec_drv_sw_remove(struct net_device *ndev, struct fec_enet_private *fep)
 #ifdef CONFIG_LAN937X_EMBEDDED
 	lan937x_exit();
 #endif
-}
-#endif
-
-static int
-fec_drv_remove(struct platform_device *pdev)
-{
-	struct net_device *ndev = platform_get_drvdata(pdev);
-	struct fec_enet_private *fep = netdev_priv(ndev);
-	struct device_node *np = pdev->dev.of_node;
-	int ret;
-
-	ret = pm_runtime_resume_and_get(&pdev->dev);
-	if (ret < 0)
-		return ret;
-
-#ifdef CONFIG_KSZ_SWITCH
-	fec_drv_sw_remove(ndev, fep);
 #endif
 
 	cancel_work_sync(&fep->tx_timeout_work);
@@ -5362,6 +5515,8 @@ static int __maybe_unused fec_suspend(struct device *dev)
 
 	rtnl_lock();
 	if (netif_running(ndev)) {
+		int ret;
+
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE)
 			fep->wol_flag |= FEC_WOL_FLAG_SLEEP_ON;
 		phy_stop(ndev->phydev);
@@ -5370,9 +5525,24 @@ static int __maybe_unused fec_suspend(struct device *dev)
 		netif_device_detach(ndev);
 		netif_tx_unlock_bh(ndev);
 		fec_stop(ndev);
-		fec_enet_clk_enable(ndev, false);
-		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE))
+		if (!(fep->wol_flag & FEC_WOL_FLAG_ENABLE)) {
+			fec_irqs_disable(ndev);
 			pinctrl_pm_select_sleep_state(&fep->pdev->dev);
+		} else {
+			fec_enet_enter_stop_mode(fep);
+			disable_irq(fep->wake_irq);
+			enable_irq_wake(fep->wake_irq);
+		}
+		fec_enet_clk_enable(ndev, false);
+
+		fep->rpm_active = !pm_runtime_status_suspended(dev);
+		if (fep->rpm_active) {
+			ret = pm_runtime_force_suspend(dev);
+			if (ret < 0)
+				return ret;
+		}
+	} else if (fep->mii_bus_share && !ndev->phydev) {
+		pinctrl_pm_select_sleep_state(&fep->pdev->dev);
 	}
 	rtnl_unlock();
 
@@ -5392,7 +5562,7 @@ static int __maybe_unused fec_resume(struct device *dev)
 {
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
-	int ret;
+	int ret = 0;
 	int val;
 
 	if (fep->reg_phy && !(fep->wol_flag & FEC_WOL_FLAG_ENABLE)) {
@@ -5403,14 +5573,18 @@ static int __maybe_unused fec_resume(struct device *dev)
 
 	rtnl_lock();
 	if (netif_running(ndev)) {
+		if (fep->rpm_active)
+			pm_runtime_force_resume(dev);
+
 		ret = fec_enet_clk_enable(ndev, true);
 		if (ret) {
 			rtnl_unlock();
 			goto failed_clk;
 		}
 		if (fep->wol_flag & FEC_WOL_FLAG_ENABLE) {
-			fec_enet_stop_mode(fep, false);
-
+			disable_irq_wake(fep->wake_irq);
+			fec_enet_exit_stop_mode(fep);
+			enable_irq(fep->wake_irq);
 			val = readl(fep->hwp + FEC_ECNTRL);
 			val &= ~(FEC_ECR_MAGICEN | FEC_ECR_SLEEP);
 			writel(val, fep->hwp + FEC_ECNTRL);
@@ -5424,10 +5598,14 @@ static int __maybe_unused fec_resume(struct device *dev)
 		netif_tx_unlock_bh(ndev);
 		napi_enable(&fep->napi);
 		phy_start(ndev->phydev);
+	} else if (fep->mii_bus_share && !ndev->phydev) {
+		pinctrl_pm_select_default_state(&fep->pdev->dev);
+		/* And then recovery mii bus */
+		ret = fec_restore_mii_bus(ndev);
 	}
 	rtnl_unlock();
 
-	return 0;
+	return ret;
 
 failed_clk:
 	if (fep->reg_phy)
@@ -5442,6 +5620,7 @@ static int __maybe_unused fec_runtime_suspend(struct device *dev)
 
 	clk_disable_unprepare(fep->clk_ahb);
 	clk_disable_unprepare(fep->clk_ipg);
+	release_bus_freq(BUS_FREQ_HIGH);
 
 	return 0;
 }
@@ -5451,6 +5630,8 @@ static int __maybe_unused fec_runtime_resume(struct device *dev)
 	struct net_device *ndev = dev_get_drvdata(dev);
 	struct fec_enet_private *fep = netdev_priv(ndev);
 	int ret;
+
+	request_bus_freq(BUS_FREQ_HIGH);
 
 	ret = clk_prepare_enable(fep->clk_ahb);
 	if (ret)
@@ -5463,6 +5644,7 @@ static int __maybe_unused fec_runtime_resume(struct device *dev)
 
 failed_clk_ipg:
 	clk_disable_unprepare(fep->clk_ahb);
+	release_bus_freq(BUS_FREQ_HIGH);
 	return ret;
 }
 
@@ -5476,12 +5658,11 @@ static struct platform_driver fec_driver = {
 		.name	= DRIVER_NAME,
 		.pm	= &fec_pm_ops,
 		.of_match_table = fec_dt_ids,
-		.suppress_bind_attrs = true,
 	},
 	.id_table = fec_devtype,
 	.probe	= fec_probe,
 	.remove	= fec_drv_remove,
-#ifdef CONFIG_KSZ_SWITCH
+#ifdef HAVE_KSZ_SWITCH
 	.shutdown	= fec_drv_shutdown,
 #endif
 };

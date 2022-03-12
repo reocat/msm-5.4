@@ -16,29 +16,13 @@
 
 #include <linux/clocksource.h>
 #include <linux/net_tstamp.h>
+#include <linux/pm_qos.h>
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timecounter.h>
 
-#if defined(CONFIG_LAN937X_SWITCH)
-#ifndef CONFIG_KSZ_SWITCH
-#define CONFIG_KSZ_SWITCH
-#endif
-#endif
-
-#ifdef CONFIG_KSZ_SWITCH
-#if defined(CONFIG_HAVE_KSZ9897)
-#include "../micrel/ksz_cfg_9897.h"
-#elif defined(CONFIG_HAVE_KSZ8795)
-#include "../micrel/ksz_cfg_8795.h"
-#elif defined(CONFIG_HAVE_KSZ8895)
-#include "../micrel/ksz_cfg_8895.h"
-#elif defined(CONFIG_HAVE_KSZ8863)
-#include "../micrel/ksz_cfg_8863.h"
-#elif defined(CONFIG_HAVE_KSZ8463)
-#include "../micrel/ksz_cfg_8463.h"
-#elif defined(CONFIG_HAVE_LAN937X)
-#include "../microchip/lan937x_cfg.h"
-#endif
+#ifdef CONFIG_IMX_SCU_SOC
+#include <dt-bindings/firmware/imx/rsrc.h>
+#include <linux/firmware/imx/sci.h>
 #endif
 
 #if defined(CONFIG_M523x) || defined(CONFIG_M527x) || defined(CONFIG_M528x) || \
@@ -400,8 +384,13 @@ struct bufdesc_ex {
 #define FEC_ENET_TS_AVAIL       ((uint)0x00010000)
 #define FEC_ENET_TS_TIMER       ((uint)0x00008000)
 
-#define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF)
+#define FEC_DEFAULT_IMASK (FEC_ENET_TXF | FEC_ENET_RXF | FEC_ENET_MII)
+#define FEC_NAPI_IMASK	FEC_ENET_MII
 #define FEC_RX_DISABLED_IMASK (FEC_DEFAULT_IMASK & (~FEC_ENET_RXF))
+
+#define FEC_ENET_ETHEREN	((uint)0x00000002)
+#define FEC_ENET_TXC_DLY	((uint)0x00010000)
+#define FEC_ENET_RXC_DLY	((uint)0x00020000)
 
 /* ENET interrupt coalescing macro define */
 #define FEC_ITR_CLK_SEL		(0x1 << 30)
@@ -490,22 +479,14 @@ struct bufdesc_ex {
  * clocks to generate 2ns delay.
  */
 #define FEC_QUIRK_DELAYED_CLKS_SUPPORT	(1 << 18)
+/* request pmqos during low power */
+#define FEC_QUIRK_HAS_PMQOS		(1 << 19)
 
-/* Some FEC hardware blocks need the MMFR cleared at setup time to avoid
- * the generation of an MII event. This must be avoided in the older
- * FEC blocks where it will stop MII events being generated.
- */
-#define FEC_QUIRK_CLEAR_SETUP_MII	(1 << 17)
-
-/* Some link partners do not tolerate the momentary reset of the REF_CLK
- * frequency when the RNCTL register is cleared by hardware reset.
- */
-#define FEC_QUIRK_NO_HARD_RESET		(1 << 18)
-
-/* i.MX6SX ENET IP supports multiple queues (3 queues), use this quirk to
- * represents this ENET IP.
- */
-#define FEC_QUIRK_HAS_MULTI_QUEUES	(1 << 19)
+struct fec_enet_stop_mode {
+	struct regmap *gpr;
+	u8 req_gpr;
+	u8 req_bit;
+};
 
 struct bufdesc_prop {
 	int qid;
@@ -538,12 +519,6 @@ struct fec_enet_priv_rx_q {
 	struct  sk_buff *rx_skbuff[RX_RING_SIZE];
 };
 
-struct fec_stop_mode_gpr {
-	struct regmap *gpr;
-	u8 reg;
-	u8 bit;
-};
-
 /* The FEC buffer descriptors track the ring buffers.  The rx_bd_base and
  * tx_bd_base always point to the base of the buffer descriptors.  The
  * cur_rx and cur_tx point to the currently available buffer.
@@ -563,6 +538,7 @@ struct fec_enet_private {
 	struct clk *clk_ref;
 	struct clk *clk_enet_out;
 	struct clk *clk_ptp;
+	struct clk *clk_2x_txclk;
 
 	bool ptp_clk_on;
 	struct mutex ptp_clk_mutex;
@@ -576,6 +552,11 @@ struct fec_enet_private {
 	unsigned int total_tx_ring_size;
 	unsigned int total_rx_ring_size;
 
+	unsigned long work_tx;
+	unsigned long work_rx;
+	unsigned long work_ts;
+	unsigned long work_mdio;
+
 	struct	platform_device *pdev;
 
 	int	dev_id;
@@ -585,13 +566,19 @@ struct fec_enet_private {
 	uint	phy_speed;
 	phy_interface_t	phy_interface;
 	struct device_node *phy_node;
+	bool	rgmii_txc_dly;
+	bool	rgmii_rxc_dly;
+	bool	mii_bus_share;
+	bool	rpm_active;
 	int	link;
 	int	full_duplex;
 	int	speed;
+	struct	completion mdio_done;
 	int	irq[FEC_IRQ_NUM];
 	bool	bufdesc_ex;
 	int	pause_flag;
 	int	wol_flag;
+	int	wake_irq;
 	u32	quirks;
 
 	struct	napi_struct napi;
@@ -612,7 +599,7 @@ struct fec_enet_private {
 	int hwts_tx_en;
 	struct delayed_work time_keep;
 	struct regulator *reg_phy;
-	struct fec_stop_mode_gpr stop_gpr;
+	struct pm_qos_request pm_qos_req;
 
 	unsigned int tx_align;
 	unsigned int rx_align;
@@ -638,25 +625,35 @@ struct fec_enet_private {
 	unsigned int reload_period;
 	int pps_enable;
 	unsigned int next_counter;
- 
-#ifdef CONFIG_KSZ_SWITCH
-	struct platform_device	*sw_pdev;
-	struct fec_enet_private	*hw_priv;
-	spinlock_t		tx_lock;
-	struct ksz_port		port;
-	int			phy_addr;
-	u32			multi:1;
-	u32			promisc:1;
-	u8			opened;
-	u8			hw_multi;
-	u8			hw_promisc;
-	void			*parent;
-	struct delayed_work	promisc_reset;
-	struct ksz_sw_sysfs	sysfs;
+
+#ifdef HAVE_KSZ_SWITCH
+        struct platform_device  *sw_pdev;
+	struct fec_enet_private *hw_priv;
+	struct phy_device       dummy_phy;
+	spinlock_t              tx_lock;
+	struct ksz_port         port;
+	int                     phy_addr;
+	u8                      state;
+	u32                     ready:1;
+	u32                     multi:1;
+	u32                     promisc:1;
+	u8                      opened;
+	u8                      hw_multi;
+	u8                      hw_promisc;
+	void                    *parent;
+	struct delayed_work     promisc_reset;
+	struct ksz_sw_sysfs     sysfs;
 #ifdef CONFIG_1588_PTP
-	struct ksz_ptp_sysfs	ptp_sysfs;
+        struct ksz_ptp_sysfs    ptp_sysfs;
 #endif
 #endif
+
+	/* stop mode */
+	struct fec_enet_stop_mode lpm;
+#ifdef CONFIG_IMX_SCU_SOC
+	struct imx_sc_ipc *ipc_handle;
+#endif
+
 	u64 ethtool_stats[0];
 };
 
