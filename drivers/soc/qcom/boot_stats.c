@@ -525,6 +525,8 @@ static int __init boot_stats_init(void)
 		iounmap(mpm_counter_base);
 	}
 
+	place_marker("M - DRIVER Boot Stats Ready");
+
 	return 0;
 }
 early_subsys_initcall(boot_stats_init, EARLY_SUBSYS_PLATFORM, EARLY_INIT_LEVEL0);
