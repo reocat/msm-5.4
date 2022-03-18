@@ -130,6 +130,7 @@ adfs
 adi
 adiantum
 adin
+adin1100
 adis16080
 adis16130
 adis16136
@@ -1241,6 +1242,7 @@ i2c-diolan-u2c
 i2c-dln2
 i2c-gpio
 i2c-hid
+i2c-ksz9897
 i2c-mux
 i2c-mux-gpio
 i2c-mux-gpmux
@@ -1314,6 +1316,7 @@ imx-ldb
 imx-pcm-dma
 imx-pxp
 imx-tve
+imx219
 imx6q-cpufreq
 imx6ul_tsc
 imx7d_adc
@@ -1520,6 +1523,7 @@ ks8851
 ks8851_mll
 ksz9477
 ksz_common
+ksz_sw_sysfs_9897
 kvaser_pci
 kvaser_usb
 kxcjk-1013
@@ -2799,6 +2803,7 @@ sm501
 sm501fb
 sm_common
 sm_ftl
+sm_test
 smb347-charger
 smc
 smc_diag
