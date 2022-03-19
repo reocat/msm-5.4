@@ -77,7 +77,7 @@ struct ksz_port {
 	u16 vid_member;
 	u16 non_tag_vlan_member;
 	int stp_state;
-	struct phy_device phydev;
+	struct phy_device *phydev;
 
 	u32 on:1;			/* port is not disabled by hardware */
 	u32 phy:1;			/* port has a PHY */

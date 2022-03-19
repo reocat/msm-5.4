@@ -342,7 +342,7 @@ static int ksz9477_phy_read16(struct dsa_switch *ds, int addr, int reg)
 			val = 0x0700;
 			break;
 		case MII_STAT1000:
-			if (p->phydev.speed == SPEED_1000)
+			if (p->phydev->speed == SPEED_1000)
 				val = 0x3800;
 			else
 				val = 0;
@@ -1170,7 +1170,7 @@ static void ksz9477_phy_errata_setup(struct ksz_device *dev, int port)
 
 static void ksz9477_port_setup(struct ksz_device *dev, int port, bool cpu_port)
 {
-	u8 data8;
+	u8 ctrl0, ctrl1;
 	u8 member;
 	u16 data16;
 	struct ksz_port *p = &dev->ports[port];
@@ -1201,6 +1201,7 @@ static void ksz9477_port_setup(struct ksz_device *dev, int port, bool cpu_port)
 	ksz_port_cfg(dev, port, P_PRIO_CTRL, PORT_802_1P_PRIO_ENABLE, true);
 
 	if (port < dev->phy_port_cnt) {
+		p->phydev = dsa_to_port(dev->ds, port)->slave->phydev;
 		/* do not force flow control */
 		ksz_port_cfg(dev, port, REG_PORT_CTRL_0,
 			     PORT_FORCE_TX_FLOW_CTRL | PORT_FORCE_RX_FLOW_CTRL,
@@ -1214,40 +1215,64 @@ static void ksz9477_port_setup(struct ksz_device *dev, int port, bool cpu_port)
 			     PORT_FORCE_TX_FLOW_CTRL | PORT_FORCE_RX_FLOW_CTRL,
 			     true);
 
+		ksz_port_cfg(dev, port, REG_PORT_XMII_CTRL_0,
+			     PORT_MAC_TX_FLOW_CTRL | PORT_MAC_RX_FLOW_CTRL, true);
+
+		phy_interface_t interface;
+		if (cpu_port)
+		{
+			interface = dev->interface;
+			ksz_port_cfg(dev, port, REG_PORT_XMII_CTRL_1, PORT_MII_MAC_MODE, false);
+		}
+		else
+		{
+			p->phydev = dsa_to_port(dev->ds, port)->slave->phydev;
+			ksz_port_cfg(dev, port, REG_PORT_XMII_CTRL_1, PORT_MII_MAC_MODE, true);
+			interface = p->phydev->interface;
+			if (interface == PHY_INTERFACE_MODE_MII)
+			{
+				ksz_pread8(dev, port, REG_PORT_XMII_CTRL_0, &ctrl0);
+				if (p->phydev->speed == SPEED_10)
+					ctrl0 &= ~PORT_MII_100MBIT;
+				else
+					ctrl0 |= PORT_MII_100MBIT;
+				if (p->phydev->duplex == DUPLEX_HALF)
+					ctrl0 &= ~PORT_MII_FULL_DUPLEX;
+				else
+					ctrl0 |= PORT_MII_FULL_DUPLEX;
+				ksz_pwrite8(dev, port, REG_PORT_XMII_CTRL_0, ctrl0);
+			}
+		}
+
 		/* configure MAC to 1G & RGMII mode */
-		ksz_pread8(dev, port, REG_PORT_XMII_CTRL_1, &data8);
-		switch (dev->interface) {
+		ksz_pread8(dev, port, REG_PORT_XMII_CTRL_1, &ctrl1);
+		switch (interface) {
 		case PHY_INTERFACE_MODE_MII:
-			ksz9477_set_xmii(dev, 0, &data8);
-			ksz9477_set_gbit(dev, false, &data8);
-			p->phydev.speed = SPEED_100;
+			ksz9477_set_xmii(dev, 0, &ctrl1);
+			ksz9477_set_gbit(dev, false, &ctrl1);
 			break;
 		case PHY_INTERFACE_MODE_RMII:
-			ksz9477_set_xmii(dev, 1, &data8);
-			ksz9477_set_gbit(dev, false, &data8);
-			p->phydev.speed = SPEED_100;
+			ksz9477_set_xmii(dev, 1, &ctrl1);
+			ksz9477_set_gbit(dev, false, &ctrl1);
 			break;
 		case PHY_INTERFACE_MODE_GMII:
-			ksz9477_set_xmii(dev, 2, &data8);
-			ksz9477_set_gbit(dev, true, &data8);
-			p->phydev.speed = SPEED_1000;
+			ksz9477_set_xmii(dev, 2, &ctrl1);
+			ksz9477_set_gbit(dev, true, &ctrl1);
 			break;
 		default:
-			ksz9477_set_xmii(dev, 3, &data8);
-			ksz9477_set_gbit(dev, true, &data8);
-			data8 &= ~PORT_RGMII_ID_IG_ENABLE;
-			data8 &= ~PORT_RGMII_ID_EG_ENABLE;
-			if (dev->interface == PHY_INTERFACE_MODE_RGMII_ID ||
-			    dev->interface == PHY_INTERFACE_MODE_RGMII_RXID)
-				data8 |= PORT_RGMII_ID_IG_ENABLE;
-			if (dev->interface == PHY_INTERFACE_MODE_RGMII_ID ||
-			    dev->interface == PHY_INTERFACE_MODE_RGMII_TXID)
-				data8 |= PORT_RGMII_ID_EG_ENABLE;
-			p->phydev.speed = SPEED_1000;
+			ksz9477_set_xmii(dev, 3, &ctrl1);
+			ksz9477_set_gbit(dev, true, &ctrl1);
+			ctrl1 &= ~PORT_RGMII_ID_IG_ENABLE;
+			ctrl1 &= ~PORT_RGMII_ID_EG_ENABLE;
+			if (interface == PHY_INTERFACE_MODE_RGMII_ID ||
+			    interface == PHY_INTERFACE_MODE_RGMII_RXID)
+				ctrl1 |= PORT_RGMII_ID_IG_ENABLE;
+			if (interface == PHY_INTERFACE_MODE_RGMII_ID ||
+			    interface == PHY_INTERFACE_MODE_RGMII_TXID)
+				ctrl1 |= PORT_RGMII_ID_EG_ENABLE;
 			break;
 		}
-		ksz_pwrite8(dev, port, REG_PORT_XMII_CTRL_1, data8);
-		p->phydev.duplex = 1;
+		ksz_pwrite8(dev, port, REG_PORT_XMII_CTRL_1, ctrl1);
 	}
 	mutex_lock(&dev->dev_mutex);
 	if (cpu_port) {
@@ -1259,7 +1284,7 @@ static void ksz9477_port_setup(struct ksz_device *dev, int port, bool cpu_port)
 		dev->on_ports |= (1 << port);
 
 		/* Link was detected before port is enabled. */
-		if (p->phydev.link)
+		if (p->phydev->link)
 			dev->live_ports |= (1 << port);
 	}
 	mutex_unlock(&dev->dev_mutex);
