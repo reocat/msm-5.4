@@ -304,7 +304,7 @@ static int adin_set_powerdown_mode(struct phy_device *phydev, bool en)
 		if (ret < 0)
 			return ret;
 
-		if ((ret & ADIN_CRSM_SFT_PD_RDY) == val)
+		if (!!(ret & ADIN_CRSM_SFT_PD_RDY) == en)
 			return 0;
 
 		msleep(1);
