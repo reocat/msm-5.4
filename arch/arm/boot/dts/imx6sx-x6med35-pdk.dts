@@ -18,6 +18,7 @@
 		rtc1 = &snvs_rtc;
 		watchdog0 = &rtc;
 		watchdog1 = &wdog1;
+		watchdog2 = &wdoggpio;
 	};
 
 	beeper {
@@ -174,6 +175,16 @@
 			sound-dai = <&codec>;
 			clocks = <&clks IMX6SX_CLK_AUDIO>;
 		};
+	};
+
+	wdoggpio: watchdog {
+		compatible = "linux,wdt-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wdog>;
+		gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
+		hw_algo = "toggle";
+		hw_margin_ms = <20000>;
+		always-running;
 	};
 };
 
@@ -578,9 +589,6 @@
 };
 
 &wdog1 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_wdog>;
-	fsl,ext-reset-output;
 	status = "okay";
 };
 
@@ -931,7 +939,7 @@
 
 		pinctrl_wdog: wdoggrp {
 			fsl,pins = <
-				MX6SX_PAD_GPIO1_IO03__WDOG2_WDOG_B 0x30b0
+				MX6SX_PAD_GPIO1_IO03__GPIO1_IO_3 0x30b0
 			>;
 		};
 	};
