@@ -137,7 +137,6 @@ adfs
 adi
 adiantum
 adin
-adin1100
 adis16080
 adis16130
 adis16136
@@ -986,7 +985,6 @@ fdomain
 fdomain_pci
 fdp
 fdp_i2c
-fec
 ff-memless
 fieldbus_dev
 fit2
@@ -1411,7 +1409,6 @@ i2c-emev2
 i2c-gpio
 i2c-hid
 i2c-kempld
-i2c-ksz9897
 i2c-mux
 i2c-mux-gpio
 i2c-mux-gpmux
@@ -1712,6 +1709,7 @@ ks8842
 ks8851
 ks8851_mll
 ksz9477
+ksz9477_i2c
 ksz_common
 ksz_sw_sysfs_9897
 ktti
