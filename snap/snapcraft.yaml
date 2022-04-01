@@ -98,6 +98,36 @@ parts:
     prime:
       - -*
 
+  sign-bootimg:
+    plugin: nil
+    after:
+      - bootimg
+      - signing-test-keys
+    override-build: |
+      KEY_NAME="bootimg-key"
+      BOOT_IMG="boot.img"
+      TARGET_SHA_TYPE=sha256
+      BOARD_KERNEL_PAGESIZE=2048
+      # create signature block
+      openssl \
+        dgst \
+        -${TARGET_SHA_TYPE} \
+        -binary ${SNAPCRAFT_STAGE}/${BOOT_IMG}.nonsecure \
+        > ${BOOT_IMG}.${TARGET_SHA_TYPE}
+      openssl \
+        pkeyutl \
+        -sign \
+        -in ${BOOT_IMG}.${TARGET_SHA_TYPE} \
+        -inkey ${SNAPCRAFT_STAGE}/signing-keys/${KEY_NAME}.key \
+        -out ${BOOT_IMG}.sig \
+        -pkeyopt digest:sha256 \
+        -pkeyopt rsa_padding_mode:pkcs1
+
+      # append it to the image
+      dd if=/dev/zero of=${BOOT_IMG}.sig.padded bs=${BOARD_KERNEL_PAGESIZE} count=1
+      dd if=${BOOT_IMG}.sig of=${BOOT_IMG}.sig.padded conv=notrunc
+      cat ${SNAPCRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${SNAPCRAFT_PART_INSTALL}/${BOOT_IMG}
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
