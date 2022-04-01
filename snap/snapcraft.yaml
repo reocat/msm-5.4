@@ -89,6 +89,15 @@ parts:
     prime:
       - firmware
 
+  signing-test-keys:
+    plugin: dump
+    source: https://git.launchpad.net/~ubuntu-cervinia/+git/cervinia-test-keys
+    source-type: git
+    organize:
+      '*': signing-keys/
+    prime:
+      - -*
+
 build-packages:
     - dpkg-dev
     - android-tools-mkbootimg
