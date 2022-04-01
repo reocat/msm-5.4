@@ -164,16 +164,6 @@
 		regulator-min-microvolt = <5000000>;
 		regulator-always-on;
 	};
-
-	wdoggpio: watchdog {
-		compatible = "linux,wdt-gpio";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_wdoggpio>;
-		gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
-		hw_algo = "toggle";
-		hw_margin_ms = <60000>;
-		always-running;
-	};
 };
 
 &ecspi1 {
@@ -867,12 +857,6 @@
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO02__WDOG1_WDOG_B	0x166
-		>;
-	};
-
-	pinctrl_wdoggpio:wdoggpiogrp{
-		fsl,pins = <
-			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x19
 		>;
 	};
 

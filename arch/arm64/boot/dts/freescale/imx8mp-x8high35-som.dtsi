@@ -75,6 +75,15 @@
 		};
 	};
 
+	wdoggpio: watchdog {
+		compatible = "linux,wdt-gpio";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_wdoggpio>;
+		gpios = <&gpio1 0 GPIO_ACTIVE_LOW>;
+		hw_algo = "toggle";
+		hw_margin_ms = <60000>;
+		always-running;
+	};
 };
 
 &A53_0 {
@@ -306,6 +315,12 @@
 	pinctrl_pmic: pmicirq {
 		fsl,pins = <
 			MX8MP_IOMUXC_GPIO1_IO03__GPIO1_IO03	0x41
+		>;
+	};
+
+	pinctrl_wdoggpio:wdoggpiogrp{
+		fsl,pins = <
+			MX8MP_IOMUXC_GPIO1_IO00__GPIO1_IO00	0x19
 		>;
 	};
 };

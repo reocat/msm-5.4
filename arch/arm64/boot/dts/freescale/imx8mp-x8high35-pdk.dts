@@ -35,7 +35,7 @@
 			no-map;
 			reg = <0 0x94400000 0 0x10000000>;
 		};
-		
+
 		rpmsg_reserved: rpmsg@0x55800000 {
 			no-map;
 			reg = <0 0x55800000 0 0x800000>;
