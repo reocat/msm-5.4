@@ -411,73 +411,73 @@
 		};
 
 		led@4 {
-			label = "DL5:green";
+			label = "DL3:green";
 			reg = <4>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@5 {
-			label = "DL5:red";
+			label = "DL3:red";
 			reg = <5>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@6 {
-			label = "DL6:green";
+			label = "DL4:green";
 			reg = <6>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@7 {
-			label = "DL6:red";
+			label = "DL4:red";
 			reg = <7>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@8 {
-			label = "DL10:green";
+			label = "DL5:green";
 			reg = <8>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@9 {
-			label = "DL10:red";
+			label = "DL5:red";
 			reg = <9>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@10 {
-			label = "DL11:green";
+			label = "DL6:green";
 			reg = <10>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@11 {
-			label = "DL11:red";
+			label = "DL6:red";
 			reg = <11>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@12 {
-			label = "DL15:green";
+			label = "DL7:green";
 			reg = <12>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@13 {
-			label = "DL15:red";
+			label = "DL7:red";
 			reg = <13>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@14 {
-			label = "DL16:green";
+			label = "DL8:green";
 			reg = <14>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@15 {
-			label = "DL16:red";
+			label = "DL8:red";
 			reg = <15>;
 			type = <PCA955X_TYPE_LED>;
 		};
@@ -490,37 +490,37 @@
 		reg = <0x61>;
 
 		led@0 {
-			label = "DL17:green";
+			label = "DL9:green";
 			reg = <0>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@1 {
-			label = "DL17:red";
+			label = "DL9:red";
 			reg = <1>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@2 {
-			label = "DL18:green";
+			label = "DL10:green";
 			reg = <2>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@3 {
-			label = "DL18:red";
+			label = "DL10:red";
 			reg = <3>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@4 {
-			label = "DL4:green";
+			label = "DL11:green";
 			reg = <4>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@5 {
-			label = "DL4:red";
+			label = "DL11:red";
 			reg = <5>;
 			type = <PCA955X_TYPE_LED>;
 		};
@@ -535,6 +535,7 @@
 			label = "DL12:red";
 			reg = <7>;
 			type = <PCA955X_TYPE_LED>;
+			linux,default-trigger = "heartbeat";
 		};
 
 		led@8 {
@@ -547,42 +548,46 @@
 			label = "DL13:red";
 			reg = <9>;
 			type = <PCA955X_TYPE_LED>;
+			linux,default-trigger = "heartbeat";
 		};
 
 		led@10 {
-			label = "DL8all:green";
+			label = "DL14:green";
 			reg = <10>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@11 {
-			label = "DL8all:red";
+			label = "DL14:red";
 			reg = <11>;
 			type = <PCA955X_TYPE_LED>;
+			linux,default-trigger = "heartbeat";
 		};
 
 		led@12 {
-			label = "red:power";
+			label = "DL15:green";
 			reg = <12>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@13 {
-			label = "green:power";
+			label = "DL15:red";
 			reg = <13>;
 			type = <PCA955X_TYPE_LED>;
+			linux,default-trigger = "heartbeat";
 		};
 
 		led@14 {
-			label = "pca9552:yellow";
+			label = "DL16:green";
 			reg = <14>;
 			type = <PCA955X_TYPE_LED>;
 		};
 
 		led@15 {
-			label = "pca9552:white";
+			label = "DL16:red";
 			reg = <15>;
 			type = <PCA955X_TYPE_LED>;
+			linux,default-trigger = "heartbeat";
 		};
 	};
 };
