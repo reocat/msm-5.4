@@ -85,6 +85,13 @@
 			linux,code = <KEY_ESC>;
 			wakeup-source;
 		};
+
+		s2 {
+			label = "power_fail";
+			gpios = <&gpio2 11 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_1>;
+			wakeup-source;
+		};
 	};
 
 	reg_can1_stby: regulator-can1-stby {
@@ -735,6 +742,7 @@
 	pinctrl_gpiokeys: gpiokeysgrp {
 		fsl,pins = <
 			MX8MP_IOMUXC_SAI5_RXFS__GPIO3_IO19	0x19
+			MX8MP_IOMUXC_SD1_STROBE__GPIO2_IO11	0x19
 		>;
 	};
 
