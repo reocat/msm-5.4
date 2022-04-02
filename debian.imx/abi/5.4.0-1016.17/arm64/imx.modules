@@ -1308,7 +1308,6 @@ imx-dcss
 imx-dpu-crtc
 imx-dpu-render
 imx-lcdif-crtc
-imx-lcdifv3-crtc
 imx-ldb
 imx-pcm-dma
 imx-pxp

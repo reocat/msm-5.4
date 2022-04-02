@@ -1485,7 +1485,6 @@ imx-dpu-render
 imx-ipu-v3
 imx-ipuv3-crtc
 imx-lcdif-crtc
-imx-lcdifv3-crtc
 imx-ldb
 imx-mailbox
 imx-pcm-dma
