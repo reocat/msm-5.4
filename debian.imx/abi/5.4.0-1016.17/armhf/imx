@@ -1333,12 +1333,12 @@ EXPORT_SYMBOL	 drivers/net/dsa/b53/b53_serdes 0xd813263d	b53_serdes_link_set
 EXPORT_SYMBOL	 drivers/net/dsa/lan9303-core 0x33d27890	lan9303_probe
 EXPORT_SYMBOL	 drivers/net/dsa/lan9303-core 0xada83f40	lan9303_register_set
 EXPORT_SYMBOL	 drivers/net/dsa/lan9303-core 0xda7ed559	lan9303_remove
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz9477 0xa1c8230d	ksz9477_switch_register
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0x0fe184d3	ksz_switch_register
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0x5d24e745	ksz_switch_alloc
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0xafae9a08	ksz_switch_remove
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_sw_sysfs_9897 0x335be481	ksz_sw_sysfs_exit
-EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_sw_sysfs_9897 0xa2959c7e	ksz_sw_sysfs_init
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz9477 0xe5c2275c	ksz9477_switch_register
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0x2a08d657	ksz_switch_remove
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0x2b8594fb	ksz_switch_alloc
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_common 0xa974bfaa	ksz_switch_register
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_sw_sysfs_9897 0x768dd524	ksz_sw_sysfs_exit
+EXPORT_SYMBOL	 drivers/net/dsa/microchip/ksz_sw_sysfs_9897 0xbb774096	ksz_sw_sysfs_init
 EXPORT_SYMBOL	 drivers/net/dsa/vitesse-vsc73xx-core 0x93c97718	vsc73xx_probe
 EXPORT_SYMBOL	 drivers/net/dsa/vitesse-vsc73xx-core 0x99d242fe	vsc73xx_is_addr_valid
 EXPORT_SYMBOL	 drivers/net/dsa/vitesse-vsc73xx-core 0xb3e9a211	vsc73xx_remove
@@ -3662,6 +3662,7 @@ EXPORT_SYMBOL	 vmlinux 0x05b8c113	drm_fb_helper_lastclose
 EXPORT_SYMBOL	 vmlinux 0x05be5ec0	of_graph_get_remote_endpoint
 EXPORT_SYMBOL	 vmlinux 0x05c7d22d	xfrm_state_walk
 EXPORT_SYMBOL	 vmlinux 0x05ca18a2	_raw_write_lock_irqsave
+EXPORT_SYMBOL	 vmlinux 0x05d161fb	mmc_get_reserved_index
 EXPORT_SYMBOL	 vmlinux 0x05e13eb9	ZSTD_initDDict
 EXPORT_SYMBOL	 vmlinux 0x05f06696	__mark_inode_dirty
 EXPORT_SYMBOL	 vmlinux 0x05f8406b	scsi_test_unit_ready
@@ -4251,6 +4252,7 @@ EXPORT_SYMBOL	 vmlinux 0x20a789ac	irq_set_chip_data
 EXPORT_SYMBOL	 vmlinux 0x20bc811f	rpmsg_sendto
 EXPORT_SYMBOL	 vmlinux 0x20d65e40	fb_find_nearest_mode
 EXPORT_SYMBOL	 vmlinux 0x20d911eb	rtc_add_groups
+EXPORT_SYMBOL	 vmlinux 0x20e62065	mmc_first_nonreserved_index
 EXPORT_SYMBOL	 vmlinux 0x20f09258	napi_gro_flush
 EXPORT_SYMBOL	 vmlinux 0x21110dbf	mmioset
 EXPORT_SYMBOL	 vmlinux 0x211331fa	__divsi3
@@ -11222,9 +11224,11 @@ EXPORT_SYMBOL_GPL	 drivers/net/can/sja1000/sja1000 0xb25cc0c7	unregister_sja1000
 EXPORT_SYMBOL_GPL	 drivers/net/can/sja1000/sja1000 0xb5eb01b8	register_sja1000dev
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/lan9303-core 0xe44e8f40	lan9303_indirect_phy_ops
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x027d9e37	ksz_get_ethtool_stats
+EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x036e97ef	ksz_update_port_member
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x040e226b	ksz_port_mdb_prepare
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x14de73a5	ksz_port_mdb_del
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x15f21ea3	ksz_enable_port
+EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x19c59f71	ksz_init_mib_timer
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x2e40da15	ksz_port_bridge_join
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x3dfe497c	ksz_sset_count
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x5c7a7406	ksz_phy_read16
@@ -11232,8 +11236,6 @@ EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x656007bb	ksz_port_fdb_
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x6954a3ef	ksz_port_fast_age
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x761b7b89	ksz_port_bridge_leave
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x78399dbb	ksz_phy_write16
-EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x8fd29459	ksz_update_port_member
-EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0x9a89687f	ksz_init_mib_timer
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0xa9dfd8d4	ksz_adjust_link
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0xd1f23846	ksz_disable_port
 EXPORT_SYMBOL_GPL	 drivers/net/dsa/microchip/ksz_common 0xe15bbb2a	ksz_port_mdb_add
@@ -19437,6 +19439,7 @@ EXPORT_SYMBOL_GPL	 vmlinux 0xdcc1d692	device_property_read_u32_array
 EXPORT_SYMBOL_GPL	 vmlinux 0xdcc39585	devm_phy_put
 EXPORT_SYMBOL_GPL	 vmlinux 0xdccf53b7	add_disk_randomness
 EXPORT_SYMBOL_GPL	 vmlinux 0xdccfdecd	phylink_ethtool_ksettings_get
+EXPORT_SYMBOL_GPL	 vmlinux 0xdcd00961	of_alias_max_index
 EXPORT_SYMBOL_GPL	 vmlinux 0xdcde4deb	__tracepoint_block_bio_remap
 EXPORT_SYMBOL_GPL	 vmlinux 0xdce689e9	fb_deferred_io_open
 EXPORT_SYMBOL_GPL	 vmlinux 0xdce98733	clk_hw_register
