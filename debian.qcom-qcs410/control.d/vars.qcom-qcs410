@@ -1,0 +1,6 @@
+arch="arm64"
+supported="QCOM-QCS410"
+target="Geared toward embedded systems."
+desc="=HUMAN= SMP"
+bootloader="flash-kernel [arm64] | grub-efi-arm64 [arm64] |"
+provides="kvm-api-4, redhat-cluster-modules, ivtv-modules"
