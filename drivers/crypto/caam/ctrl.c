@@ -612,6 +612,13 @@ static void caam_dma_dev_unregister(void *data)
 	platform_device_unregister(data);
 }
 
+static bool needs_entropy_delay_adjustment(void)
+{
+	if (of_machine_is_compatible("fsl,imx6sx"))
+		return true;
+	return false;
+}
+
 static int caam_ctrl_rng_init(struct device *dev)
 {
 	struct caam_drv_private *ctrlpriv = dev_get_drvdata(dev);
@@ -666,6 +673,8 @@ static int caam_ctrl_rng_init(struct device *dev)
 			 * Also, if a handle was instantiated, do not change
 			 * the TRNG parameters.
 			 */
+			if (needs_entropy_delay_adjustment())
+				ent_delay = 12000;
 			if (!(ctrlpriv->rng4_sh_init || inst_handles)) {
 				dev_info(dev,
 					 "Entropy delay = %u\n",
@@ -843,13 +852,6 @@ static bool check_version(struct fsl_mc_version *mc_version, u32 major,
 	return false;
 }
 #endif
-
-static bool needs_entropy_delay_adjustment(void)
-{
-	if (of_machine_is_compatible("fsl,imx6sx"))
-		return true;
-	return false;
-}
 
 /* Probe routine for CAAM top (controller) level */
 static int caam_probe(struct platform_device *pdev)
