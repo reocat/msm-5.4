@@ -936,6 +936,9 @@
 			iommus = <&apps_smmu 0x3C0 0x0>;
 
 			snps,tso;
+			//rx-fifo-depth = <16384>;
+			//tx-fifo-depth = <32768>;
+
 			rx-fifo-depth = <4096>;
 			tx-fifo-depth = <4096>;
 
