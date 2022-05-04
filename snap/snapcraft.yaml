@@ -47,8 +47,11 @@ parts:
             - firmware/regulatory.db
             - firmware/regulatory.db.p7s
         kernel-initrd-addons:
+            - etc/fde-helper*
             - usr/bin/fde-reveal-key
+            - usr/bin/fde-helper
             - usr/lib/libteec.so*
+            - usr/lib/systemd/system
         build-environment:
             - PATH: "/usr/lib/ccache:${PATH}"
         override-build: |
@@ -255,6 +258,7 @@ parts:
         plugin: dump
         source: https://git.launchpad.net/~ondrak/+git/optee-uc-fde
         source-type: git
+        source-branch: with-helper
         organize:
             '*': optee-uc-fde/
         prime:
@@ -285,11 +289,26 @@ parts:
             export DESTDIR=${SNAPCRAFT_PART_INSTALL}
             make O=${SNAPCRAFT_PART_BUILD}/out
             make O=${SNAPCRAFT_PART_BUILD}/out install
+            # create service to auto encrypt with configuration
+            mkdir -p \
+               ${SNAPCRAFT_PART_INSTALL}/usr/lib/systemd/system/basic.target.wants \
+               ${SNAPCRAFT_PART_INSTALL}/etc/
+            cp fde-helper@.service ${SNAPCRAFT_PART_INSTALL}/usr/lib/systemd/system/
+            ln -sf \
+               /usr/lib/systemd/system/fde-helper@.service \
+               ${SNAPCRAFT_PART_INSTALL}/usr/lib/systemd/system/basic.target.wants/fde-helper@trenddata.service
+            sed \
+               's/${PART_NAME}/trenddata/g' \
+               "fde-helper@" \
+               > "${SNAPCRAFT_PART_INSTALL}/etc/fde-helper@trenddata"
         organize:
             usr/bin/fde-setup: meta/hooks/fde-setup
         stage:
+            - etc/
             - meta/
             - usr/bin/fde-reveal-key
+            - usr/bin/fde-helper
+            - usr/lib/systemd
         prime:
             - meta/
 
