@@ -40,6 +40,10 @@ parts:
       - initrd.img
       - kernel.img
       - modules
+    override-prime: |
+      snapcraftctl prime
+      # Trim firmware
+      ${SNAPCRAFT_STAGE}/trim-firmware ${SNAPCRAFT_PRIME}
     prime:
       - -dtbs
       - -initrd.img
@@ -81,34 +85,12 @@ parts:
         echo "current_version=${version}"
         curl -O http://obs.linaro.org/linaro-overlay-sid/sid/${version}
       done
+      curl -O \
+        https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22/plain/trim-firmware
+      chmod +x trim-firmware
     override-build: |
       find ${SNAPCRAFT_PART_SRC} -name "*.deb" -exec dpkg -x {} ${SNAPCRAFT_PART_INSTALL} \;
-    stage:
-      - -firmware/amd
-      - -firmware/amdgpu
-      - -firmware/asihpi
-      - -firmware/cavium
-      - -firmware/cxgb3
-      - -firmware/cxgb4
-      - -firmware/dpaa2
-      - -firmware/i915
-      - -firmware/intel
-      - -firmware/iwlwifi-*
-      - -firmware/liquidio
-      - -firmware/matrox
-      - -firmware/mediatek
-      - -firmware/mellanox
-      - -firmware/mrvl
-      - -firmware/moxa
-      - -firmware/netronome
-      - -firmware/nvidia
-      - -firmware/qed
-      - -firmware/radeon
-      - -firmware/rockchip
-      - -firmware/ath3k-1.fw
-      - -firmware/s5p*
-      - -usr
-      - -lib
+      cp trim-firmware ${SNAPCRAFT_PART_INSTALL}
     organize:
       lib/firmware: firmware
     prime:
