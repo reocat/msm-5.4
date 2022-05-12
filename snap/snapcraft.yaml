@@ -316,7 +316,7 @@ build-packages:
     - python3-serial
     - u-boot-tools
     - wget
-    - libjson-c-dev
+    - libjson-c-dev:${SNAPCRAFT_TARGET_ARCH}
     - to armhf:
         - on armhf:
             - binutils
