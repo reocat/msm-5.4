@@ -545,7 +545,8 @@ static void sched_update_group_capacities(int cpu)
 	mutex_lock(&sched_domains_mutex);
 	rcu_read_lock();
 
-	for_each_domain(cpu, sd) {
+	for (sd = rcu_dereference_check_sched_domain(cpu_rq(cpu)->sd);
+			sd; sd = rcu_dereference(sd->parent)) {
 		int balance_cpu = group_balance_cpu(sd->groups);
 
 		init_sched_groups_capacity(cpu, sd);
