@@ -42,4 +42,3 @@ build-packages:
     - bison
     - wget
     - gcc-aarch64-linux-gnu
-    - libjson-c-dev:arm64
