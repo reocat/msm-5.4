@@ -412,7 +412,7 @@ static inline u32 avc_xperms_audit_required(u32 requested,
 	return audited;
 }
 
-static inline int avc_xperms_audit(struct selinux_state *state,
+static inline int avc_xperms_audit(struct selinux_ns *ns,
 				   u32 ssid, u32 tsid, u16 tclass,
 				   u32 requested, struct av_decision *avd,
 				   struct extended_perms_decision *xpd,
@@ -425,7 +425,7 @@ static inline int avc_xperms_audit(struct selinux_state *state,
 			requested, avd, xpd, perm, result, &denied);
 	if (likely(!audited))
 		return 0;
-	return slow_avc_audit(state, ssid, tsid, tclass, requested,
+	return slow_avc_audit(ns, ssid, tsid, tclass, requested,
 			audited, denied, result, ad);
 }
 
@@ -708,7 +708,7 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 	u32 scontext_len;
 	int rc;
 
-	rc = security_sid_to_context(sad->state, sad->ssid, &scontext,
+	rc = security_sid_to_context(sad->ns, sad->ssid, &scontext,
 				     &scontext_len);
 	if (rc)
 		audit_log_format(ab, " ssid=%d", sad->ssid);
@@ -717,7 +717,7 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 		kfree(scontext);
 	}
 
-	rc = security_sid_to_context(sad->state, sad->tsid, &scontext,
+	rc = security_sid_to_context(sad->ns, sad->tsid, &scontext,
 				     &scontext_len);
 	if (rc)
 		audit_log_format(ab, " tsid=%d", sad->tsid);
@@ -732,7 +732,7 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 		audit_log_format(ab, " permissive=%u", sad->result ? 0 : 1);
 
 	/* in case of invalid context report also the actual context string */
-	rc = security_sid_to_context_inval(sad->state, sad->ssid, &scontext,
+	rc = security_sid_to_context_inval(sad->ns, sad->ssid, &scontext,
 					   &scontext_len);
 	if (!rc && scontext) {
 		if (scontext_len && scontext[scontext_len - 1] == '\0')
@@ -742,7 +742,7 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 		kfree(scontext);
 	}
 
-	rc = security_sid_to_context_inval(sad->state, sad->tsid, &scontext,
+	rc = security_sid_to_context_inval(sad->ns, sad->tsid, &scontext,
 					   &scontext_len);
 	if (!rc && scontext) {
 		if (scontext_len && scontext[scontext_len - 1] == '\0')
@@ -754,7 +754,7 @@ static void avc_audit_post_callback(struct audit_buffer *ab, void *a)
 }
 
 /* This is the slow part of avc audit with big stack footprint */
-noinline int slow_avc_audit(struct selinux_state *state,
+noinline int slow_avc_audit(struct selinux_ns *ns,
 			    u32 ssid, u32 tsid, u16 tclass,
 			    u32 requested, u32 audited, u32 denied, int result,
 			    struct common_audit_data *a)
@@ -777,7 +777,7 @@ noinline int slow_avc_audit(struct selinux_state *state,
 	sad.audited = audited;
 	sad.denied = denied;
 	sad.result = result;
-	sad.state = state;
+	sad.ns = ns;
 
 	a->selinux_audit_data = &sad;
 
@@ -994,19 +994,19 @@ int avc_ss_reset(struct selinux_avc *avc, u32 seqno)
  * results in a bigger stack frame.
  */
 static noinline
-struct avc_node *avc_compute_av(struct selinux_state *state,
+struct avc_node *avc_compute_av(struct selinux_ns *ns,
 				u32 ssid, u32 tsid,
 				u16 tclass, struct av_decision *avd,
 				struct avc_xperms_node *xp_node)
 {
 	rcu_read_unlock();
 	INIT_LIST_HEAD(&xp_node->xpd_head);
-	security_compute_av(state, ssid, tsid, tclass, avd, &xp_node->xp);
+	security_compute_av(ns, ssid, tsid, tclass, avd, &xp_node->xp);
 	rcu_read_lock();
-	return avc_insert(state->avc, ssid, tsid, tclass, avd, xp_node);
+	return avc_insert(ns->avc, ssid, tsid, tclass, avd, xp_node);
 }
 
-static noinline int avc_denied(struct selinux_state *state,
+static noinline int avc_denied(struct selinux_ns *ns,
 			       u32 ssid, u32 tsid,
 			       u16 tclass, u32 requested,
 			       u8 driver, u8 xperm, unsigned int flags,
@@ -1015,11 +1015,11 @@ static noinline int avc_denied(struct selinux_state *state,
 	if (flags & AVC_STRICT)
 		return -EACCES;
 
-	if (enforcing_enabled(state) &&
+	if (enforcing_enabled(ns) &&
 	    !(avd->flags & AVD_FLAGS_PERMISSIVE))
 		return -EACCES;
 
-	avc_update_node(state->avc, AVC_CALLBACK_GRANT, requested, driver,
+	avc_update_node(ns->avc, AVC_CALLBACK_GRANT, requested, driver,
 			xperm, ssid, tsid, tclass, avd->seqno, NULL, flags);
 	return 0;
 }
@@ -1031,7 +1031,7 @@ static noinline int avc_denied(struct selinux_state *state,
  * as-is the case with ioctls, then multiple may be chained together and the
  * driver field is used to specify which set contains the permission.
  */
-int avc_has_extended_perms(struct selinux_state *state,
+int avc_has_extended_perms(struct selinux_ns *ns,
 			   u32 ssid, u32 tsid, u16 tclass, u32 requested,
 			   u8 driver, u8 xperm, struct common_audit_data *ad)
 {
@@ -1053,9 +1053,9 @@ int avc_has_extended_perms(struct selinux_state *state,
 
 	rcu_read_lock();
 
-	node = avc_lookup(state->avc, ssid, tsid, tclass);
+	node = avc_lookup(ns->avc, ssid, tsid, tclass);
 	if (unlikely(!node)) {
-		node = avc_compute_av(state, ssid, tsid, tclass, &avd, xp_node);
+		node = avc_compute_av(ns, ssid, tsid, tclass, &avd, xp_node);
 	} else {
 		memcpy(&avd, &node->ae.avd, sizeof(avd));
 		xp_node = node->ae.xp_node;
@@ -1079,10 +1079,10 @@ int avc_has_extended_perms(struct selinux_state *state,
 			goto decision;
 		}
 		rcu_read_unlock();
-		security_compute_xperms_decision(state, ssid, tsid, tclass,
+		security_compute_xperms_decision(ns, ssid, tsid, tclass,
 						 driver, &local_xpd);
 		rcu_read_lock();
-		avc_update_node(state->avc, AVC_CALLBACK_ADD_XPERMS, requested,
+		avc_update_node(ns->avc, AVC_CALLBACK_ADD_XPERMS, requested,
 				driver, xperm, ssid, tsid, tclass, avd.seqno,
 				&local_xpd, 0);
 	} else {
@@ -1096,12 +1096,12 @@ int avc_has_extended_perms(struct selinux_state *state,
 decision:
 	denied = requested & ~(avd.allowed);
 	if (unlikely(denied))
-		rc = avc_denied(state, ssid, tsid, tclass, requested,
+		rc = avc_denied(ns, ssid, tsid, tclass, requested,
 				driver, xperm, AVC_EXTENDED_PERMS, &avd);
 
 	rcu_read_unlock();
 
-	rc2 = avc_xperms_audit(state, ssid, tsid, tclass, requested,
+	rc2 = avc_xperms_audit(ns, ssid, tsid, tclass, requested,
 			&avd, xpd, xperm, rc, ad);
 	if (rc2)
 		return rc2;
@@ -1128,7 +1128,7 @@ decision:
  * auditing, e.g. in cases where a lock must be held for the check but
  * should be released for the auditing.
  */
-inline int avc_has_perm_noaudit(struct selinux_state *state,
+inline int avc_has_perm_noaudit(struct selinux_ns *ns,
 				u32 ssid, u32 tsid,
 				u16 tclass, u32 requested,
 				unsigned int flags,
@@ -1144,15 +1144,15 @@ inline int avc_has_perm_noaudit(struct selinux_state *state,
 
 	rcu_read_lock();
 
-	node = avc_lookup(state->avc, ssid, tsid, tclass);
+	node = avc_lookup(ns->avc, ssid, tsid, tclass);
 	if (unlikely(!node))
-		node = avc_compute_av(state, ssid, tsid, tclass, avd, &xp_node);
+		node = avc_compute_av(ns, ssid, tsid, tclass, avd, &xp_node);
 	else
 		memcpy(avd, &node->ae.avd, sizeof(*avd));
 
 	denied = requested & ~(avd->allowed);
 	if (unlikely(denied))
-		rc = avc_denied(state, ssid, tsid, tclass, requested, 0, 0,
+		rc = avc_denied(ns, ssid, tsid, tclass, requested, 0, 0,
 				flags, avd);
 
 	rcu_read_unlock();
@@ -1175,23 +1175,23 @@ inline int avc_has_perm_noaudit(struct selinux_state *state,
  * permissions are granted, -%EACCES if any permissions are denied, or
  * another -errno upon other errors.
  */
-int avc_has_perm(struct selinux_state *state, u32 ssid, u32 tsid, u16 tclass,
+int avc_has_perm(struct selinux_ns *ns, u32 ssid, u32 tsid, u16 tclass,
 		 u32 requested, struct common_audit_data *auditdata)
 {
 	struct av_decision avd;
 	int rc, rc2;
 
-	rc = avc_has_perm_noaudit(state, ssid, tsid, tclass, requested, 0,
+	rc = avc_has_perm_noaudit(ns, ssid, tsid, tclass, requested, 0,
 				  &avd);
 
-	rc2 = avc_audit(state, ssid, tsid, tclass, requested, &avd, rc,
+	rc2 = avc_audit(ns, ssid, tsid, tclass, requested, &avd, rc,
 			auditdata, 0);
 	if (rc2)
 		return rc2;
 	return rc;
 }
 
-int avc_has_perm_flags(struct selinux_state *state,
+int avc_has_perm_flags(struct selinux_ns *ns,
 		       u32 ssid, u32 tsid, u16 tclass, u32 requested,
 		       struct common_audit_data *auditdata,
 		       int flags)
@@ -1199,20 +1199,20 @@ int avc_has_perm_flags(struct selinux_state *state,
 	struct av_decision avd;
 	int rc, rc2;
 
-	rc = avc_has_perm_noaudit(state, ssid, tsid, tclass, requested,
+	rc = avc_has_perm_noaudit(ns, ssid, tsid, tclass, requested,
 				  (flags & MAY_NOT_BLOCK) ? AVC_NONBLOCKING : 0,
 				  &avd);
 
-	rc2 = avc_audit(state, ssid, tsid, tclass, requested, &avd, rc,
+	rc2 = avc_audit(ns, ssid, tsid, tclass, requested, &avd, rc,
 			auditdata, flags);
 	if (rc2)
 		return rc2;
 	return rc;
 }
 
-u32 avc_policy_seqno(struct selinux_state *state)
+u32 avc_policy_seqno(struct selinux_ns *ns)
 {
-	return state->avc->avc_cache.latest_notif;
+	return ns->avc->avc_cache.latest_notif;
 }
 
 void avc_disable(void)
@@ -1229,7 +1229,7 @@ void avc_disable(void)
 	 * the cache and get that memory back.
 	 */
 	if (avc_node_cachep) {
-		avc_flush(selinux_state.avc);
+		avc_flush(current_selinux_ns->avc);
 		/* kmem_cache_destroy(avc_node_cachep); */
 	}
 }
