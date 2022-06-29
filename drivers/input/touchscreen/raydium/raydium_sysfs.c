@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,8 +17,35 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #include <linux/unistd.h>
 #include <linux/uaccess.h>
 #include <linux/fs.h>
@@ -147,7 +177,7 @@ static ssize_t raydium_check_i2c_show(struct device *dev,
 				      struct device_attribute *attr,
 				      char *p_i8_buf)
 {
-	unsigned char u8_rbuffer[4];
+	unsigned char u8_rbuffer[4] = {0};
 	unsigned short u16_len = 0;
 	int i32_ret = -1;
 
@@ -312,7 +342,7 @@ static ssize_t raydium_check_fw_version_show(struct device *dev,
 		struct device_attribute *attr,
 		char *p_i8_buf)
 {
-	unsigned char u8_rbuffer[4];
+	unsigned char u8_rbuffer[4] = {0};
 	unsigned short u16_len = 0;
 	int i32_ret = -1;
 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
@@ -372,7 +402,7 @@ static ssize_t raydium_check_panel_version_show(struct device *dev,
 		struct device_attribute *attr,
 		char *p_i8_buf)
 {
-	unsigned char u8_rbuffer[8];
+	unsigned char u8_rbuffer[8] = {0};
 	unsigned short u16_len = 0;
 	int i32_ret = -1;
 	struct i2c_client *client = container_of(dev, struct i2c_client, dev);
@@ -532,7 +562,7 @@ exit_error:
 	kfree(free_temp_buf);
 	return count;
 }
-
+#if !ENABLE_FW_LOADER
 static ssize_t raydium_mem_store(struct device *dev,
 				 struct device_attribute *attr,
 				 const char *p_i8_buf, size_t count)
@@ -587,7 +617,7 @@ static ssize_t raydium_mem_store(struct device *dev,
 
 	return count;
 }
-
+#endif
 static ssize_t raydium_i2c_raw_data_store(struct device *dev,
 		struct device_attribute *attr,
 		const char *p_i8_buf, size_t count)
@@ -1374,11 +1404,11 @@ static DEVICE_ATTR(raydium_palm_status, 0644,
 static DEVICE_ATTR(raydium_receive_fw_control, 0644,
 		   NULL,
 		   raydium_receive_fw_store);
-
+#if !ENABLE_FW_LOADER
 static DEVICE_ATTR(raydium_mem_setting, 0644,
 		   NULL,
 		   raydium_mem_store);
-
+#endif
 #ifdef RAD_SELFTEST
 
 /* Read interrupt flag cmd (R)
@@ -1417,7 +1447,9 @@ struct attribute *raydium_attributes[] = {
 	&dev_attr_raydium_palm_status.attr,
 	&dev_attr_raydium_check_driver_version.attr,
 	&dev_attr_raydium_receive_fw_control.attr,
+#if !ENABLE_FW_LOADER
 	&dev_attr_raydium_mem_setting.attr,
+#endif
 	&dev_attr_raydium_log_level.attr,
 #ifdef RAD_SELFTEST
 	&dev_attr_raydium_irq_state.attr,

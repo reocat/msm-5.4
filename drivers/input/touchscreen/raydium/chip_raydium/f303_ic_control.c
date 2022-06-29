@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,6 +17,33 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifdef __KERNEL__
@@ -39,7 +69,7 @@
 
 unsigned char check_dev_id_3x(unsigned short u16_dev_id)
 {
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 
 	if (handle_ic_read(REG_FLASHCTL_DEVID_ADDR, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 		return ERROR;
@@ -55,7 +85,7 @@ unsigned char check_dev_id_3x(unsigned short u16_dev_id)
 
 unsigned char check_dev_sub_version_3x(unsigned char u8_version)
 {
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 
 	if (handle_ic_read(REG_FLASHCTL_DEVID_ADDR, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 		return ERROR;
@@ -69,9 +99,9 @@ unsigned char check_dev_sub_version_3x(unsigned char u8_version)
 	return ERROR;
 }
 
-unsigned char enable_ic_block_3x()
+unsigned char enable_ic_block_3x(void)
 {
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 
 	if (handle_ic_read(REG_SYSCON_BLKEN_ADDR, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 		return ERROR;
@@ -95,7 +125,7 @@ unsigned char enable_ic_block_3x()
 	return SUCCESS;
 }
 
-unsigned char disable_i2c_deglitch_3x()
+unsigned char disable_i2c_deglitch_3x(void)
 {
 	unsigned int u32_buf = 0;
 	unsigned char u8_retry = 3, u8_comfirm_time = 3;
@@ -181,7 +211,7 @@ unsigned char disable_i2c_deglitch_3x()
 unsigned char stop_mcu_3x(unsigned char u8_is_tp_reset)
 {
 	unsigned short u16_time_out = 100;
-	unsigned int u32_read_data;
+	unsigned int u32_read_data = 0;
 	unsigned int u32_write = 0;
 
 	g_u8_mute_i2c_err_log = TRUE;
@@ -250,6 +280,7 @@ EXIT_ERROR:
 unsigned char hardware_reset_3x(unsigned char u8_enable_ic_block)
 {
 	unsigned char u8_time_out = 200;
+
 	DEBUGOUT("HW Reseting...\r\n");
 
 	gpio_touch_hw_reset();
@@ -284,7 +315,7 @@ unsigned char hardware_reset_3x(unsigned char u8_enable_ic_block)
 
 unsigned char set_fw_system_cmd_3x(unsigned int u32_sysm_cmd)
 {
-	unsigned char u8_time_out = 100, u8_value;
+	unsigned char u8_time_out = 100, u8_value = 0;
 
 	if (handle_ic_write(FW_SYS_CMD_ADDR, 4, (unsigned char *)&u32_sysm_cmd, g_u8_drv_interface, I2C_WORD_MODE) == ERROR)
 		return ERROR;
@@ -308,6 +339,7 @@ unsigned char set_fw_system_cmd_3x(unsigned int u32_sysm_cmd)
 unsigned char wait_fw_state_3x(unsigned int u32_addr, unsigned int u32_state, unsigned short u16_delay, unsigned short u16_retry)
 {
 	unsigned int u32_read_data = 0;
+
 	do {
 		if (handle_ic_read(u32_addr, 4, (unsigned char *)(&u32_read_data), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 			return ERROR;
@@ -331,6 +363,7 @@ unsigned char wait_fw_state_3x(unsigned int u32_addr, unsigned int u32_state, un
 unsigned char wait_T2D_done_state_3x(unsigned int u32_addr, unsigned short u16_delay, unsigned short u16_retry)
 {
 	unsigned int u32_read_data = 0;
+
 	do {
 		if (handle_ic_read(u32_addr, 4, (unsigned char *)(&u32_read_data), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 			return ERROR;
@@ -418,6 +451,7 @@ unsigned char WriteToDriver_3x(unsigned char *p_u8_data, unsigned char u8_data_l
 unsigned char ReadFromDriver_3x(unsigned char *p_u8_addr, unsigned char u8_read_len, unsigned char *p_u8_output_buf)
 {
 	unsigned int u32_write = 0;
+
 	if ((p_u8_addr[0] == 0xFE) || (p_u8_addr[0] == 0xFF) || (u8_read_len > 1)) {
 		DEBUGOUT("[ReadFromDriver_3x] no use\r\n");
 		return FALSE;
@@ -441,9 +475,9 @@ unsigned char WriteDriverByTouchMode(const unsigned char *p_u8_data, uint16_t u1
 	unsigned short u16_i = 0/*, u8_j = 0*/;
 	unsigned char  u8_CurCmdLen = 0;
 	unsigned int u32_write = 0;
-/*	unsigned char u8_read_buf[4];
-	signed char i8_retry_cnt = 3;
-	unsigned char u8_error_flag = 0;*/
+	/*	unsigned char u8_read_buf[4];
+		signed char i8_retry_cnt = 3;
+		unsigned char u8_error_flag = 0;*/
 	for (u16_i = 0; u16_i < (u16DataLength - 7) && u16_i < sizeof(g_u8_data_buf); u16_i++) {
 		g_u8_data_buf[u16_i] = p_u8_data[u16_i + 7];
 	}

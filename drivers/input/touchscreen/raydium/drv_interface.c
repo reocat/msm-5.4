@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,6 +17,33 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <linux/timer.h>
@@ -60,6 +90,7 @@ STATUS burn_fw_3x(void)
 unsigned char fw_upgrade(unsigned char type)
 {
 	int i32_ret = ERROR;
+	
 	i32_ret = raydium_burn_fw(g_raydium_ts->client);
 	if (i32_ret < 0)
 		pr_err("[touch]FW update fail:%d\n", i32_ret);
@@ -125,6 +156,7 @@ unsigned char read_flash_data(unsigned int u32_addr, unsigned short u16_lenth)
 unsigned int get_system_time(void)
 {
 	unsigned int u32_timer;
+
 	do_gettimeofday(&timer);
 	u32_timer = (timer.tv_sec % 1000) * 1000 + (timer.tv_usec / 1000);
 	return u32_timer;
@@ -148,54 +180,17 @@ unsigned char gpio_touch_int_access(unsigned char u8_is_clear_flag)
 unsigned char sysfs_burn_cc_bl(void)
 {
 	unsigned char ret = ERROR;
+
 	DEBUGOUT("start sysfs_burn_cc_bl\r\n");
 	ret = raydium_burn_comp(ts->client);
 	return ret;
-}
-
-unsigned char raydium_upgrade_test_fw_2x(unsigned long ul_fw_addr)
-{
-	int ret = ERROR;
-	unsigned char u8_retry = 2;
-	unsigned int u32_read;
-	unsigned int u32_write;
-
-RETRY:
-	gpio_touch_reset_pin_control(0);
-	delay_ms(10);
-	gpio_touch_reset_pin_control(1);
-	delay_ms(2);
-	u32_write = 0x00000030;
-	handle_ic_write(0x50000918, 4, (unsigned char *)&u32_write, g_u8_drv_interface, I2C_WORD_MODE);
-
-	if (raydium_load_test_fw(ts->client) == SUCCESS) {
-		ret = SUCCESS;
-		DEBUGOUT("### Raydium Load test FW SUCCESS ###\n");
-	}
-
-	handle_ic_read(0x6A04, 4, (unsigned char *)&u32_read, g_u8_drv_interface, I2C_WORD_MODE);
-
-	if (u32_read != g_st_test_para_resv.u32_test_fw_version) {
-		DEBUGOUT("Read FW version NG=0x%x:0x%x!!\r\n", u32_read, g_st_test_para_resv.u32_test_fw_version);
-		goto ERROR_EXIT;
-	}
-
-	return ret;
-
-ERROR_EXIT:
-	if (u8_retry) {
-		u8_retry--;
-		goto RETRY;
-	}
-
-	return ERROR;
 }
 
 unsigned char raydium_upgrade_test_fw_3x(unsigned long ul_fw_addr)
 {
 	int ret = ERROR;
 	unsigned char u8_retry = 2;
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 
 RETRY:
 
@@ -252,20 +247,20 @@ void set_raydium_ts_data(struct raydium_ts_data *ts_old)
 ** Descriptions:		handle read data from ic
 **
 ** parameters:			u32_addr,  			Address
-						u8_read_len, 		Read data length
-						p_u8_output_buf,	Data buffer
-						u8_interface,		SPI or I2C
-						u8_trans_mode		PDA2_MODE, PDA_WORD_MODE, PDA_BYTE_MODE, MCU_MODE
+				u8_read_len,		Read data length
+				p_u8_output_buf,	Data buffer
+				u8_interface,		SPI or I2C
+				u8_trans_mode		PDA2_MODE, PDA_WORD_MODE, PDA_BYTE_MODE, MCU_MODE
 
 ** Returned value:		ERROR, SUCCESS
 **
 ******************************************************************************/
 unsigned char handle_ic_read(
-	unsigned int 	u32_addr,
-	unsigned short 	u8_read_len,
-	unsigned char 	*p_u8_output_buf,
+	unsigned int	u32_addr,
+	unsigned short	u8_read_len,
+	unsigned char	*p_u8_output_buf,
 	unsigned char	u8_interface,
-	unsigned char 	u8_trans_mode)
+	unsigned char	u8_trans_mode)
 {
 	if (u8_trans_mode == I2C_PDA2_MODE) {
 		/*PDA2 MODE
@@ -317,21 +312,21 @@ unsigned char handle_ic_read(
 **
 ** Descriptions:		handle write data to ic
 **
-** parameters:			u32_addr,  			Address
-						u8_write_len, 		data length
-						bValue,				Data
-						u8_interface,		SPI or I2C
-						u8_trans_mode		PDA2_MODE, PDA_WORD_MODE, PDA_BYTE_MODE, MCU_MODE
+** parameters:			u32_addr,		Address
+				u8_write_len,		data length
+				bValue,			Data
+				u8_interface,		SPI or I2C
+				u8_trans_mode		PDA2_MODE, PDA_WORD_MODE, PDA_BYTE_MODE, MCU_MODE
 
 ** Returned value:		ERROR, SUCCESS
 **
 ******************************************************************************/
 unsigned char handle_ic_write(
-	unsigned int 	u32_addr,
-	unsigned char 	u8_write_len,
-	unsigned char 	*bValue,
+	unsigned int	u32_addr,
+	unsigned char	u8_write_len,
+	unsigned char	*bValue,
 	unsigned char	u8_interface,
-	unsigned char 	u8_trans_mode)
+	unsigned char	u8_trans_mode)
 {
 	if (u8_trans_mode == I2C_PDA2_MODE) {
 		/*PDA2 MODE
@@ -404,8 +399,8 @@ unsigned char handle_ic_write(
 **
 ** Descriptions:		handle write data to display
 **
-** parameters:			p_u8_data,  			Data
-						u16DataLength, 		data length
+** parameters:			p_u8_data,		Data
+				u16DataLength,		data length
 
 
 ** Returned value:		ERROR, SUCCESS

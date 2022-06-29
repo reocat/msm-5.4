@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,6 +17,33 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <linux/delay.h>
@@ -40,10 +70,10 @@
 #define RM_SELF_TEST_MAIN_VERSION		1
 #define RM_SELF_TEST_SUB_VERSION		0
 
-#define RESULT_SUCCESS 					0
-#define RESULT_NG 					1
+#define RESULT_SUCCESS				0
+#define RESULT_NG				1
 
-#define RELATIVE_PATH	 				0
+#define RELATIVE_PATH				0
 
 unsigned char g_u8_normal_fw_version_buf[4];
 char str_ini_path[100];
@@ -66,6 +96,7 @@ int self_test_save_to_file(char *file_name, char *p_string, short len)
 {
 	struct file *filp = NULL;
 	mm_segment_t old_fs;
+
 	filp = filp_open(file_name, O_RDWR | O_CREAT | O_APPEND, 0666);
 	if (IS_ERR(filp)) {
 		DEBUGOUT("can't open file:%s\n", RM_SELF_TEST_LOGFILE);
@@ -80,11 +111,11 @@ int self_test_save_to_file(char *file_name, char *p_string, short len)
 	return 1;
 }
 
-#if 1
 static int raydium_check_ini_version(void)
 {
 	int ret = 0;
 	unsigned int u32_test_version;
+
 	memcpy(&u32_test_version, &g_rad_testpara_image[4], 4);
 
 	if (u32_test_version != g_st_test_para_resv.u32_test_fw_version) {
@@ -101,54 +132,14 @@ static int raydium_check_ini_version(void)
 		g_u32_ini_uc_cc_addr = F303_INI_UC_CC_ADDR;
 		g_u32_initial_code_start_addr = F303_INITIAL_CODE_START_ADDR;
 		DEBUGOUT("[out_set_ic_version] F303 Set INI ADDR!\r\n");
-	} else if (g_u16_dev_id == DEVICE_ID_2X) {
-		g_u32_dongle_flash_ini_addr = F302_DONGLE_FLASH_INI_ADDR;
-		g_u32_ini_threshold_addr = F302_INI_THRESHOLD_ADDR;
-		g_u32_ini_para_addr = F302_INI_PARA_ADDR;
-		g_u32_ini_raw_data_3_cc_addr = F302_INI_RAW_DATA_3_CC_ADDR;
-		g_u32_ini_uc_cc_addr = F302_INI_UC_CC_ADDR;
-		g_u32_initial_code_start_addr = F302_INITIAL_CODE_START_ADDR;
-		DEBUGOUT("[out_set_ic_version] F302 Set INI ADDR!\r\n");
 	}
 	return ret;
 }
-#else
-static int raydium_check_ini_version(void)
-{
-	int ret = 0;
-	unsigned int u32_test_version, u32_version_20, u32_version_21;
-	memcpy(&u32_test_version, &g_st_test_para_resv.u32_test_fw_version, 4);
 
-	if (g_u16_dev_id == DEVICE_ID_2X) {
-		switch (g_raydium_ts->id) {
-		case RAD_SELFTEST_20:
-			memcpy(&u32_version_20, &u8_rad_testpara_20[4], 4);
-			DEBUGOUT("ini version 0x%X, 20 version 0x%X\n"
-				 , u32_test_version, u32_version_20);
-
-			if (u32_test_version == u32_version_20) {
-				DEBUGOUT("map version= 0x%X\r\n", u32_version_20);
-			}  else
-				ret = WEARABLE_FT_TEST_RESULT_TEST_FW_VER_NG;
-		case RAD_SELFTEST_21:
-			memcpy(&u32_version_21, &u8_rad_testpara_21[4], 4);
-			DEBUGOUT("ini version 0x%X, 21 version 0x%X\n"
-				 , u32_test_version, u32_version_21);
-
-			if (u32_test_version == u32_version_21) {
-				DEBUGOUT("map version= 0x%X\r\n", u32_version_21);
-			}  else
-				ret = WEARABLE_FT_TEST_RESULT_TEST_FW_VER_NG;
-		}
-	}
-
-	return ret;
-}
-#endif
 static int self_test_init(void)
 {
 	int ret = 0;
-	unsigned int u32_dev_id;
+	unsigned int u32_dev_id = 0;
 
 	g_u8_drv_interface = I2C_INTERFACE;
 	g_u16_dev_id = DEVICE_ID_3X;
@@ -159,11 +150,7 @@ static int self_test_init(void)
 	}
 	g_u16_dev_id = ((u32_dev_id & 0xFFFF0000) >> 16);
 
-	if (g_u16_dev_id == DEVICE_ID_2X) {
-		handle_ic_read(0x00006a04, 4, g_u8_normal_fw_version_buf, g_u8_drv_interface, I2C_WORD_MODE);
-		DEBUGOUT("FW Version=0x%.2X%.2X%.2X%.2X\n", g_u8_normal_fw_version_buf[0], g_u8_normal_fw_version_buf[1],
-			 g_u8_normal_fw_version_buf[3], g_u8_normal_fw_version_buf[2]);
-	} else if (g_u16_dev_id == DEVICE_ID_3X) {
+	if (g_u16_dev_id == DEVICE_ID_3X) {
 		handle_ic_read(0x00007b04, 4, g_u8_normal_fw_version_buf, g_u8_drv_interface, I2C_WORD_MODE);
 		DEBUGOUT("FW Version=0x%.2X%.2X%.2X%.2X\n", g_u8_normal_fw_version_buf[0], g_u8_normal_fw_version_buf[1],
 			 g_u8_normal_fw_version_buf[3], g_u8_normal_fw_version_buf[2]);
@@ -184,17 +171,9 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 {
 	/*struct tm *time_infor;*/
 	/*time_t raw_time;*/
-	char write_string[1000];
-	unsigned char u8_i, u8_j;
+	char write_string[1000] = {0};
+	unsigned char u8_i = 0, u8_j = 0;
 	short *p_i16_buf = (short *)g_u16_raw_data_tmp;
-#if 0
-	/*Date*/
-	time(&raw_time);
-	time_infor = localtime(&raw_time);
-	memset(write_string, 0, strlen(write_string));
-	sprintf(write_string, "Date=%s\n", asctime(time_infor));
-	self_test_save_to_file(RM_SELF_TEST_LOGFILE, write_string, strlen(write_string));
-#endif
 	/*FW Version*/
 	memset(write_string, 0, strlen(write_string));
 	if (g_u16_dev_id != 0) {
@@ -352,7 +331,7 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 			self_test_save_to_file(RM_SELF_TEST_LOGFILE, write_string, strlen(write_string));
 			/*Raw data1*/
 			memset(p_i16_buf, 0, MAX_IMAGE_BUFFER_SIZE * 2);
-			for (u8_i = 0; u8_i < MAX_IMAGE_BUFFER_SIZE; u8_i++)
+			for (u8_i = 0; u8_i < MAX_SENSING_PIN_NUM; u8_i++)
 				if (g_u8_wearable_pin_map[u8_i] != F303_NA_P)
 					p_i16_buf[g_u8_wearable_pin_map[u8_i]] = g_i16_raw_data_1_short_buf[u8_i];
 
@@ -380,7 +359,7 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 			self_test_save_to_file(RM_SELF_TEST_LOGFILE, write_string, strlen(write_string));
 			/*Raw data2*/
 			memset(p_i16_buf, 0, MAX_IMAGE_BUFFER_SIZE * 2);
-			for (u8_i = 0; u8_i < MAX_IMAGE_BUFFER_SIZE; u8_i++)
+			for (u8_i = 0; u8_i < MAX_SENSING_PIN_NUM; u8_i++)
 				if (g_u8_wearable_pin_map[u8_i] != F303_NA_P)
 					p_i16_buf[g_u8_wearable_pin_map[u8_i]] = g_i16_raw_data_2_open_buf[u8_i];
 
@@ -408,7 +387,7 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 			self_test_save_to_file(RM_SELF_TEST_LOGFILE, write_string, strlen(write_string));
 			/*Raw data3*/
 			memset(p_i16_buf, 0, MAX_IMAGE_BUFFER_SIZE * 2);
-			for (u8_i = 0; u8_i < MAX_IMAGE_BUFFER_SIZE; u8_i++)
+			for (u8_i = 0; u8_i < MAX_SENSING_PIN_NUM; u8_i++)
 				if (g_u8_wearable_pin_map[u8_i] != F303_NA_P)
 					p_i16_buf[g_u8_wearable_pin_map[u8_i]] = g_u16_raw_data3_cc_buf[u8_i];
 
@@ -436,7 +415,7 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 			self_test_save_to_file(RM_SELF_TEST_LOGFILE, write_string, strlen(write_string));
 			/*Raw data uc*/
 			memset(p_i16_buf, 0, MAX_IMAGE_BUFFER_SIZE * 2);
-			for (u8_i = 0; u8_i < MAX_IMAGE_BUFFER_SIZE; u8_i++)
+			for (u8_i = 0; u8_i < MAX_SENSING_PIN_NUM; u8_i++)
 				if (g_u8_wearable_pin_map[u8_i] != F303_NA_P)
 					p_i16_buf[g_u8_wearable_pin_map[u8_i]] = g_u16_uc_buf[u8_i];
 
@@ -467,6 +446,7 @@ int self_test_save_test_raw_data_to_file(int i32_ng_type)
 int self_test_read_setting_from_file(void)
 {
 	unsigned short u16_offset = 0;
+
 	DEBUGOUT("[touch]g_raydium_ts->id = 0x%x\r\n", g_raydium_ts->id);
 	switch (g_raydium_ts->id) {
 	case RAD_SELFTEST_30:
@@ -514,6 +494,7 @@ int raydium_do_selftest(struct raydium_ts_data *ts)
 {
 	int ret = RESULT_SUCCESS;
 	unsigned int time_start, time_end, time_start2, time_end2;
+
 	time_start = get_system_time();
 
 	pr_info("Selftest Version=%x.%x.%x.%x.%x\n", RM_SELF_TEST_CUSTOMER_VERSION, RM_SELF_TEST_PLATFORM_VERSION,
@@ -525,12 +506,12 @@ int raydium_do_selftest(struct raydium_ts_data *ts)
 
 	ret = self_test_init();
 	if (ret != 0) {
-		DEBUGOUT("mapping ic fw fail \n");
+		DEBUGOUT("mapping ic fw fail\n");
 	} else {
 		DEBUGOUT("Test all\n");
 		ret |= self_test_all();
 	}
-#if 1
+
 	if (ret != WEARABLE_FT_TEST_RESULT_SYSFS_NG) {
 		gpio_touch_hw_reset();
 		g_u8_raydium_flag &= ~ENG_MODE;
@@ -558,6 +539,5 @@ int raydium_do_selftest(struct raydium_ts_data *ts)
 	time_end = get_system_time();
 	DEBUGOUT("All Test Finish(%ums)\n", time_end - time_start);
 
-#endif
 	return ret;
 }

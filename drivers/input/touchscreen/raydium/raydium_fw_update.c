@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,6 +17,33 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <linux/i2c.h>
@@ -31,7 +61,9 @@
 #include <asm/traps.h>
 #include <linux/firmware.h>
 #include "raydium_driver.h"
+#if !ENABLE_FW_LOADER
 #include "rad_fw_image_30.h"
+#endif
 #if defined(FW_MAPPING_EN)
 #include "rad_fw_image_31.h"
 #endif
@@ -49,7 +81,76 @@ void raydium_mem_table_init(unsigned short u16_id)
 				       GFP_KERNEL);
 	g_u8_table_init = SUCCESS;
 }
+#if ENABLE_FW_LOADER
+static void raydium_cb(const struct firmware *fw, void *ctx)
+{
+	unsigned int u32_offset = 0;
+	unsigned int u32_image_version;
+#ifdef FW_UPDATE_EN
+	int i32_ret = ERROR;
+#endif
+	if (fw && (fw->size == RAD_ALLFW_3X_SIZE)) {
+		LOGD(LOG_INFO, "[touch]get firmware success size:%x\n", fw->size);
 
+		memcpy(g_rad_boot_image, fw->data, RAD_BOOT_3X_SIZE);
+		u32_offset += RAD_BOOT_3X_SIZE;
+		memcpy(g_rad_init_image, fw->data + u32_offset, RAD_INIT_3X_SIZE);
+		u32_offset += RAD_INIT_3X_SIZE;
+		memcpy(g_rad_fw_image, fw->data + u32_offset, RAD_FW_3X_SIZE);
+		u32_offset += RAD_FW_3X_SIZE;
+		memcpy(g_rad_para_image, fw->data + u32_offset, RAD_PARA_3X_SIZE + 4);
+		u32_offset += RAD_PARA_3X_SIZE + 4;
+		memcpy(g_rad_testfw_image, fw->data + u32_offset, RAD_FW_3X_SIZE);
+		u32_offset += RAD_FW_3X_SIZE;
+		memcpy(g_rad_testpara_image, fw->data + u32_offset, RAD_PARA_3X_SIZE + 4);
+
+		memcpy(g_rad_testfw_image + RAD_FW_3X_SIZE, g_rad_testpara_image
+		       , RAD_PARA_3X_SIZE + 4);
+		u32_image_version = (g_rad_para_image[PARA_FW_VERSION_OFFSET] << 24) |
+				    (g_rad_para_image[PARA_FW_VERSION_OFFSET + 1] << 16) |
+				    (g_rad_para_image[PARA_FW_VERSION_OFFSET + 2] << 8) |
+				    g_rad_para_image[PARA_FW_VERSION_OFFSET + 3];
+
+		LOGD(LOG_INFO, "[touch]RAD Image FW ver : 0x%x\n", u32_image_version);
+#ifdef FW_UPDATE_EN
+		i32_ret = raydium_fw_update_check(u32_image_version);
+		if (i32_ret < 0)
+			LOGD(LOG_ERR, "[touch]fw update fail!\n");
+#endif
+	}
+
+	return;
+}
+int raydium_load_image(unsigned char *u8_buf, char *name)
+{
+	int i32_ret = SUCCESS;
+	struct i2c_client *client = g_raydium_ts->client;
+
+	i32_ret = request_firmware_nowait(THIS_MODULE, true, FW_NAME, &client->dev,
+					  GFP_KERNEL, g_raydium_ts, raydium_cb);
+	if (i32_ret) {
+		LOGD(LOG_ERR, "[touch]failed to get firmware %s %d\n",
+		     name, i32_ret);
+		return i32_ret;
+	}
+
+	return i32_ret;
+}
+int raydium_mem_table_setting(void)
+{
+	int i32_ret = SUCCESS;
+	char name[RAYDIUM_FW_BIN_PATH_LENGTH];
+
+	snprintf((char *)name, RAYDIUM_FW_BIN_PATH_LENGTH, "%s", FW_NAME);
+	LOGD(LOG_ERR, "[touch]firmware path %s\n", name);
+	i32_ret = raydium_load_image(g_rad_fw_image, name);
+	if (i32_ret < 0)
+		return ERROR;
+
+	return i32_ret;
+}
+
+#else
 int raydium_mem_table_setting(void)
 {
 	int i32_ret = SUCCESS;
@@ -99,7 +200,9 @@ int raydium_mem_table_setting(void)
 	g_u8_table_setting = 0;
 	return i32_ret;
 }
+#endif
 
+#if !ENABLE_FW_LOADER
 int raydium_id_init(unsigned char u8_type)
 {
 	int i32_ret = ERROR;
@@ -119,7 +222,7 @@ int raydium_id_init(unsigned char u8_type)
 	}
 	return i32_ret;
 }
-
+#endif
 unsigned int bits_reverse(unsigned int u32_num, unsigned int bit_num)
 {
 	unsigned int reverse = 0, u32_i;
@@ -155,8 +258,8 @@ int wait_fw_state(struct i2c_client *client, unsigned int u32_addr,
 		  unsigned int u32_state, unsigned long u32_delay_us,
 		  unsigned short u16_retry)
 {
-	unsigned char u8_buf[4];
-	unsigned int u32_read_data;
+	unsigned char u8_buf[4] = {0};
+	unsigned int u32_read_data = 0;
 	unsigned int u32_min_delay_us = u32_delay_us - 500;
 	unsigned int u32_max_delay_us = u32_delay_us + 500;
 
@@ -408,7 +511,7 @@ exit_upgrate:
 unsigned char raydium_stop_mcu_3x(unsigned char u8_is_tp_reset)
 {
 	unsigned short u16_time_out = 100;
-	unsigned int u32_read_data;
+	unsigned int u32_read_data = 0;
 	unsigned int u32_write = 0;
 
 	if (u8_is_tp_reset) {
@@ -472,7 +575,7 @@ static int raydium_fw_upgrade_3X(struct i2c_client *client,
 				 unsigned char u8_check_crc)
 {
 	int i32_ret = 0;
-	unsigned char u8_buf[4];
+	unsigned char u8_buf[4] = {0};
 	unsigned short u16_retry = 1000;
 	unsigned int u32_write = 0;
 
@@ -779,7 +882,7 @@ static int raydium_boot_upgrade_3X(struct i2c_client *client, unsigned char u8_i
 		return ERROR;
 	/*WRT boot-loader to PRAM first*/
 	memset(u8_buf, 0, sizeof(u8_buf));
-	u8_buf[0] = 0x1F;
+	u8_buf[0] = 0x1E;
 	i32_ret = handle_i2c_pda_write(client, RAYDIUM_PDA_PRAMLOCK, u8_buf, 4);
 
 	/*Sending bootloader*/
@@ -818,6 +921,53 @@ exit_upgrade:
 	return i32_ret;
 }
 
+int raydium_fw_update_check(unsigned int u32_check_version)
+{
+	int i32_ret = ERROR;
+	unsigned int u32_fw_version = 0;
+	unsigned char u8_rbuffer[4] = {0};
+
+	if (g_raydium_ts->fw_version != u32_check_version) {
+
+		LOGD(LOG_INFO, "[touch]FW need update.\n");
+		g_u8_raydium_flag |= ENG_MODE;
+
+		i32_ret = raydium_burn_fw(g_raydium_ts->client);
+		if (i32_ret < 0) {
+			LOGD(LOG_ERR, "[touch]FW update fail:%d\n", i32_ret);
+			goto exit_error;
+		}
+		g_u8_raydium_flag &= ~ENG_MODE;
+
+		i32_ret = raydium_i2c_pda2_set_page(g_raydium_ts->client,
+						    g_raydium_ts->is_suspend,
+						    RAYDIUM_PDA2_PAGE_0);
+		if (i32_ret < 0)
+			goto exit_error;
+
+		i32_ret = raydium_i2c_pda2_read(g_raydium_ts->client,
+						RAYDIUM_PDA2_FW_VERSION_ADDR,
+						u8_rbuffer,
+						4);
+		if (i32_ret < 0)
+			goto exit_error;
+
+		u32_fw_version = (u8_rbuffer[0] << 24) |
+				 (u8_rbuffer[1] << 16) |
+				 (u8_rbuffer[2] << 8) |
+				 u8_rbuffer[3];
+		LOGD(LOG_INFO, "[touch]RAD FW ver is 0x%x\n",
+		     u32_fw_version);
+		g_raydium_ts->fw_version = u32_fw_version;
+	} else
+		LOGD(LOG_INFO, "[touch]FW is the latest version.\n");
+
+	i32_ret = SUCCESS;
+	return i32_ret;
+
+exit_error:
+	return i32_ret;
+}
 
 int raydium_burn_fw(struct i2c_client *client)
 {
@@ -845,12 +995,15 @@ exit_upgrade:
 	return i32_ret;
 }
 
-int raydium_fw_update_check(unsigned short u16_i2c_data)
+int raydium_fw_update_init(unsigned short u16_i2c_data)
 {
 
-	unsigned char u8_rbuffer[4];
+	unsigned char u8_rbuffer[4] = {0};
 
-	unsigned int u32_fw_version, u32_image_version;
+	unsigned int u32_fw_version = 0;
+#if !ENABLE_FW_LOADER
+	unsigned int u32_image_version = 0;
+#endif
 	int i32_ret = ERROR;
 
 	mutex_lock(&g_raydium_ts->lock);
@@ -880,55 +1033,30 @@ int raydium_fw_update_check(unsigned short u16_i2c_data)
 
 	raydium_mem_table_init(g_raydium_ts->id);
 	if (raydium_mem_table_setting() == SUCCESS) {
-
+#if ENABLE_FW_LOADER
+		LOGD(LOG_INFO, "[touch]RAD Load FW success\n");
+#else
 		u32_image_version = (g_rad_para_image[PARA_FW_VERSION_OFFSET] << 24) |
 				    (g_rad_para_image[PARA_FW_VERSION_OFFSET + 1] << 16) |
 				    (g_rad_para_image[PARA_FW_VERSION_OFFSET + 2] << 8) |
 				    g_rad_para_image[PARA_FW_VERSION_OFFSET + 3];
 
 		LOGD(LOG_INFO, "[touch]RAD Image FW ver : 0x%x\n", u32_image_version);
+#endif
 	} else {
 		LOGD(LOG_ERR, "[touch]Mem setting failed, Stop fw upgrade!\n");
-		return FAIL;
+		return i32_ret;
 	}
 
 #ifdef FW_UPDATE_EN
-	if (u32_fw_version != u32_image_version) {
-		LOGD(LOG_INFO, "[touch]FW need update.\n");
-		g_u8_raydium_flag |= ENG_MODE;
 
-		i32_ret = raydium_burn_fw(g_raydium_ts->client);
-		if (i32_ret < 0)
-			LOGD(LOG_ERR, "[touch]FW update fail:%d\n", i32_ret);
-
-		g_u8_raydium_flag &= ~ENG_MODE;
-		mutex_lock(&g_raydium_ts->lock);
-		i32_ret = raydium_i2c_pda2_set_page(g_raydium_ts->client,
-						    g_raydium_ts->is_suspend,
-						    RAYDIUM_PDA2_PAGE_0);
-		if (i32_ret < 0)
-			goto exit_error;
-
-		i32_ret = raydium_i2c_pda2_read(g_raydium_ts->client,
-						RAYDIUM_PDA2_FW_VERSION_ADDR,
-						u8_rbuffer,
-						4);
-		if (i32_ret < 0)
-			goto exit_error;
-
-		mutex_unlock(&g_raydium_ts->lock);
-		u32_fw_version = (u8_rbuffer[0] << 24) |
-				 (u8_rbuffer[1] << 16) |
-				 (u8_rbuffer[2] << 8) |
-				 u8_rbuffer[3];
-		LOGD(LOG_INFO, "[touch]RAD FW ver is 0x%x\n",
-		     u32_fw_version);
-		g_raydium_ts->fw_version = u32_fw_version;
-	} else
-		LOGD(LOG_INFO, "[touch]FW is the latest version.\n");
+#if !ENABLE_FW_LOADER
+	i32_ret = raydium_fw_update_check(u32_image_version);
+	if (i32_ret < 0)
+		LOGD(LOG_ERR, "[touch]fw update fail!\n");
 #endif
 
-
+#endif
 	return i32_ret;
 
 exit_error:
@@ -985,84 +1113,9 @@ int raydium_check_fw_ready(struct i2c_client *client)
 exit:
 	return i32_ret;
 }
-/* upgrade firmware with image file */
-int raydium_fw_upgrade_with_image(struct i2c_client *client,
-				  unsigned int u32_fw_addr,
-				  unsigned char u8_type)
-{
-	int i32_ret = ERROR;
-	unsigned int u32_fw_size = 0;
-	unsigned char *p_u8_firmware_data = NULL;
-	unsigned int u32_write_offset = 0;
-	unsigned short u16_write_length = 0;
-	unsigned int u32_checksum = 0xFFFFFFFF;
-
-	switch (u8_type) {
-	case RAYDIUM_INIT:
-		u32_fw_size = 0x1fc;
-		p_u8_firmware_data = g_rad_init_image;
-		break;
-	case RAYDIUM_PARA:
-		u32_fw_size = 0x158;
-		p_u8_firmware_data = g_rad_para_image;
-		break;
-	case RAYDIUM_FIRMWARE:
-		u32_fw_size = 0x61fc;
-		p_u8_firmware_data = g_rad_fw_image;
-		break;
-	case RAYDIUM_BOOTLOADER:
-		u32_fw_size = 0x7FC;
-		p_u8_firmware_data = g_rad_boot_image;
-		break;
-	case RAYDIUM_TEST_FW:
-		u32_fw_size = 0x635C;
-		p_u8_firmware_data = g_rad_testfw_image;
-		break;
-	}
-
-	LOGD(LOG_DEBUG, "[touch]CRC 0x%08X\n",
-	     *(unsigned int *)(p_u8_firmware_data + u32_fw_size));
-
-	u32_checksum = rc_crc32(p_u8_firmware_data,
-				u32_fw_size, u32_checksum);
-	u32_checksum = bits_reverse(u32_checksum, 32);
-	memcpy((p_u8_firmware_data + u32_fw_size), &u32_checksum, 4);
-	LOGD(LOG_DEBUG, "[touch]CRC result 0x%08X\n", u32_checksum);
-
-	u32_fw_size += 4;
-
-	u32_write_offset = 0;
-	while (u32_write_offset < u32_fw_size) {
-		if ((u32_write_offset + MAX_WRITE_PACKET_SIZE) < u32_fw_size)
-			u16_write_length = MAX_WRITE_PACKET_SIZE;
-		else
-			u16_write_length =
-				(unsigned short)
-				(u32_fw_size - u32_write_offset);
-
-		i32_ret = handle_i2c_pda_write(
-				  client,
-				  (u32_fw_addr + u32_write_offset),
-				  (p_u8_firmware_data + u32_write_offset),
-				  u16_write_length);
-		if (i32_ret < 0)
-			goto exit_upgrate;
-
-		u32_write_offset += (unsigned long)u16_write_length;
-	}
-	u32_fw_addr += u32_write_offset;
-
-exit_upgrate:
-	if (i32_ret < 0) {
-		LOGD(LOG_ERR, "[touch]upgrade failed\n");
-		return i32_ret;
-	}
-	LOGD(LOG_INFO, "[touch]upgrade success\n");
-	return SUCCESS;
-}
 int raydium_load_test_fw(struct i2c_client *client)
 {
-	unsigned int u32_read_data;
+	unsigned int u32_read_data = 0;
 	unsigned int u32_write = 0;
 	int i32_ret = ERROR;
 

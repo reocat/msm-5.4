@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,6 +17,33 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <linux/i2c.h>
@@ -73,7 +103,6 @@ unsigned char *g_rad_boot_image, *g_rad_para_image;
 unsigned char *g_rad_testfw_image, *g_rad_testpara_image;
 unsigned char g_u8_table_setting, g_u8_table_init;
 unsigned char g_u8_resetflag;
-unsigned char g_u8_wakeup_flag;
 #ifdef ESD_SOLUTION_EN
 unsigned char g_u8_checkflag;
 #endif
@@ -108,7 +137,6 @@ static void raydium_variable_init(void)
 				(RAD_MINOR_VERSION << 16) |
 				(RAD_CUSTOMER_VERSION));
 	g_u8_resetflag = false;
-	g_u8_wakeup_flag = false;
 #ifdef ESD_SOLUTION_EN
 	g_u8_checkflag = false;
 #endif
@@ -802,7 +830,7 @@ unsigned char raydium_disable_i2c_deglitch(void)
 int raydium_i2c_mode_control(struct i2c_client *client,
 			     unsigned char u8_mode)
 {
-	unsigned char u8_buf[4];
+	unsigned char u8_buf[4] = {0};
 
 	switch (u8_mode) {
 	case 0:	/* Disable INT flag */
@@ -1061,6 +1089,7 @@ int raydium_read_touchdata(unsigned char *p_u8_tp_status,  unsigned char *p_u8_b
 	u8_retry = 3;
 
 	mutex_lock(&g_raydium_ts->lock);
+#if !ENABLE_NEW_REPORT_FLOW
 	while (u8_retry != 0) {
 		i32_ret = raydium_i2c_pda2_set_page(g_raydium_ts->client,
 						    g_raydium_ts->is_suspend, RAYDIUM_PDA2_PAGE_0);
@@ -1075,11 +1104,15 @@ int raydium_read_touchdata(unsigned char *p_u8_tp_status,  unsigned char *p_u8_b
 
 		goto reset_error;
 	}
-
+#endif
 	memset(u8_read_buf, 0, MAX_REPORT_PACKET_SIZE);
 	memset(p_u8_buf, 0, MAX_REPORT_PACKET_SIZE);
 	memset(p_u8_tp_status, 0, MAX_TCH_STATUS_PACKET_SIZE);
+#if ENABLE_NEW_REPORT_FLOW
+	u8_read_size = 4 + 1 * LEN_PT + 1;
+#else
 	u8_read_size = 4 + MAX_TOUCH_NUM * LEN_PT + 1;
+#endif
 	/*read touch point information*/
 	i32_ret = raydium_i2c_pda2_read(g_raydium_ts->client,
 					RAYDIUM_PDA2_TCH_RPT_STATUS_ADDR,
@@ -1110,6 +1143,10 @@ int raydium_read_touchdata(unsigned char *p_u8_tp_status,  unsigned char *p_u8_b
 #endif
 	/* inform IC to prepare next report*/
 	if (u8_seq_no == p_u8_tp_status[POS_SEQ]) {
+#if ENABLE_NEW_REPORT_FLOW
+		i32_ret = raydium_i2c_pda2_set_page(g_raydium_ts->client,
+						    g_raydium_ts->is_suspend, RAYDIUM_PDA2_PAGE_0);
+#endif
 		p_u8_tp_status[POS_SEQ] = 0;
 		i32_ret = raydium_i2c_pda2_write(g_raydium_ts->client,
 						 RAYDIUM_PDA2_TCH_RPT_STATUS_ADDR, p_u8_tp_status, 1);
@@ -1122,17 +1159,32 @@ int raydium_read_touchdata(unsigned char *p_u8_tp_status,  unsigned char *p_u8_b
 	}
 	u8_seq_no = p_u8_tp_status[POS_SEQ];
 	p_u8_tp_status[POS_SEQ] = 0;
+#if !ENABLE_NEW_REPORT_FLOW
 	i32_ret = raydium_i2c_pda2_write(g_raydium_ts->client,
 					 RAYDIUM_PDA2_TCH_RPT_STATUS_ADDR, p_u8_tp_status, 1);
 	if (i32_ret < 0) {
 		LOGD(LOG_ERR, "[touch]%s: write data failed: %d\n", __func__, i32_ret);
 		goto exit_error;
 	}
-
+#endif
 	u8_points_amount = p_u8_tp_status[POS_PT_AMOUNT];
-
 	if (u8_points_amount > MAX_TOUCH_NUM)
 		goto exit_error;
+#if ENABLE_NEW_REPORT_FLOW
+	if (u8_points_amount > 1) {
+		u8_read_size = LEN_PT;
+		/*read touch point information*/
+		i32_ret = raydium_i2c_pda2_read(g_raydium_ts->client,
+						RAYDIUM_PDA2_TCH_FINGER2_ADDR,
+						&u8_read_buf[16], u8_read_size);
+		if (i32_ret < 0) {
+			LOGD(LOG_ERR, "[touch]%s: failed to read data: %d\n",
+			     __func__, __LINE__);
+			goto exit_error;
+		}
+	}
+
+#endif
 	memcpy(p_u8_buf, &u8_read_buf[4], u8_points_amount * LEN_PT);
 
 	raydium_touch_report(p_u8_buf, u8_points_amount);
@@ -1141,7 +1193,7 @@ exit_error:
 	mutex_unlock(&g_raydium_ts->lock);
 
 	return i32_ret;
-
+#if !ENABLE_NEW_REPORT_FLOW
 reset_error:
 	mutex_unlock(&g_raydium_ts->lock);
 #ifdef ESD_SOLUTION_EN
@@ -1157,13 +1209,14 @@ reset_error:
 	}
 #endif
 	return i32_ret;
+#endif
 }
 
 static void raydium_work_handler(struct work_struct *work)
 {
 	int i32_ret = 0;
-	unsigned char u8_tp_status[MAX_TCH_STATUS_PACKET_SIZE];
-	unsigned char u8_buf[MAX_REPORT_PACKET_SIZE];
+	unsigned char u8_tp_status[MAX_TCH_STATUS_PACKET_SIZE] = {0};
+	unsigned char u8_buf[MAX_REPORT_PACKET_SIZE] = {0};
 
 #ifdef GESTURE_EN
 	unsigned char u8_i;
@@ -1218,8 +1271,7 @@ static void raydium_work_handler(struct work_struct *work)
 	} else if (g_raydium_ts->blank == FB_BLANK_VSYNC_SUSPEND ||
 		   g_raydium_ts->blank == FB_BLANK_POWERDOWN) {
 		/*need check small area*/
-		if (u8_tp_status[POS_GES_STATUS] == RAD_WAKE_UP
-		    && g_u8_wakeup_flag == false) {
+		if (u8_tp_status[POS_GES_STATUS] == RAD_WAKE_UP) {
 			input_report_key(g_raydium_ts->input_dev, KEY_POWER, true);
 			usleep_range(9500, 10500);
 			input_sync(g_raydium_ts->input_dev);
@@ -1286,7 +1338,7 @@ static irqreturn_t raydium_ts_interrupt(int irq, void *dev_id)
 
 static int raydium_check_i2c_ready(unsigned short *u16_i2c_data)
 {
-	unsigned char u8_buf[4];
+	unsigned char u8_buf[4] = {0};
 	int i32_ret = ERROR;
 
 	mutex_lock(&g_raydium_ts->lock);
@@ -1777,7 +1829,7 @@ static void raydium_input_set(struct input_dev *input_dev)
 }
 static int raydium_set_resolution(void)
 {
-	unsigned char u8_buf[4];
+	unsigned char u8_buf[4] = {0};
 	int i32_ret = -1;
 	unsigned int u32_x, u32_y;
 
@@ -1953,8 +2005,8 @@ static int raydium_ts_probe(struct i2c_client *client,
 #endif/*end of CONFIG_RM_SYSFS_DEBUG*/
 
 	INIT_WORK(&g_raydium_ts->work, raydium_work_handler);
-
 	g_raydium_ts->workqueue = create_singlethread_workqueue("raydium_ts");
+
 	/*irq_gpio = 13 irqflags = 108*/
 	LOGD(LOG_INFO, "[touch]pdata irq : %d\n", g_raydium_ts->irq_gpio);
 	LOGD(LOG_INFO, "[touch]client irq : %d, pdata flags : %d\n",
@@ -1976,16 +2028,17 @@ static int raydium_ts_probe(struct i2c_client *client,
 	/*disable_irq then enable_irq for avoid Unbalanced enable for IRQ */
 
 	/*raydium_irq_control(ts, ENABLE);*/
-
 	LOGD(LOG_INFO, "[touch]RAD Touch driver ver :0x%X\n", g_u32_driver_version);
 
+
 	/*fw update check*/
-	ret = raydium_fw_update_check(u16_i2c_data);
+	ret = raydium_fw_update_init(u16_i2c_data);
 	if (ret < 0) {
-		LOGD(LOG_ERR, "[touch]FW update check failed\n");
+		LOGD(LOG_ERR, "[touch]FW update init failed\n");
 		ret = -ENODEV;
 		goto exit_irq_request_failed;
 	}
+
 	return 0;
 
 exit_irq_request_failed:
@@ -2110,4 +2163,4 @@ module_exit(raydium_ts_exit);
 
 MODULE_AUTHOR("<Rejion>");
 MODULE_DESCRIPTION("Raydium TouchScreen driver");
-MODULE_LICENSE("GPL");
+MODULE_LICENSE("Dual BSD/GPL");

@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,8 +17,34 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
 
 #ifndef __LINUX_RAYDIUM_H
 #define __LINUX_RAYDIUM_H
@@ -24,7 +53,7 @@
 #define I2C_VTG_MIN_UV    1800000
 #define I2C_VTG_MAX_UV    1800000
 #define RAD_MAIN_VERSION	0x01
-#define RAD_MINOR_VERSION	0x01
+#define RAD_MINOR_VERSION	0x04
 #define RAD_CUSTOMER_VERSION	0x0100
 
 #if defined(CONFIG_TOUCHSCREEN_RM_TS)
@@ -96,8 +125,7 @@
 #define RAYDIUM_PDA2_TCH_RPT_STATUS_ADDR    0x00    /* only in Page 0 */
 #define RAYDIUM_PDA2_TCH_RPT_ADDR           0x01    /* only in Page 0 */
 #define RAYDIUM_PDA2_HOST_CMD_ADDR          0x02    /* only in Page 0 */
-#define RAYDIUM_PDA2_PALM_AREA_ADDR         0x03    /* only in Page 0 */
-#define RAYDIUM_PDA2_GESTURE_RPT_ADDR       0x04    /* only in Page 0 */
+#define RAYDIUM_PDA2_TCH_FINGER2_ADDR         0x03    /* only in Page 0 */
 #define RAYDIUM_PDA2_PALM_STATUS_ADDR       0x05    /* only in Page 0 */
 #define RAYDIUM_PDA2_FW_VERSION_ADDR        0x06    /* only in Page 0 */
 #define RAYDIUM_PDA2_PANEL_VERSION_ADDR     0x07    /* only in Page 0 */
@@ -199,6 +227,7 @@
 #define RAD_FW_3X_SIZE			0x7300
 #define RAD_PARA_3X_SIZE		0x174
 #define RAD_TESTFW_3X_SIZE		(RAD_FW_3X_SIZE + RAD_PARA_3X_SIZE + 4)
+#define RAD_ALLFW_3X_SIZE		0xF170
 
 #define RAD_CMD_UPDATE_BIN		0x80
 #define RAD_CMD_UPDATE_END		0x81
@@ -210,7 +239,7 @@
 #define RAD_FT_CMD_LENGTH   0x02
 
 /* FT APK data type */
-#define RAYDIUM_FT_UPDATE    0x00
+#define RAYDIUM_FT_UPDATE    0x01
 
 /*Raydium system flag*/
 #define INT_FLAG	0x01
@@ -236,7 +265,13 @@
 /* #define ESD_SOLUTION_EN */
 
 #define RAD_SELFTEST
+#define ENABLE_NEW_REPORT_FLOW	0
+
 #define PARA_FW_VERSION_OFFSET	4
+
+#define	ENABLE_FW_LOADER	0
+
+#define FW_NAME			"RM6D030.bin"
 
 #define PINCTRL_STATE_ACTIVE     "pmx_ts_active"
 #define PINCTRL_STATE_SUSPEND    "pmx_ts_suspend"
@@ -391,7 +426,8 @@ extern int raydium_burn_comp(struct i2c_client *client);
 extern int raydium_burn_fw(struct i2c_client *client);
 
 extern int raydium_load_test_fw(struct i2c_client *client);
-extern int raydium_fw_update_check(unsigned short u16_i2c_data);
+extern int raydium_fw_update_init(unsigned short u16_i2c_data);
+extern int raydium_fw_update_check(unsigned int u32_check_version);
 extern int raydium_i2c_pda_set_address(unsigned int u32_address,
 				       unsigned char u8_mode);
 extern void raydium_mem_table_init(unsigned short u16_id);

@@ -2,6 +2,9 @@
  *
  * Raydium TouchScreen driver.
  *
+ * This file is provided under a dual BSD/GPLv2 license.  When using or
+ * redistributing this file, you may do so under either license.
+
  * Copyright (c) 2021  Raydium tech Ltd.
  *
  * This program is free software; you can redistribute it and/or modify
@@ -14,8 +17,35 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
+ * BSD LICENSE
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *  * Neither the name of Google Inc. or Linaro Ltd. nor the names of
+ *    its contributors may be used to endorse or promote products
+ *    derived from this software without specific prior written
+ *    permission.
+ * * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS
+ * IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+ * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+ * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+ * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+ * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
+ * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- 
+
 #ifdef __KERNEL__
 #include <linux/delay.h>
 #include <linux/mutex.h>
@@ -53,6 +83,7 @@ STATUS burn_data_log_to_flash_3x(void)
 	unsigned int u32_read = 0, u32_flash_header_start_addr = 0xA000, u32_header_size = 0x400;
 	unsigned int u32_write = 0;
 	unsigned char *p_data = (unsigned char *)g_i16_raw_data_frame_buffer;
+
 	if (g_u8_drv_interface == SPI_INTERFACE || g_u8_test_log_burn_times > 3) {
 		/*flashless*/
 		DEBUGOUT("return burn test log\r\n");
@@ -191,7 +222,7 @@ STATUS burn_data_log_to_flash_3x(void)
 	}
 
 
-	u32_write = u16_pram_start_addr ;
+	u32_write = u16_pram_start_addr;
 	if (handle_ic_write(REG_FLASHCTL_FLASH_PRAM_ADDR, 4, (unsigned char *)&u32_write, g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 		return ERROR;
 	}
@@ -251,11 +282,10 @@ STATUS burn_data_log_to_flash_3x(void)
 STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_page)
 {
 
-#if 1
-	unsigned short u16_pram_start_addr = 0x1000 ;
+	unsigned short u16_pram_start_addr = 0x1000;
 	unsigned char *p_header_data = (unsigned char *)g_u32_save_config;
 	unsigned char  u8_write_buf[64], u8_fw_version[4], u8_read_buf[4],  u8_burn_full_times = 20, u8_count_1 = 0, u8_test_info[16];
-	unsigned short u16_index = 0, u16_retry = 0 ;
+	unsigned short u16_index = 0, u16_retry = 0;
 	unsigned int u32_read = 0, u32_flash_header_start_addr = 0xA000 + (g_st_test_info.u8_station_id - 1) * 4096 + g_u8_test_log_burn_times / 5 * 0x100;
 	unsigned int u32_write = 0, u32_temp = 0;
 	bool b_is_first_read = true;
@@ -293,9 +323,6 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 	}
 
 
-#if 1
-
-
 	/*read FW Version*/
 	if (handle_ic_read(FW_FT_SRAM_FW_VERSION, 4, u8_fw_version, g_u8_drv_interface, I2C_BYTE_MODE) == ERROR) {
 		return ERROR;
@@ -323,7 +350,6 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 		return ERROR;
 	}
 	DEBUGOUT("[header addr!]:%X\r\n", u32_flash_header_start_addr);
-#endif
 	while (u16_index < 256) {
 		/*write flash addr*/
 
@@ -359,7 +385,6 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 			return ERROR;
 		}
 		/*memcpy(&g_u8_header_buf[0] ,  &u32_read  , 4);*/
-#if 1
 
 		if (b_is_first_read && !is_in_header_data_page) {
 
@@ -388,18 +413,13 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 		} else {
 			memcpy(&p_header_data[u16_index],  &u32_read, 4);
 		}
-#endif
 		u16_index += 4;
 
 
 	}
 
-
-#if 1
-
-
-/*	u16_auo_jig_cmd = g_u16_panel_jig_set_test_items;*/
-/*	fill data*/
+	/*	u16_auo_jig_cmd = g_u16_panel_jig_set_test_items;*/
+	/*	fill data*/
 	if (g_u8_test_log_burn_times <= 5 || is_in_header_data_page) {
 		memcpy(&p_header_data[8 + ((g_u8_test_log_burn_times - 1) % 5) * 48], &u8_test_info, 8);
 		/*if ((g_st_test_info.u16_ft_eng_item & IC_TEST_ENG_ITEMS_PANEL_TEST_JIG))*/
@@ -527,7 +547,7 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 	if (handle_ic_read(REG_FLASHCTL_FLASH_ISPCTL, 4, u8_read_buf, g_u8_drv_interface, I2C_BYTE_MODE) == ERROR) {
 		return ERROR;
 	}
-	while ((u8_read_buf[0] & 0x08) != 0 && u16_retry > 0) {
+	while ((u8_read_buf[0] & 0x08) == 0 && u16_retry > 0) {
 		if (handle_ic_read(REG_FLASHCTL_FLASH_ISPCTL, 4, u8_read_buf, g_u8_drv_interface, I2C_BYTE_MODE) == ERROR) {
 			return ERROR;
 		}
@@ -542,11 +562,8 @@ STATUS burn_header_log_to_flash_3x(bool is_test_finish, bool is_in_header_data_p
 	/*---end write header section---*/
 	hardware_reset_3x(TRUE);
 	DEBUGOUT("End burn header\r\n");
-#endif
 	return SUCCESS;
-#endif
 }
-
 #endif
 STATUS turn_on_flash_3x(void)
 {
@@ -566,7 +583,7 @@ STATUS turn_on_flash_3x(void)
 
 STATUS read_fpc_flash_3x(unsigned int u32_addr, unsigned int *p_u32_data)
 {
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 
 	/*Turn on Flash*/
 	if (turn_on_flash_3x() == ERROR) {
@@ -607,8 +624,8 @@ STATUS read_fpc_flash_3x(unsigned int u32_addr, unsigned int *p_u32_data)
 
 STATUS set_test_info_thd_para_3x(void)
 {
-	unsigned char u8_read_buf[96], u8_i;
-	unsigned char *p_u8_input_buf;
+	unsigned char u8_read_buf[96] = {0}, u8_i = 0;
+	unsigned char *p_u8_input_buf  = NULL;
 
 	if (handle_ic_write(FT_TEST_INFO_ADDR, sizeof(g_st_test_info), (unsigned char *)&g_st_test_info, g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 		return ERROR;
@@ -694,7 +711,7 @@ STATUS set_test_info_thd_para_3x(void)
 void dump_image_data_3x(short *p_image_buf, unsigned char u8_remap)
 {
 	short *p_i16_buf = (short *)g_u16_raw_data_tmp;
-	unsigned char u8_i, u8_j;
+	unsigned char u8_i = 0, u8_j = 0;
 
 	memset(p_i16_buf, 0, MAX_IMAGE_BUFFER_SIZE * 2);
 	if (u8_remap) {
@@ -763,11 +780,12 @@ STATUS check_test_fw_status_3x(unsigned char u8_target_status, unsigned char *p_
 STATUS ft_test_do_fw_test_3x(unsigned short u16_test_items)
 {
 
-	unsigned char u8_write_data[5], u8_result;
-	unsigned int u32_read_data;
+	unsigned char u8_write_data[5], u8_result = 0;
+	unsigned int u32_read_data = 0;
 	short i16_time_out = 0;
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 	DEBUGOUT("ft_test_do_fw_test Start Time= %d\r\n", u32_fun_time);
 #endif
@@ -829,6 +847,7 @@ STATUS enter_fw_test_mode_3x(void)
 
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 #endif
 
@@ -882,7 +901,7 @@ IC_INIT_NG:
 STATUS ft_test_read_used_pin_infor_3x(unsigned char *p_u8_infor)
 {
 	/*unsigned char u8_i;*/
-	unsigned char u8_r_buf[2];
+	unsigned char u8_r_buf[2] = {0};
 
 	/*get Pin remap*/
 	if (handle_ic_read(FW_FT_PIN_ADDR, 48, p_u8_infor, g_u8_drv_interface, I2C_BYTE_MODE) == ERROR) {
@@ -909,7 +928,8 @@ STATUS ft_test_read_used_pin_infor_3x(unsigned char *p_u8_infor)
 
 STATUS ft_test_ctrl_mbist_fun_3x(unsigned char u8_enable)
 {
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
+
 	if (u8_enable) {
 		if (handle_ic_read(REG_SYSCON_BLKEN_ADDR, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
 			DEBUGOUT("Data RAM Test NG !!!\r\n");
@@ -936,98 +956,14 @@ STATUS ft_test_ctrl_mbist_fun_3x(unsigned char u8_enable)
 	return SUCCESS;
 }
 
-#if 0
 STATUS ft_test_ram_test_3x(unsigned char u8_is_stop_mcu)
 {
-	unsigned int u32_read;
-	unsigned char u8_retry_times = 2;
-	unsigned int u32_write = 0;
-
-	if ((g_st_test_info.u16_ft_test_info_1) == WEARBLE_FT_PRAM_SYSTEM_NG_CASE) {
-		g_u32_wearable_test_result = WEARABLE_FT_TEST_RESULT_PRAM_NG;
-		return ERROR;
-	}
-
-RETRY_RAM_TEST:
-
-	if (u8_is_stop_mcu) {
-		stop_mcu_3x(TRUE);
-	}
-
-	if (ft_test_ctrl_mbist_fun_3x(ENABLE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	u32_write = 0x04000080;
-	if (handle_ic_write(RAM_WRITE_TEST_ADDR1, 4, (unsigned char *)&u32_write, g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	u32_write = 0x00FE90FE;
-	if (handle_ic_write(RAM_WRITE_TEST_ADDR2, 4, (unsigned char *)&u32_write, g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	u32_write = 0x0A800080;
-	if (handle_ic_write(RAM_WRITE_TEST_ADDR3, 4, (unsigned char *)&u32_write, g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	delay_ms(5);
-
-	if (handle_ic_read(RAM_READ_TEST_ADDR1, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	if ((u32_read & 0xFE00) != 0) {
-		DEBUGOUT("RAM Test NG 954[0x%x]!!!\r\n", u32_read);
-		goto EXIT_ERROR;
-	}
-
-	if (handle_ic_read(RAM_READ_TEST_ADDR2, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	if (u32_read != 0x19007F00) {
-		DEBUGOUT("RAM Test NG B04[0x%x]!!!\r\n", u32_read);
-		goto EXIT_ERROR;
-	}
-
-	if (handle_ic_read(RAM_READ_TEST_ADDR3, 4, (unsigned char *)(&u32_read), g_u8_drv_interface, I2C_WORD_MODE) == ERROR) {
-		goto EXIT_ERROR;
-	}
-
-	if (u32_read != 0x40007F00) {
-		DEBUGOUT("RAM Test NG B08[0x%x]!!!\r\n", u32_read);
-		goto EXIT_ERROR;
-	}
-
-	if (ft_test_ctrl_mbist_fun_3x(DISABLE) == ERROR) {
-		goto EXIT_ERROR;
-	} else {
-		DEBUGOUT("RAM Test Pass\r\n");
-		return SUCCESS;
-	}
-
-EXIT_ERROR:
-	if ((u8_retry_times-- > 0)) {
-		goto RETRY_RAM_TEST;
-	}
-
-	ft_test_ctrl_mbist_fun_3x(DISABLE);
-	g_u32_wearable_test_result = WEARABLE_FT_TEST_RESULT_PRAM_NG;
-	DEBUGOUT("PRAM Test NG !!!\r\n");
-	return ERROR;
-}
-#endif
-
-STATUS ft_test_ram_test_3x(unsigned char u8_is_stop_mcu)
-{
-	unsigned int u32_read;
+	unsigned int u32_read = 0;
 	unsigned char u8_retry_times = 2, u8_check_time = 8;
 	unsigned int u32_write = 0;
 	unsigned int u32_addr = 0;
-	unsigned short u16_retry, u16DataBufLength;
+	unsigned char u8_index = 0;
+	unsigned short u16_retry = 0, u16DataBufLength = 0;
 
 	if ((g_st_test_info.u16_ft_test_info_1) == WEARBLE_FT_PRAM_SYSTEM_NG_CASE) {
 		g_u32_wearable_test_result = WEARABLE_FT_TEST_RESULT_PRAM_NG;
@@ -1052,13 +988,13 @@ RETRY_RAM_TEST:
 
 	/* i2c tx buffer size = 0x38 (56)*/
 	u16DataBufLength = 0x38;
-	u32_addr = 0;
-	while (u32_addr < u16DataBufLength) {
-		g_u8_data_buf[u32_addr] = 0xFF;
-		g_u8_data_buf[u32_addr + 1] = 0x00;
-		g_u8_data_buf[u32_addr + 2] = 0xAA;
-		g_u8_data_buf[u32_addr + 3] = 0x55;
-		u32_addr += 4;
+	u8_index = 0;
+	while (u8_index < u16DataBufLength) {
+		g_u8_data_buf[u8_index] = 0xFF;
+		g_u8_data_buf[u8_index + 1] = 0x00;
+		g_u8_data_buf[u8_index + 2] = 0xAA;
+		g_u8_data_buf[u8_index + 3] = 0x55;
+		u8_index += 4;
 	}
 	u32_addr = PRAM_BOOT_START;
 
@@ -1082,7 +1018,7 @@ RETRY_RAM_TEST:
 	gpio_touch_reset_pin_control(FALSE);/*Low*/
 	delay_ms(1);
 	gpio_touch_reset_pin_control(TRUE);/*High*/
-	delay_ms(25);
+	delay_ms(35);
 
 	g_u8_mute_i2c_err_log = TRUE;
 
@@ -1134,7 +1070,7 @@ EXIT_ERROR:
 STATUS ft_test_connect_test_3x(void)
 {
 	unsigned char u8_retry = IC_TEST_RETRY_TIME;
-	unsigned int u32_w_buf, u32_r_buf;
+	unsigned int u32_w_buf = 0, u32_r_buf = 0;
 	unsigned int u32_test_addr = RM_DATAMEM0_BASE;
 	char i8_str[8];
 
@@ -1194,7 +1130,7 @@ NG_CASE2:
 	return ERROR;
 }
 
-STATUS ft_test_reset_pin_test_3x()
+STATUS ft_test_reset_pin_test_3x(void)
 {
 	unsigned int u32_write = 0;
 
@@ -1260,6 +1196,7 @@ void ft_raw_data_checksum_cal_3x(unsigned short *u16_buffer)
 void ft_test_result_checksum_cal_3x(unsigned char *u8_buffer)
 {
 	unsigned char u8_i;
+
 	u8_buffer[48] = 0x5A;
 	u8_buffer[49] = 0;
 	for (u8_i = 0; u8_i < (MAX_SENSING_PIN_NUM - 1); u8_i++) {
@@ -1322,8 +1259,8 @@ STATUS ft_test_result_checksum_check_3x(unsigned char *u8_buffer)
 
 STATUS baseline_update_control_3x(bool b_enable_baseline_update)
 {
-	unsigned int u32_write_buf;
-	unsigned char u8_read;
+	unsigned int u32_write_buf = 0;
+	unsigned char u8_read = 0;
 	short i16_time_out = 100;
 
 	if (b_enable_baseline_update) {
@@ -1389,6 +1326,7 @@ STATUS enter_normal_fw_3x(void)
 	unsigned char u8_pattern_noise_only = 0;
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 #endif
 	if (g_u8_is_normal_fw)
@@ -1451,10 +1389,10 @@ STATUS enter_normal_fw_3x(void)
 
 STATUS check_cc_bl_flag_3x(void)
 {
-	unsigned char u8_read_buf[4];
+	unsigned char u8_read_buf[4] = {0};
 	unsigned char u8_is_cc_ready = 0;
-	unsigned char u8_fw_version[4];
-	short i16_time_out;
+	unsigned char u8_fw_version[4] = {0};
+	short i16_time_out = 0;
 
 	DEBUGOUT("[CCBF] Check CC BL Flag\r\n");
 
@@ -1486,7 +1424,7 @@ STATUS check_cc_bl_flag_3x(void)
 	return SUCCESS;
 }
 
-STATUS burn_cc_to_ic_flash_3x()
+STATUS burn_cc_to_ic_flash_3x(void)
 {
 	short i16_time_out = 1000;
 	unsigned int u32_cc_table;
@@ -1793,9 +1731,10 @@ STATUS hw_int_pin_Test_3x(void)
 STATUS read_test_fw_data_3x(unsigned short u16_test_items)
 {
 	unsigned char u8_retry = IC_TEST_RETRY_TIME;
-	unsigned int u32_test_item_result;
+	unsigned int u32_test_item_result = 0;
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 #endif
 
@@ -1916,6 +1855,7 @@ ERROR_EXIT:
 void test_item_message_3x(void)
 {
 	unsigned short u16_test_item = g_st_test_info.u16_ft_test_item;
+
 	DEBUGOUT("================================\r\n");
 	DEBUGOUT("Enter 3x IC Test,(%d)\r\n", get_system_time());
 	DEBUGOUT("IC Test Items=0x%X\r\n", u16_test_item);
@@ -1957,6 +1897,7 @@ STATUS burn_cc_3x(unsigned short u16_test_items)
 #endif
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 #endif
 	g_u32_wearable_test_result &= ~(WEARABLE_FT_TEST_RESULT_BURN_CC_NG | WEARABLE_FT_TEST_RESULT_NORMAL_FW_NG
@@ -2020,6 +1961,7 @@ STATUS load_test_fw_3x(void)
 	STATUS u8_ret = ERROR;
 #if ENABLE_TEST_TIME_MEASURMENT
 	unsigned int u32_fun_time = 0;
+
 	u32_fun_time = get_system_time();
 	DEBUGOUT("load_test_fw Start Time= %d\r\n", u32_fun_time);
 #endif
@@ -2048,49 +1990,6 @@ STATUS load_test_fw_3x(void)
 
 	return u8_ret;
 }
-#if 0
-STATUS check_ext_flash_fw_version(void)
-{
-	unsigned int u32_addr, u32_normal_fw_version, u32_test_fw_version;
-	unsigned short u16_data_length = 0;
-	u16_data_length = 4;
-
-
-	/*get normal FW version from ext flash*/
-	u32_addr = FLASH_NORMAL_FW_FW_VERSION_ADDR;
-	if (read_flash_data(u32_addr, u16_data_length) == ERROR) {
-		DEBUGOUT("Read Ext Flash NG [0x%08X] \r\n", u32_addr);
-		return ERROR;
-	}
-	u32_normal_fw_version = 0;
-	u32_normal_fw_version |= g_u8_data_buf[0];
-	u32_normal_fw_version |= g_u8_data_buf[1] << 8;
-	u32_normal_fw_version |= g_u8_data_buf[2] << 16;
-	u32_normal_fw_version |= g_u8_data_buf[3] << 24;
-	/*DEBUGOUT("SPI Read_addr = 0x%08X, u16DataLength = %d \r\n", u32_normal_fw_version, u16_data_length);*/
-
-	/* Test FW Version*/
-	u32_addr = FLASH_TEST_FW_FW_VERSION_ADDR;
-	if (read_flash_data(u32_addr, u16_data_length) == ERROR) {
-		DEBUGOUT("Read Ext Flash NG [0x%08X] \r\n", u32_addr);
-		return ERROR;
-	}
-	u32_test_fw_version = 0;
-	u32_test_fw_version |= g_u8_data_buf[0];
-	u32_test_fw_version |= g_u8_data_buf[1] << 8;
-	u32_test_fw_version |= g_u8_data_buf[2] << 16;
-	u32_test_fw_version |= g_u8_data_buf[3] << 24;
-	/*DEBUGOUT("SPI Read_addr = 0x%08X, u16DataLength = %d \r\n", u32_test_fw_version, u16_data_length);*/
-	if (g_st_test_para_resv.u32_normal_fw_version != u32_normal_fw_version
-	    || g_st_test_para_resv.u32_test_fw_version != u32_test_fw_version) {
-		DEBUGOUT("INI FW Version NG ,0x%08X VS 0x%08X \r\n", g_st_test_para_resv.u32_normal_fw_version, u32_normal_fw_version);
-		DEBUGOUT("INI Test FW Version NG ,0x%08X VS 0x%08X \r\n", g_st_test_para_resv.u32_test_fw_version, u32_test_fw_version);
-		return ERROR;
-	}
-
-	return SUCCESS;
-}
-#endif
 STATUS system_test_3x(void)
 {
 	STATUS u8_test_result = SUCCESS;
@@ -2121,7 +2020,8 @@ STATUS system_test_3x(void)
 		u8_test_result = ERROR;
 		g_u32_wearable_test_result = WEARABLE_FT_TEST_RESULT_IC_FW_VERIFY_NG;
 		goto ERROR_EXIT;
-	}	*/
+	}
+	*/
 
 #if ENABLE_TEST_TIME_MEASURMENT
 	u32_fun_time = get_system_time();
@@ -2164,7 +2064,8 @@ STATUS system_test_3x(void)
 	/*if (ft_test_ram_test_3x(0) == ERROR) {
 		u8_test_result = ERROR;
 		goto ERROR_EXIT;
-	}	*/
+	}
+	*/
 #if ENABLE_TEST_TIME_MEASURMENT
 	DEBUGOUT("RAM Spend Time= %d\r\n", get_system_time() - u32_fun_time);
 #endif
@@ -2398,11 +2299,12 @@ void do_ic_test_3x(void)
 					DEBUGOUT("[burn_log_to_flash ERROR!]\r\n");
 			}
 #endif
-/*
-			if (g_u8_panel_jig_test_status == STATUS_DATA_PANEL_JIG_FINISH && (g_st_test_info.u16_ft_eng_item & IC_TEST_ENG_ITEMS_ENABLE_BURN_TEST_LOG)) {
-				if (!burn_log_to_flash_3x())
-					DEBUGOUT("[burn_log_to_flash ERROR!]\r\n");
-			}*/
+			/*
+						if (g_u8_panel_jig_test_status == STATUS_DATA_PANEL_JIG_FINISH && (g_st_test_info.u16_ft_eng_item & IC_TEST_ENG_ITEMS_ENABLE_BURN_TEST_LOG)) {
+							if (!burn_log_to_flash_3x())
+								DEBUGOUT("[burn_log_to_flash ERROR!]\r\n");
+						}
+			*/
 
 #if ENABLE_CONTROL_OPENSHORT_WDT
 			/*Chip_WWDT_SetTimeOut(LPC_WWDT, (WDT_OSC / 10) * 50);*/
