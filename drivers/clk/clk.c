@@ -2041,8 +2041,14 @@ static struct clk_core *clk_calc_new_rates(struct clk_core *core,
 		}
 	}
 
+	/*
+	 * Certain PLLs only have 16 bits to program the fractional divider.
+	 * Hence the programmed rate might be slightly different than the
+	 * requested one.
+	 */
 	if ((core->flags & CLK_SET_RATE_PARENT) && parent &&
-	    best_parent_rate != parent->rate)
+		(DIV_ROUND_CLOSEST(best_parent_rate, 1000) !=
+			DIV_ROUND_CLOSEST(parent->rate, 1000)))
 		top = clk_calc_new_rates(parent, best_parent_rate);
 
 out:
