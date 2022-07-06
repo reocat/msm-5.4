@@ -288,6 +288,12 @@ struct qseecom_key_delete_ireq {
 
 } __attribute__((__packed__));
 
+struct qseecom_wipe_req_info {
+	unsigned char *partition_name;
+	unsigned char hash32[QSEECOM_HASH_SIZE];
+	uint8_t slot;
+} __attribute__((__packed__));
+
 struct qseecom_key_userinfo_update_ireq {
 	uint32_t qsee_command_id;
 	uint32_t flags;
@@ -727,8 +733,5 @@ struct qseecom_continue_blocked_request_ireq {
 	TZ_SYSCALL_CREATE_PARAM_ID_4( \
 	TZ_SYSCALL_PARAM_TYPE_VAL, TZ_SYSCALL_PARAM_TYPE_VAL, \
 	TZ_SYSCALL_PARAM_TYPE_BUF_RW, TZ_SYSCALL_PARAM_TYPE_VAL)
-
-//Function prototypes defined in qseecom.c
-int get_key_slot(char *partition_name);
 
 #endif /* __QSEECOMI_H_ */

@@ -427,22 +427,6 @@ static struct qseecom_key_id_usage_desc key_id_array[] = {
 	},
 };
 
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-struct available_key_slot_indexes {
-	int8_t top;
-	uint8_t slots[QSEECOM_ICE_FDE_KEY_INDEX+1];
-};
-
-struct mapper_node {
-	char *partition_name;
-	uint8_t slot_index;
-	struct mapper_node *next;
-};
-
-static struct available_key_slot_indexes available_key_slots;
-static struct mapper_node *mapper;
-#endif
-
 /* Function proto types */
 static int qsee_vote_for_clock(struct qseecom_dev_handle *, int32_t);
 static void qsee_disable_clock_vote(struct qseecom_dev_handle *, int32_t);
@@ -462,129 +446,6 @@ static int qseecom_query_ce_info(struct qseecom_dev_handle *data,
 						void __user *argp);
 static int __qseecom_unload_app(struct qseecom_dev_handle *data,
 				uint32_t app_id);
-
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-static void __key_slot_indexes_init(void)
-{
-	int i = 0;
-	static bool is_init;
-
-	if (!is_init) {
-		for (i = 0; i < QSEECOM_ICE_FDE_KEY_INDEX+1; i++)
-			available_key_slots.slots[i] = i;
-		is_init = true;
-		available_key_slots.top = QSEECOM_ICE_FDE_KEY_INDEX;
-	}
-}
-
-static int __acquire_key_slot(void)
-{
-	int ret = 0;
-	int8_t top = -1;
-	uint8_t index = -1;
-
-	if (available_key_slots.top == -1) {
-		pr_err("All 32 slots are filled\n");
-		return  index;
-	}
-	top = available_key_slots.top;
-	index = available_key_slots.slots[top];
-	available_key_slots.top--;
-	return index;
-}
-
-static int __free_key_slot(uint8_t slot)
-{
-	int ret = 0;
-	int8_t top = -1;
-
-	if (available_key_slots.top == QSEECOM_ICE_FDE_KEY_INDEX) {
-		ret = -1;
-		return ret;
-	}
-	available_key_slots.top++;
-	top = available_key_slots.top;
-	available_key_slots.slots[top] = slot;
-	return ret;
-}
-
-
-static int __map_key_partition_name(uint8_t slot, char *partition_name)
-{
-	int ret = 0;
-	int len = strlen(partition_name);
-	struct mapper_node *node = kmalloc(
-			sizeof(struct mapper_node), GFP_KERNEL);
-	if (!node) {
-		ret =  -ENOMEM;
-		return ret;
-	}
-	node->partition_name = kmalloc(len, GFP_KERNEL);
-	if (!node->partition_name) {
-		ret =  -ENOMEM;
-		kfree(node);
-		return ret;
-	}
-
-	node->slot_index = slot;
-	memcpy(node->partition_name, partition_name, len+1);
-	node->next = mapper;
-	mapper = node;
-
-	return ret;
-}
-
-static int __unmap_key_partition_name(uint8_t slot, char *partition_name)
-{
-	int ret = 0;
-	struct mapper_node *node = mapper, *prev_node;
-
-	if (node == NULL) {
-		ret = -1;
-		goto no_map;
-	}
-
-	if (!strcmp(node->partition_name, partition_name)) {
-		mapper = node->next;
-		goto free_node;
-	}
-
-	while (node != NULL && strcmp(node->partition_name, partition_name)) {
-		prev_node = node;
-		node = node->next;
-	}
-
-	if (node == NULL) {
-		ret = -1;
-		goto no_map;
-	}
-	prev_node->next = node->next;
-
-free_node:
-	kfree(node->partition_name);
-	kfree(node);
-	return ret;
-
-no_map:
-	pr_debug("No key slot has been mapped with for the given paritition");
-	return ret;
-}
-
-int get_key_slot(char *partition_name)
-{
-	int ret = 0;
-	struct mapper_node *node = mapper;
-
-	while (node != NULL) {
-		if (!strcmp(node->partition_name, partition_name))
-			return node->slot_index;
-		node = node->next;
-	}
-	pr_debug("No key slot has been mapped with for the given paritition");
-	ret = -1;
-	return ret;
-}
-#endif
 
 static int get_qseecom_keymaster_status(char *str)
 {
@@ -6403,14 +6264,17 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 	int i;
 	uint32_t *ce_hw = NULL;
 	uint32_t pipe = 0;
-	int ret = 0;
+	int ret = 0, clean_ret = 0;
 	uint32_t flags = 0;
 	struct qseecom_create_key_req create_key_req;
 	struct qseecom_key_generate_ireq generate_key_ireq;
 	struct qseecom_key_select_ireq set_key_ireq;
-	int8_t slot = -1;
 	uint32_t entries = 0;
+	int8_t slot = -1;
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
 	unsigned char *partition_name = NULL;
+	int len = 0;
+#endif
 
 	ret = copy_from_user(&create_key_req, argp, sizeof(create_key_req));
 	if (ret) {
@@ -6418,45 +6282,19 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 		return ret;
 	}
 
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-	/* Multi partition case */
-	partition_name = kmalloc(create_key_req.len, GFP_KERNEL);
-	if (!partition_name) {
-		ret = -ENOMEM;
-		return ret;
-	}
-	ret = copy_from_user(partition_name,
-				create_key_req.partition_name,
-				create_key_req.len);
-	if (ret) {
-		pr_err("copy_from_user failed\n");
-		goto free_buf;
-	}
-
-	if (create_key_req.usage < QSEOS_KM_USAGE_UFS_ICE_DISK_ENCRYPTION ||
-		create_key_req.usage >= QSEOS_KM_USAGE_MAX) {
-		pr_err("unsupported usage %d\n", create_key_req.usage);
-		ret = -EFAULT;
-		goto free_buf;
-	}
-#else
-	partition_name = "userdata";
-	create_key_req.len = strlen(partition_name);
 	if (create_key_req.usage < QSEOS_KM_USAGE_DISK_ENCRYPTION ||
 		create_key_req.usage >= QSEOS_KM_USAGE_MAX) {
 		pr_err("unsupported usage %d\n", create_key_req.usage);
 		ret = -EFAULT;
-		goto free_buf;
+		return ret;
 	}
-#endif
-
 	entries = qseecom_get_ce_hw_instance(DEFAULT_CE_INFO_UNIT,
 					create_key_req.usage);
 	if (entries <= 0) {
 		pr_err("no ce instance for usage %d instance %d\n",
 			DEFAULT_CE_INFO_UNIT, create_key_req.usage);
 		ret = -EINVAL;
-		goto free_buf;
+		return ret;
 	}
 
 	ce_hw = kcalloc(entries, sizeof(*ce_hw), GFP_KERNEL);
@@ -6486,12 +6324,34 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 			0, QSEECOM_KEY_ID_SIZE);
 	memset((void *)generate_key_ireq.hash32,
 			0, QSEECOM_HASH_SIZE);
+
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	partition_name =  qcom_ice_get_partition_name_from_pwd(
+						create_key_req.hash32);
+	if (!partition_name) {
+		pr_err("Failed to retrieve partition name");
+		ret = -EINVAL;
+		goto free_buf;
+	}
+	len = strlen(partition_name);
+	slot = qcom_ice_get_key_slot(partition_name);
+	if (slot == -1) {
+		pr_err("No slot found for the partition %s", partition_name);
+		ret = -EINVAL;
+		goto free_buf;
+	}
 	memcpy((void *)&generate_key_ireq.key_id[0],
-			(void *)partition_name,
-			create_key_req.len);
-	memcpy((void *)&generate_key_ireq.key_id[create_key_req.len],
+	       (void *)partition_name, len);
+	memcpy((void *)&generate_key_ireq.key_id[len],
+	       (void *)key_id_array[create_key_req.usage].desc,
+	       QSEECOM_KEY_ID_SIZE - len);
+#else
+	slot = QSEECOM_ICE_FDE_KEY_INDEX;
+	memcpy((void *)generate_key_ireq.key_id,
 			(void *)key_id_array[create_key_req.usage].desc,
-			QSEECOM_KEY_ID_SIZE - create_key_req.len);
+			QSEECOM_KEY_ID_SIZE);
+#endif
+
 	memcpy((void *)generate_key_ireq.hash32,
 			(void *)create_key_req.hash32,
 			QSEECOM_HASH_SIZE);
@@ -6502,18 +6362,6 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 		pr_err("Failed to generate key on storage: %d\n", ret);
 		goto free_buf;
 	}
-
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-		/*Acquire slot for storing the key*/
-		slot = __acquire_key_slot();
-		if (slot == -1) {
-			pr_err("No key slots available");
-			ret = -EINVAL;
-			goto free_buf;
-		}
-#else
-		slot = QSEECOM_ICE_FDE_KEY_INDEX;
-#endif
 
 	for (i = 0; i < entries; i++) {
 		set_key_ireq.qsee_command_id = QSEOS_SET_KEY;
@@ -6537,12 +6385,19 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 		set_key_ireq.pipe_type = QSEOS_PIPE_ENC|QSEOS_PIPE_ENC_XTS;
 		memset((void *)set_key_ireq.key_id, 0, QSEECOM_KEY_ID_SIZE);
 		memset((void *)set_key_ireq.hash32, 0, QSEECOM_HASH_SIZE);
-		memcpy((void *)&set_key_ireq.key_id[0],
-			(void *)partition_name,
-			create_key_req.len);
-		memcpy((void *)&set_key_ireq.key_id[create_key_req.len],
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	memcpy((void *)&set_key_ireq.key_id[0],
+	       (void *)partition_name, len);
+	memcpy((void *)&set_key_ireq.key_id[len],
+	       (void *)key_id_array[create_key_req.usage].desc,
+	       (QSEECOM_KEY_ID_SIZE - len));
+#else
+	slot = QSEECOM_ICE_FDE_KEY_INDEX;
+	memcpy((void *)set_key_ireq.key_id,
 			(void *)key_id_array[create_key_req.usage].desc,
-			QSEECOM_KEY_ID_SIZE - create_key_req.len);
+			QSEECOM_KEY_ID_SIZE);
+#endif
+
 		memcpy((void *)set_key_ireq.hash32,
 				(void *)create_key_req.hash32,
 				QSEECOM_HASH_SIZE);
@@ -6572,27 +6427,31 @@ static int qseecom_create_key(struct qseecom_dev_handle *data,
 		if (ret) {
 			pr_err("Failed to create key: pipe %d, ce %d: %d\n",
 				pipe, ce_hw[i], ret);
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-				__free_key_slot(slot);
-#endif
 			goto free_buf;
 		} else {
 			pr_err("Set the key successfully\n");
 			if ((create_key_req.usage ==
 				QSEOS_KM_USAGE_UFS_ICE_DISK_ENCRYPTION) ||
 			     (create_key_req.usage ==
-				QSEOS_KM_USAGE_SDCC_ICE_DISK_ENCRYPTION)) {
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-				__map_key_partition_name(slot, partition_name);
-#endif
+				QSEOS_KM_USAGE_SDCC_ICE_DISK_ENCRYPTION))
 				goto free_buf;
-				}
 		}
 	}
 
 free_buf:
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	if (ret) {
+		/*remove info from mapper and free the slot in ice driver.*/
+		if (partition_name)
+			qcom_ice_umap_key_partition(slot, partition_name);
+
+		clean_ret = qcom_ice_free_key_slot(slot);
+		if (clean_ret)
+			pr_err("Unable to free the slot");
+	}
 	if (partition_name)
 		kzfree(partition_name);
+#endif
 	if (ce_hw)
 		kzfree(ce_hw);
 	return ret;
@@ -6603,15 +6462,18 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 {
 	uint32_t *ce_hw = NULL;
 	uint32_t pipe = 0;
-	int ret = 0;
+	int ret = 0, clean_ret = 0;
 	uint32_t flags = 0;
 	int i, j;
 	struct qseecom_wipe_key_req wipe_key_req;
 	struct qseecom_key_delete_ireq delete_key_ireq;
 	struct qseecom_key_select_ireq clear_key_ireq;
-	unsigned char *partition_name = NULL;
-	uint8_t slot = -1;
 	uint32_t entries = 0;
+	uint8_t slot = -1;
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	int len = 0;
+	struct qseecom_wipe_req_info wipe_info;
+#endif
 
 	ret = copy_from_user(&wipe_key_req, argp, sizeof(wipe_key_req));
 	if (ret) {
@@ -6619,36 +6481,12 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 		return ret;
 	}
 
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-	partition_name = kmalloc(wipe_key_req.len, GFP_KERNEL);
-	if (!partition_name) {
-		ret = -ENOMEM;
-		return ret;
-	}
-	ret = copy_from_user(partition_name,
-				wipe_key_req.partition_name,
-				wipe_key_req.len);
-	if (ret) {
-		pr_err("copy_from_user failed\n");
-		goto free_buf;
-	}
-
-	if (wipe_key_req.usage < QSEOS_KM_USAGE_UFS_ICE_DISK_ENCRYPTION ||
-		wipe_key_req.usage >= QSEOS_KM_USAGE_MAX) {
-		pr_err("unsupported usage %d\n", wipe_key_req.usage);
-		ret = -EFAULT;
-		goto free_buf;
-	}
-#else
-	partition_name = "userdata";
-	wipe_key_req.len = strlen(partition_name);
 	if (wipe_key_req.usage < QSEOS_KM_USAGE_DISK_ENCRYPTION ||
 		wipe_key_req.usage >= QSEOS_KM_USAGE_MAX) {
 		pr_err("unsupported usage %d\n", wipe_key_req.usage);
 		ret = -EFAULT;
-		goto free_buf;
+		return ret;
 	}
-#endif
 
 	entries = qseecom_get_ce_hw_instance(DEFAULT_CE_INFO_UNIT,
 					wipe_key_req.usage);
@@ -6656,13 +6494,13 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 		pr_err("no ce instance for usage %d instance %d\n",
 			DEFAULT_CE_INFO_UNIT, wipe_key_req.usage);
 		ret = -EINVAL;
-		goto free_buf;
+		return ret;
 	}
 
 	ce_hw = kcalloc(entries, sizeof(*ce_hw), GFP_KERNEL);
 	if (!ce_hw) {
 		ret = -ENOMEM;
-		goto free_buf;
+		return ret;
 	}
 
 	ret = __qseecom_get_ce_pipe_info(wipe_key_req.usage, &pipe, &ce_hw,
@@ -6673,16 +6511,36 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 		goto free_buf;
 	}
 
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	wipe_info = qcom_ice_get_wipe_info();
+	if (!wipe_info.partition_name) {
+		pr_err("No partition name info found to wipe");
+		ret = -EINVAL;
+		goto free_buf;
+	}
+	len = strlen(wipe_info.partition_name);
+	slot =  wipe_info.slot;
+#else
+	slot = QSEECOM_ICE_FDE_KEY_INDEX;
+#endif
+
 	if (wipe_key_req.wipe_key_flag) {
 		delete_key_ireq.flags = flags;
 		delete_key_ireq.qsee_command_id = QSEOS_DELETE_KEY;
 		memset((void *)delete_key_ireq.key_id, 0, QSEECOM_KEY_ID_SIZE);
+
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
 		memcpy((void *)&delete_key_ireq.key_id[0],
-			(void *)partition_name,
-			wipe_key_req.len);
-		memcpy((void *)&delete_key_ireq.key_id[wipe_key_req.len],
+		       (void *)wipe_info.partition_name, len);
+		memcpy((void *)&delete_key_ireq.key_id[len],
+		       (void *)key_id_array[wipe_key_req.usage].desc,
+		       (QSEECOM_KEY_ID_SIZE - len));
+#else
+		memcpy((void *)delete_key_ireq.key_id,
 			(void *)key_id_array[wipe_key_req.usage].desc,
-			QSEECOM_KEY_ID_SIZE - wipe_key_req.len);
+			QSEECOM_KEY_ID_SIZE);
+#endif
+
 		memset((void *)delete_key_ireq.hash32, 0, QSEECOM_HASH_SIZE);
 
 		ret = __qseecom_delete_saved_key(data, wipe_key_req.usage,
@@ -6694,16 +6552,6 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 			goto free_buf;
 		}
 	}
-
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-		slot = get_key_slot(partition_name);
-		if (slot == -1) {
-			pr_err("No slot found for %s", partition_name);
-			goto free_buf;
-		}
-#else
-		slot = QSEECOM_ICE_FDE_KEY_INDEX;
-#endif
 
 	for (j = 0; j < entries; j++) {
 		clear_key_ireq.qsee_command_id = QSEOS_SET_KEY;
@@ -6746,14 +6594,25 @@ static int qseecom_wipe_key(struct qseecom_dev_handle *data,
 		}
 	}
 #if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-	__unmap_key_partition_name(slot, partition_name);
-	__free_key_slot(slot);
+	ret = qcom_ice_free_key_slot(wipe_info.slot);
 #endif
 free_buf:
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	if (ret) {
+		if (wipe_info.partition_name) {
+			clean_ret = qcom_ice_map_key_partition(slot,
+						wipe_info.partition_name,
+						wipe_info.hash32);
+			if (clean_ret)
+				pr_err("Unable to map key after wipe failed.");
+		}
+	}
+
+	if (wipe_info.partition_name)
+		kzfree(wipe_info.partition_name);
+#endif
 	if (ce_hw)
 		kzfree(ce_hw);
-	if (partition_name)
-		kzfree(partition_name);
 	return ret;
 }
 
@@ -6764,7 +6623,10 @@ static int qseecom_update_key_user_info(struct qseecom_dev_handle *data,
 	uint32_t flags = 0;
 	struct qseecom_update_key_userinfo_req update_key_req;
 	struct qseecom_key_userinfo_update_ireq ireq;
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
 	unsigned char *partition_name = NULL;
+	int len = 0;
+#endif
 
 	ret = copy_from_user(&update_key_req, argp, sizeof(update_key_req));
 	if (ret) {
@@ -6772,36 +6634,12 @@ static int qseecom_update_key_user_info(struct qseecom_dev_handle *data,
 		return ret;
 	}
 
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-	partition_name = kmalloc(update_key_req.len, GFP_KERNEL);
-	if (!partition_name) {
-		ret = -ENOMEM;
-		return ret;
-	}
-	ret = copy_from_user(partition_name,
-				update_key_req.partition_name,
-				update_key_req.len);
-	if (ret) {
-		pr_err("copy_from_user failed\n");
-		goto free_buf;
-	}
-
-	if (update_key_req.usage < QSEOS_KM_USAGE_UFS_ICE_DISK_ENCRYPTION ||
-		update_key_req.usage >= QSEOS_KM_USAGE_MAX) {
-		pr_err("unsupported usage %d\n", update_key_req.usage);
-		ret = -EFAULT;
-		goto free_buf;
-	}
-#else
-	partition_name = "userdata";
-	update_key_req.len = strlen(partition_name);
 	if (update_key_req.usage < QSEOS_KM_USAGE_DISK_ENCRYPTION ||
 		update_key_req.usage >= QSEOS_KM_USAGE_MAX) {
-		pr_err("unsupported usage %d\n", update_key_req.usage);
-		ret = -EFAULT;
-		goto free_buf;
+		pr_err("Error:: unsupported usage %d\n", update_key_req.usage);
+		return -EFAULT;
 	}
-#endif
+
 	ireq.qsee_command_id = QSEOS_UPDATE_KEY_USERINFO;
 
 	if (qseecom.fde_key_size)
@@ -6813,12 +6651,28 @@ static int qseecom_update_key_user_info(struct qseecom_dev_handle *data,
 	memset(ireq.key_id, 0, QSEECOM_KEY_ID_SIZE);
 	memset((void *)ireq.current_hash32, 0, QSEECOM_HASH_SIZE);
 	memset((void *)ireq.new_hash32, 0, QSEECOM_HASH_SIZE);
+
+#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
+	partition_name =  qcom_ice_get_partition_name_from_pwd(
+					update_key_req.current_hash32);
+	if (!partition_name) {
+		pr_err("Failed to retrieve partition name");
+		return -EINVAL;
+	}
+
+	len = strlen(partition_name);
+
+	memcpy((void *)&ireq.key_id[0],
+	       (void *)partition_name, len);
+	memcpy((void *)&ireq.key_id[len],
+	       (void *)key_id_array[update_key_req.usage].desc,
+	       (QSEECOM_KEY_ID_SIZE - len));
+#else
 	memcpy((void *)ireq.key_id,
-			(void *)partition_name,
-			update_key_req.len);
-	memcpy((void *)&ireq.key_id[update_key_req.len],
-			(void *)key_id_array[update_key_req.usage].desc,
-			QSEECOM_KEY_ID_SIZE - update_key_req.len);
+		(void *)key_id_array[update_key_req.usage].desc,
+		QSEECOM_KEY_ID_SIZE);
+#endif
+
 	memcpy((void *)ireq.current_hash32,
 		(void *)update_key_req.current_hash32, QSEECOM_HASH_SIZE);
 	memcpy((void *)ireq.new_hash32,
@@ -6838,11 +6692,8 @@ static int qseecom_update_key_user_info(struct qseecom_dev_handle *data,
 	} while (ret == QSEOS_RESULT_FAIL_PENDING_OPERATION);
 	if (ret) {
 		pr_err("Failed to update key info: %d\n", ret);
-		goto free_buf;
+		return ret;
 	}
-free_buf:
-	if (partition_name)
-		kzfree(partition_name);
 	return ret;
 
 }
@@ -8096,9 +7947,6 @@ static long qseecom_ioctl(struct file *file,
 		data->released = true;
 		mutex_lock(&app_access_lock);
 		atomic_inc(&data->ioctl_count);
-#if IS_ENABLED(CONFIG_CRYPTO_DEV_QCOM_ICE_MULTI_FDE)
-		__key_slot_indexes_init();
-#endif
 		ret = qseecom_create_key(data, argp);
 		if (ret)
 			pr_err("failed to create encryption key: %d\n", ret);
