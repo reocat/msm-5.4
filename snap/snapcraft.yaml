@@ -33,6 +33,9 @@ parts:
       snapcraftctl build
       kernel_version="$(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 14-)"
       snapcraftctl set-version ${kernel_version}
+    override-prime: |
+      snapcraftctl prime
+      ${SNAPCRAFT_STAGE}/trim-firmware ${SNAPCRAFT_PRIME}
     stage:
       - dtbs
       - System.map-*
