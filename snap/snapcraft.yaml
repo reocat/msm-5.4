@@ -34,6 +34,9 @@ parts:
       craftctl default
       kernel_version="$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 12-)"
       craftctl set version=${kernel_version}-unsigned
+    override-prime: |
+      craftctl default
+      ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
     stage:
       - config-*
       - dtbs
