@@ -420,14 +420,14 @@ static int ena_set_coalesce(struct net_device *net_dev,
 	if (rc)
 		return rc;
 
-	ena_update_rx_rings_nonadaptive_intr_moderation(adapter);
+	ena_update_rx_rings_intr_moderation(adapter);
 
-	if ((coalesce->use_adaptive_rx_coalesce) &&
-	    (!ena_com_get_adaptive_moderation_enabled(ena_dev)))
+	if (coalesce->use_adaptive_rx_coalesce &&
+	    !ena_com_get_adaptive_moderation_enabled(ena_dev))
 		ena_com_enable_adaptive_moderation(ena_dev);
 
-	if ((!coalesce->use_adaptive_rx_coalesce) &&
-	    (ena_com_get_adaptive_moderation_enabled(ena_dev)))
+	if (!coalesce->use_adaptive_rx_coalesce &&
+	    ena_com_get_adaptive_moderation_enabled(ena_dev))
 		ena_com_disable_adaptive_moderation(ena_dev);
 
 	return 0;

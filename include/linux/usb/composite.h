@@ -249,6 +249,15 @@ int usb_function_activate(struct usb_function *);
 
 int usb_interface_id(struct usb_configuration *, struct usb_function *);
 
+#ifdef CONFIG_USB_FUNC_WAKEUP_SUPPORTED
+int usb_func_wakeup(struct usb_function *func);
+#else
+static inline int usb_func_wakeup(struct usb_function *func)
+{
+	return -EOPNOTSUPP;
+}
+#endif
+
 int config_ep_by_speed_and_alt(struct usb_gadget *g, struct usb_function *f,
 				struct usb_ep *_ep, u8 alt);
 
@@ -569,6 +578,9 @@ struct usb_composite_overwrite {
 void usb_composite_overwrite_options(struct usb_composite_dev *cdev,
 		struct usb_composite_overwrite *covr);
 
+int composite_dev_prepare(struct usb_composite_driver *composite,
+		struct usb_composite_dev *dev);
+
 static inline u16 get_default_bcdDevice(void)
 {
 	u16 bcdDevice;
@@ -590,6 +602,7 @@ struct usb_function_instance {
 	struct config_group group;
 	struct list_head cfs_list;
 	struct usb_function_driver *fd;
+	struct usb_function *f;
 	int (*set_inst_name)(struct usb_function_instance *inst,
 			      const char *name);
 	void (*free_func_inst)(struct usb_function_instance *inst);

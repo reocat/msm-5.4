@@ -1422,6 +1422,11 @@ static inline struct pqi_ctrl_info *shost_to_hba(struct Scsi_Host *shost)
 	return *((struct pqi_ctrl_info **)hostdata);
 }
 
+static inline bool pqi_device_reset_blocked(struct pqi_ctrl_info *ctrl_info)
+{
+	return ctrl_info->block_device_reset;
+}
+
 void pqi_sas_smp_handler(struct bsg_job *job, struct Scsi_Host *shost,
 	struct sas_rphy *rphy);
 

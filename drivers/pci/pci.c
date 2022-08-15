@@ -123,6 +123,7 @@ bool pci_ats_disabled(void)
 {
 	return pcie_ats_disabled;
 }
+EXPORT_SYMBOL_GPL(pci_ats_disabled);
 
 /* Disable bridge_d3 for all PCIe ports */
 static bool pci_bridge_d3_disable;
@@ -1358,6 +1359,11 @@ int pci_save_state(struct pci_dev *dev)
 		return i;
 
 	pci_save_ltr_state(dev);
+
+#ifdef CONFIG_PCI_QTI
+	pci_save_aspm_l1ss_state(dev);
+#endif
+
 	pci_save_dpc_state(dev);
 	return pci_save_vc_state(dev);
 }
@@ -1462,6 +1468,10 @@ void pci_restore_state(struct pci_dev *dev)
 	 * LTR itself (in the PCIe capability).
 	 */
 	pci_restore_ltr_state(dev);
+
+#ifdef CONFIG_PCI_QTI
+	pci_restore_aspm_l1ss_state(dev);
+#endif
 
 	pci_restore_pcie_state(dev);
 	pci_restore_pasid_state(dev);
@@ -3122,6 +3132,13 @@ void pci_allocate_cap_save_buffers(struct pci_dev *dev)
 					    2 * sizeof(u16));
 	if (error)
 		pci_err(dev, "unable to allocate suspend buffer for LTR\n");
+
+#ifdef CONFIG_PCI_QTI
+	error = pci_add_ext_cap_save_buffer(dev, PCI_EXT_CAP_ID_L1SS,
+					    2 * sizeof(u32));
+	if (error)
+		pci_err(dev, "unable to allocate suspend buffer for ASPM-L1SS\n");
+#endif
 
 	pci_allocate_vc_save_buffers(dev);
 }

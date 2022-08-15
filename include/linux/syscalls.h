@@ -51,7 +51,7 @@ struct statx;
 struct __sysctl_args;
 struct sysinfo;
 struct timespec;
-struct timeval;
+struct __kernel_old_timeval;
 struct __kernel_timex;
 struct timezone;
 struct tms;
@@ -732,9 +732,9 @@ asmlinkage long sys_prctl(int option, unsigned long arg2, unsigned long arg3,
 asmlinkage long sys_getcpu(unsigned __user *cpu, unsigned __user *node, struct getcpu_cache __user *cache);
 
 /* kernel/time.c */
-asmlinkage long sys_gettimeofday(struct timeval __user *tv,
+asmlinkage long sys_gettimeofday(struct __kernel_old_timeval __user *tv,
 				struct timezone __user *tz);
-asmlinkage long sys_settimeofday(struct timeval __user *tv,
+asmlinkage long sys_settimeofday(struct __kernel_old_timeval __user *tv,
 				struct timezone __user *tz);
 asmlinkage long sys_adjtimex(struct __kernel_timex __user *txc_p);
 asmlinkage long sys_adjtimex_time32(struct old_timex32 __user *txc_p);
@@ -874,6 +874,9 @@ asmlinkage long sys_munlockall(void);
 asmlinkage long sys_mincore(unsigned long start, size_t len,
 				unsigned char __user * vec);
 asmlinkage long sys_madvise(unsigned long start, size_t len, int behavior);
+asmlinkage long sys_process_madvise(int which, pid_t upid,
+		const struct iovec __user *vec, unsigned long vlen,
+		int behavior, unsigned long flags);
 asmlinkage long sys_remap_file_pages(unsigned long start, unsigned long size,
 			unsigned long prot, unsigned long pgoff,
 			unsigned long flags);
@@ -1082,9 +1085,9 @@ asmlinkage long sys_time32(old_time32_t __user *tloc);
 asmlinkage long sys_utime(char __user *filename,
 				struct utimbuf __user *times);
 asmlinkage long sys_utimes(char __user *filename,
-				struct timeval __user *utimes);
+				struct __kernel_old_timeval __user *utimes);
 asmlinkage long sys_futimesat(int dfd, const char __user *filename,
-			      struct timeval __user *utimes);
+			      struct __kernel_old_timeval __user *utimes);
 #endif
 asmlinkage long sys_futimesat_time32(unsigned int dfd,
 				     const char __user *filename,
@@ -1098,7 +1101,7 @@ asmlinkage long sys_getdents(unsigned int fd,
 				struct linux_dirent __user *dirent,
 				unsigned int count);
 asmlinkage long sys_select(int n, fd_set __user *inp, fd_set __user *outp,
-			fd_set __user *exp, struct timeval __user *tvp);
+			fd_set __user *exp, struct __kernel_old_timeval __user *tvp);
 asmlinkage long sys_poll(struct pollfd __user *ufds, unsigned int nfds,
 				int timeout);
 asmlinkage long sys_epoll_wait(int epfd, struct epoll_event __user *events,

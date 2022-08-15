@@ -24,7 +24,7 @@
 #define IDISP_VID_INTEL	0x80860000
 
 /* load the legacy HDA codec driver */
-static int request_codec_module(struct hda_codec *codec)
+static void hda_codec_load_module(struct hda_codec *codec)
 {
 #ifdef MODULE
 	char alias[MODULE_NAME_LEN];

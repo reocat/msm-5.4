@@ -266,6 +266,7 @@ static int __init omapdss_init_of(void)
 	put_device(&pdev->dev);
 	if (r) {
 		pr_err("Unable to populate DSS submodule devices\n");
+		put_device(&pdev->dev);
 		return r;
 	}
 

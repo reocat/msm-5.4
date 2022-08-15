@@ -2650,7 +2650,6 @@ int ena_com_indirect_table_get(struct ena_com_dev *ena_dev, u32 *ind_tbl)
 
 	if (!ind_tbl)
 		return 0;
-
 	for (i = 0; i < (1 << rss->tbl_log_size); i++)
 		ind_tbl[i] = rss->host_rss_ind_tbl[i];
 
@@ -2672,10 +2671,10 @@ int ena_com_rss_init(struct ena_com_dev *ena_dev, u16 indr_tbl_log_size)
 	 * ignore this error and have indirection table support only.
 	 */
 	rc = ena_com_hash_key_allocate(ena_dev);
-	if (likely(!rc))
-		ena_com_hash_key_fill_default_key(ena_dev);
-	else if (rc != -EOPNOTSUPP)
+	if (unlikely(rc) && rc != -EOPNOTSUPP)
 		goto err_hash_key;
+	else if (rc != -EOPNOTSUPP)
+		ena_com_hash_key_fill_default_key(ena_dev);
 
 	rc = ena_com_hash_ctrl_init(ena_dev);
 	if (unlikely(rc))

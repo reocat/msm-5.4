@@ -124,7 +124,6 @@ static inline u32 kvm_read_and_reset_pf_reason(void)
 {
 	return 0;
 }
-
 #endif
 
 #endif /* _ASM_X86_KVM_PARA_H */

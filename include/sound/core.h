@@ -14,7 +14,9 @@
 #include <linux/pm.h>			/* pm_message_t */
 #include <linux/stringify.h>
 #include <linux/printk.h>
-
+#ifdef CONFIG_SND_CTL_HASHTABLE
+#include <linux/hashtable.h>
+#endif
 /* number of supported soundcards */
 #ifdef CONFIG_SND_DYNAMIC_MINORS
 #define SNDRV_CARDS CONFIG_SND_MAX_CARDS
@@ -23,6 +25,10 @@
 #endif
 
 #define CONFIG_SND_MAJOR	116	/* standard configuration */
+
+#ifdef CONFIG_SND_CTL_HASHTABLE
+#define SND_CTL_HASH_TABLE_BITS 14	/* buckets numbers: 1 << 14 */
+#endif
 
 /* forward declarations */
 struct pci_dev;
@@ -103,7 +109,9 @@ struct snd_card {
 	int user_ctl_count;		/* count of all user controls */
 	struct list_head controls;	/* all controls for this card */
 	struct list_head ctl_files;	/* active control files */
-
+#ifdef CONFIG_SND_CTL_HASHTABLE
+	DECLARE_HASHTABLE(ctl_htable, SND_CTL_HASH_TABLE_BITS);
+#endif
 	struct snd_info_entry *proc_root;	/* root for soundcard specific files */
 	struct proc_dir_entry *proc_root_link;	/* number link to real id */
 
@@ -118,6 +126,11 @@ struct snd_card {
 	const struct attribute_group *dev_groups[4]; /* assigned sysfs attr */
 	bool registered;		/* card_dev is registered? */
 	wait_queue_head_t remove_sleep;
+#ifdef CONFIG_AUDIO_QGKI
+	int offline;			/* if this sound card is offline */
+	unsigned long offline_change;
+	wait_queue_head_t offline_poll_wait;
+#endif
 
 #ifdef CONFIG_PM
 	unsigned int power_state;	/* power state */
@@ -249,6 +262,11 @@ static inline void snd_card_unref(struct snd_card *card)
 {
 	put_device(&card->card_dev);
 }
+
+#ifdef CONFIG_AUDIO_QGKI
+void snd_card_change_online_state(struct snd_card *card, int online);
+bool snd_card_is_online_state(struct snd_card *card);
+#endif
 
 #define snd_card_set_dev(card, devptr) ((card)->dev = (devptr))
 

@@ -132,8 +132,8 @@ static void clean_dcache_range_nopatch(u64 start, u64 end)
 	} while (cur += d_size, cur < end);
 }
 
-static void __apply_alternatives(void *alt_region,  bool is_module,
-				 unsigned long *feature_mask)
+static void __nocfi __apply_alternatives(void *alt_region,  bool is_module,
+					 unsigned long *feature_mask)
 {
 	struct alt_instr *alt;
 	struct alt_region *region = alt_region;
@@ -203,8 +203,13 @@ static int __apply_alternatives_multi_stop(void *unused)
 		.end	= (struct alt_instr *)__alt_instructions_end,
 	};
 
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+	/* We always have a logical boot CPU at this point (__init) */
+	if (smp_processor_id() != logical_bootcpu_id) {
+#else
 	/* We always have a CPU 0 at this point (__init) */
 	if (smp_processor_id()) {
+#endif
 		while (!READ_ONCE(all_alternatives_applied))
 			cpu_relax();
 		isb();
@@ -242,7 +247,11 @@ void __init apply_boot_alternatives(void)
 	};
 
 	/* If called on non-boot cpu things could go wrong */
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+	WARN_ON(smp_processor_id() != logical_bootcpu_id);
+#else
 	WARN_ON(smp_processor_id() != 0);
+#endif
 
 	__apply_alternatives(&region, false, &boot_capabilities[0]);
 }

@@ -18,6 +18,9 @@
 #include <linux/percpu.h>
 #include <linux/refcount.h>
 #include <linux/slab.h>
+#include <linux/msm_rtb.h>
+#include <linux/wakeup_reason.h>
+
 
 #include <linux/irqchip.h>
 #include <linux/irqchip/arm-gic-common.h>
@@ -28,6 +31,10 @@
 #include <asm/exception.h>
 #include <asm/smp_plat.h>
 #include <asm/virt.h>
+
+#include <linux/syscore_ops.h>
+#include <linux/suspend.h>
+#include <linux/notifier.h>
 
 #include "irq-gic-common.h"
 
@@ -53,6 +60,14 @@ struct gic_chip_data {
 	bool			has_rss;
 	unsigned int		ppi_nr;
 	struct partition_desc	**ppi_descs;
+#ifdef CONFIG_HIBERNATION
+	unsigned int enabled_irqs[32];
+	unsigned int active_irqs[32];
+	unsigned int irq_edg_lvl[64];
+	unsigned int ppi_edg_lvl;
+	unsigned int enabled_sgis;
+	unsigned int pending_sgis;
+#endif
 };
 
 static struct gic_chip_data gic_data __read_mostly;
@@ -132,6 +147,9 @@ static enum gic_intid_range get_intid_range(struct irq_data *d)
 {
 	return __get_intid_range(d->hwirq);
 }
+
+static void gic_dist_init(void);
+static void gic_cpu_init(void);
 
 static inline unsigned int gic_irq(struct irq_data *d)
 {
@@ -569,6 +587,172 @@ static int gic_irq_set_vcpu_affinity(struct irq_data *d, void *vcpu)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+#ifdef CONFIG_HIBERNATION
+extern int in_suspend;
+static bool hibernation;
+
+static int gic_suspend_notifier(struct notifier_block *nb,
+				unsigned long event,
+				void *dummy)
+{
+#ifdef CONFIG_DEEPSLEEP
+	if ((event == PM_HIBERNATION_PREPARE) || ((event == PM_SUSPEND_PREPARE)
+			&& (mem_sleep_current == PM_SUSPEND_MEM)))
+#else
+	if (event == PM_HIBERNATION_PREPARE)
+#endif
+		hibernation = true;
+#ifdef CONFIG_DEEPSLEEP
+	else if ((event == PM_POST_HIBERNATION) || ((event == PM_POST_SUSPEND)
+			&& (mem_sleep_current == PM_SUSPEND_MEM)))
+#else
+	else if (event == PM_POST_HIBERNATION)
+#endif
+		hibernation = false;
+	return NOTIFY_OK;
+}
+
+static struct notifier_block gic_notif_block = {
+	.notifier_call = gic_suspend_notifier,
+};
+
+static void gic_hibernation_suspend(void)
+{
+	int i;
+	void __iomem *base = gic_data.dist_base;
+	void __iomem *rdist_base = gic_data_rdist_sgi_base();
+
+	gic_data.enabled_sgis = readl_relaxed(rdist_base + GICD_ISENABLER);
+	gic_data.pending_sgis = readl_relaxed(rdist_base + GICD_ISPENDR);
+	/* Store edge level for PPIs by reading GICR_ICFGR1 */
+	gic_data.ppi_edg_lvl = readl_relaxed(rdist_base + GICR_ICFGR0 + 4);
+
+	for (i = 0; i * 32 < GIC_LINE_NR; i++) {
+		gic_data.enabled_irqs[i] = readl_relaxed(base +
+						GICD_ISENABLER + i * 4);
+		gic_data.active_irqs[i] = readl_relaxed(base +
+						GICD_ISPENDR + i * 4);
+	}
+
+	for (i = 2; i < GIC_LINE_NR / 16; i++)
+		gic_data.irq_edg_lvl[i] = readl_relaxed(base +
+						GICD_ICFGR + i * 4);
+}
+#endif
+
+static int gic_suspend(void)
+{
+#ifdef CONFIG_HIBERNATION
+	if (unlikely(hibernation))
+		gic_hibernation_suspend();
+#endif
+	return 0;
+}
+
+static void gic_show_resume_irq(struct gic_chip_data *gic)
+{
+	unsigned int i;
+	u32 enabled;
+	u32 pending[32];
+	void __iomem *base = gic_data.dist_base;
+
+	if (!msm_show_resume_irq_mask)
+		return;
+
+	for (i = 0; i * 32 < GIC_LINE_NR; i++) {
+		enabled = readl_relaxed(base + GICD_ICENABLER + i * 4);
+		pending[i] = readl_relaxed(base + GICD_ISPENDR + i * 4);
+		pending[i] &= enabled;
+	}
+
+	for (i = find_first_bit((unsigned long *)pending, GIC_LINE_NR);
+	     i < GIC_LINE_NR;
+	     i = find_next_bit((unsigned long *)pending, GIC_LINE_NR, i + 1)) {
+		unsigned int irq = irq_find_mapping(gic->domain, i);
+		struct irq_desc *desc = irq_to_desc(irq);
+		const char *name = "null";
+
+		if (i < 32)
+			continue;
+
+		if (desc == NULL)
+			name = "stray irq";
+		else if (desc->action && desc->action->name)
+			name = desc->action->name;
+		else if (desc->irq_data.chip && desc->irq_data.chip->name)
+			name = desc->irq_data.chip->name;
+
+		pr_warn("%s: irq:%d hwirq:%u triggered %s\n",
+			 __func__, irq, i, name);
+	}
+}
+
+static void gic_resume_one(struct gic_chip_data *gic)
+{
+	gic_show_resume_irq(gic);
+}
+
+static void gic_resume(void)
+{
+#ifdef CONFIG_HIBERNATION
+	int i;
+	void __iomem *base = gic_data.dist_base;
+	void __iomem *rdist_base = gic_data_rdist_sgi_base();
+
+	/*
+	 * in_suspend is defined in hibernate.c and will be 0 during
+	 * hibernation restore case. Also it willl be 0 for suspend to ram case
+	 * and similar cases. Underlying code will not get executed in regular
+	 * cases and will be executed only for hibernation restore.
+	 */
+	if (unlikely((in_suspend == 0 && hibernation))) {
+		pr_info("Re-initializing gic in hibernation restore\n");
+		gic_dist_init();
+		gic_cpu_init();
+		/* Activate and enable SGIs and PPIs */
+		writel_relaxed(gic_data.enabled_sgis,
+			       rdist_base + GICD_ISENABLER);
+		writel_relaxed(gic_data.pending_sgis,
+			       rdist_base + GICD_ISPENDR);
+		/* Restore edge and level triggers for PPIs from GICR_ICFGR1 */
+		writel_relaxed(gic_data.ppi_edg_lvl,
+			       rdist_base + GICR_ICFGR0 + 4);
+
+		/* Restore edge and level triggers */
+		for (i = 2; i < GIC_LINE_NR / 16; i++)
+			writel_relaxed(gic_data.irq_edg_lvl[i],
+					base + GICD_ICFGR + i * 4);
+		gic_dist_wait_for_rwp();
+
+		/* Activate and enable interrupts from backup */
+		for (i = 0; i * 32 < GIC_LINE_NR; i++) {
+			writel_relaxed(gic_data.active_irqs[i],
+				       base + GICD_ISPENDR + i * 4);
+
+			writel_relaxed(gic_data.enabled_irqs[i],
+				       base + GICD_ISENABLER + i * 4);
+		}
+		gic_dist_wait_for_rwp();
+	}
+#endif
+	gic_resume_one(&gic_data);
+}
+
+static struct syscore_ops gic_syscore_ops = {
+	.suspend = gic_suspend,
+	.resume = gic_resume,
+};
+
+static int __init gic_init_sys(void)
+{
+	register_syscore_ops(&gic_syscore_ops);
+	return 0;
+}
+arch_initcall(gic_init_sys);
+
+#endif
+
 static u64 gic_mpidr_to_affinity(unsigned long mpidr)
 {
 	u64 aff;
@@ -640,6 +824,7 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 	if (likely(irqnr > 15)) {
 		int err;
 
+		uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 		if (static_branch_likely(&supports_deactivate_key))
 			gic_write_eoir(irqnr);
 		else
@@ -648,11 +833,15 @@ static asmlinkage void __exception_irq_entry gic_handle_irq(struct pt_regs *regs
 		err = handle_domain_irq(gic_data.domain, irqnr, regs);
 		if (err) {
 			WARN_ONCE(true, "Unexpected interrupt received!\n");
+			log_abnormal_wakeup_reason(
+					"unexpected HW IRQ %u", irqnr);
+
 			gic_deactivate_unhandled(irqnr);
 		}
 		return;
 	}
 	if (irqnr < 16) {
+		uncached_logk(LOGK_IRQ, (void *)(uintptr_t)irqnr);
 		gic_write_eoir(irqnr);
 		if (static_branch_likely(&supports_deactivate_key))
 			gic_write_dir(irqnr);
@@ -709,7 +898,7 @@ static bool gic_has_group0(void)
 	return val != 0;
 }
 
-static void __init gic_dist_init(void)
+static void gic_dist_init(void)
 {
 	unsigned int i;
 	u64 affinity;
@@ -822,10 +1011,6 @@ static int __gic_populate_rdist(struct redist_region *region, void __iomem *ptr)
 		gic_data_rdist_rd_base() = ptr;
 		gic_data_rdist()->phys_base = region->phys_base + offset;
 
-		pr_info("CPU%d: found redistributor %lx region %d:%pa\n",
-			smp_processor_id(), mpidr,
-			(int)(region - gic_data.redist_regions),
-			&gic_data_rdist()->phys_base);
 		return 0;
 	}
 
@@ -1173,6 +1358,13 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
 #define gic_set_affinity	NULL
 #define gic_smp_init()		do { } while(0)
 #endif
+
+#ifdef CONFIG_QGKI_SHOW_S2IDLE_WAKE_IRQ
+void gic_s2idle_wake(void)
+{
+	gic_resume_one(&gic_data);
+}
+#endif /* CONFIG_QGKI_SHOW_S2IDLE_WAKE_IRQ */
 
 #ifdef CONFIG_CPU_PM
 static int gic_cpu_pm_notifier(struct notifier_block *self,
@@ -1722,7 +1914,7 @@ static void __init gic_of_setup_kvm_info(struct device_node *node)
 	gic_set_kvm_info(&gic_v3_kvm_info);
 }
 
-static int __init gic_of_init(struct device_node *node, struct device_node *parent)
+static int __init gicv3_of_init(struct device_node *node, struct device_node *parent)
 {
 	void __iomem *dist_base;
 	struct redist_region *rdist_regs;
@@ -1775,7 +1967,11 @@ static int __init gic_of_init(struct device_node *node, struct device_node *pare
 			     redist_stride, &node->fwnode);
 	if (err)
 		goto out_unmap_rdist;
-
+#ifdef CONFIG_HIBERNATION
+	err = register_pm_notifier(&gic_notif_block);
+	if (err)
+		goto out_unmap_rdist;
+#endif
 	gic_populate_ppi_partitions(node);
 
 	if (static_branch_likely(&supports_deactivate_key))
@@ -1792,7 +1988,7 @@ out_unmap_dist:
 	return err;
 }
 
-IRQCHIP_DECLARE(gic_v3, "arm,gic-v3", gic_of_init);
+IRQCHIP_DECLARE(gic_v3, "arm,gic-v3", gicv3_of_init);
 
 #ifdef CONFIG_ACPI
 static struct

@@ -44,17 +44,27 @@
 #include <asm/pgtable.h>
 #include <asm/pgalloc.h>
 #include <asm/processor.h>
+#include <asm/scs.h>
 #include <asm/smp_plat.h>
 #include <asm/sections.h>
 #include <asm/tlbflush.h>
 #include <asm/ptrace.h>
 #include <asm/virt.h>
+#include <asm/system_misc.h>
+#include <soc/qcom/lpm_levels.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/ipi.h>
+#undef CREATE_TRACE_POINTS
+#include <trace/hooks/debug.h>
 
 DEFINE_PER_CPU_READ_MOSTLY(int, cpu_number);
 EXPORT_PER_CPU_SYMBOL(cpu_number);
+
+#ifdef CONFIG_QGKI_LPM_IPI_CHECK
+DEFINE_PER_CPU(bool, pending_ipi);
+EXPORT_PER_CPU_SYMBOL(pending_ipi);
+#endif /* CONFIG_QGKI_LPM_IPI_CHECK */
 
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
@@ -336,7 +346,7 @@ void __cpu_die(unsigned int cpu)
 		pr_crit("CPU%u: cpu didn't die\n", cpu);
 		return;
 	}
-	pr_notice("CPU%u: shutdown\n", cpu);
+	pr_info("CPU%u: shutdown\n", cpu);
 
 	/*
 	 * Now that the dying CPU is beyond the point of no return w.r.t.
@@ -357,6 +367,9 @@ void __cpu_die(unsigned int cpu)
 void cpu_die(void)
 {
 	unsigned int cpu = smp_processor_id();
+
+	/* Save the shadow stack pointer before exiting the idle task */
+	scs_save(current);
 
 	idle_task_exit();
 
@@ -471,6 +484,20 @@ static u64 __init of_get_cpu_mpidr(struct device_node *dn)
  * cpu. cpu_logical_map was initialized to INVALID_HWID to avoid
  * matching valid MPIDR values.
  */
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+static bool __init is_mpidr_duplicate(unsigned int cpu, u64 hwid)
+{
+	unsigned int i;
+
+	for (i = 0; (i <= cpu) && (i < NR_CPUS); i++) {
+		if (i == logical_bootcpu_id)
+			continue;
+		if (cpu_logical_map(i) == hwid)
+			return true;
+	}
+	return false;
+}
+#else
 static bool __init is_mpidr_duplicate(unsigned int cpu, u64 hwid)
 {
 	unsigned int i;
@@ -480,6 +507,7 @@ static bool __init is_mpidr_duplicate(unsigned int cpu, u64 hwid)
 			return true;
 	return false;
 }
+#endif
 
 /*
  * Initialize cpu operations for a logical cpu and
@@ -499,7 +527,11 @@ static int __init smp_cpu_setup(int cpu)
 }
 
 static bool bootcpu_valid __initdata;
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+static unsigned int cpu_count;
+#else
 static unsigned int cpu_count = 1;
+#endif
 
 #ifdef CONFIG_ACPI
 static struct acpi_madt_generic_interrupt cpu_madt_gicc[NR_CPUS];
@@ -536,14 +568,22 @@ acpi_map_gic_cpu_interface(struct acpi_madt_generic_interrupt *processor)
 	}
 
 	/* Check if GICC structure of boot CPU is available in the MADT */
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+	if (cpu_logical_map(logical_bootcpu_id) == hwid) {
+#else
 	if (cpu_logical_map(0) == hwid) {
+#endif
 		if (bootcpu_valid) {
 			pr_err("duplicate boot CPU MPIDR: 0x%llx in MADT\n",
 			       hwid);
 			return;
 		}
 		bootcpu_valid = true;
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+		cpu_madt_gicc[logical_bootcpu_id] = *processor;
+#else
 		cpu_madt_gicc[0] = *processor;
+#endif
 		return;
 	}
 
@@ -618,7 +658,8 @@ static void __init acpi_parse_and_init_cpus(void)
 /*
  * Enumerate the possible CPU set from the device tree and build the
  * cpu logical map array containing MPIDR values related to logical
- * cpus. Assumes that cpu_logical_map(0) has already been initialized.
+ * cpus. Assumes that cpu_logical_map(0) or cpu_logical_map(logical_bootcpu_id)
+ * for CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING has already been initialized.
  */
 static void __init of_parse_and_init_cpus(void)
 {
@@ -636,6 +677,33 @@ static void __init of_parse_and_init_cpus(void)
 			goto next;
 		}
 
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+		/*
+		 * The numbering scheme requires that the boot CPU
+		 * must be assigned logical boot cpu id. Record it so that
+		 * the logical map built from DT is validated and can
+		 * be used.
+		 */
+		if (hwid == cpu_logical_map(logical_bootcpu_id)) {
+			if (bootcpu_valid) {
+				pr_err("%pOF: duplicate boot cpu reg property in DT\n",
+					dn);
+				goto next;
+			}
+
+			bootcpu_valid = true;
+			early_map_cpu_to_node(logical_bootcpu_id,
+						of_node_to_nid(dn));
+			/*
+			 * boot cpu's cpu_logical_map is already
+			 * initialized and the boot cpu doesn't need the
+			 * enable-method like secondary cpu's. Now, as we
+			 * can't assume logical boot cpu to be 0, we need
+			 * to loop through entire logical cpu map.
+			 */
+			goto next;
+		}
+#else
 		/*
 		 * The numbering scheme requires that the boot CPU
 		 * must be assigned logical id 0. Record it so that
@@ -660,6 +728,7 @@ static void __init of_parse_and_init_cpus(void)
 			 */
 			continue;
 		}
+#endif
 
 		if (cpu_count >= NR_CPUS)
 			goto next;
@@ -703,12 +772,25 @@ void __init smp_init_cpus(void)
 	 * with entries in cpu_logical_map while initializing the cpus.
 	 * If the cpu set-up fails, invalidate the cpu_logical_map entry.
 	 */
+#ifdef CONFIG_FIX_BOOT_CPU_LOGICAL_MAPPING
+	for (i = 0; i < nr_cpu_ids; i++) {
+		if (cpu_logical_map(i) != INVALID_HWID) {
+			if (cpu_logical_map(i) ==
+					cpu_logical_map(logical_bootcpu_id))
+				continue;
+
+			if (smp_cpu_setup(i))
+				set_cpu_logical_map(i, INVALID_HWID);
+		}
+	}
+#else
 	for (i = 1; i < nr_cpu_ids; i++) {
 		if (cpu_logical_map(i) != INVALID_HWID) {
 			if (smp_cpu_setup(i))
 				set_cpu_logical_map(i, INVALID_HWID);
 		}
 	}
+#endif
 }
 
 void __init smp_prepare_cpus(unsigned int max_cpus)
@@ -775,6 +857,13 @@ static const char *ipi_types[NR_IPI] __tracepoint_string = {
 
 static void smp_cross_call(const struct cpumask *target, unsigned int ipinr)
 {
+#ifdef CONFIG_QGKI_LPM_IPI_CHECK
+	unsigned int cpu;
+
+	for_each_cpu(cpu, target)
+		per_cpu(pending_ipi, cpu) = true;
+#endif /* CONFIG_QGKI_LPM_IPI_CHECK */
+
 	trace_ipi_raise(target, ipi_types[ipinr]);
 	__smp_cross_call(target, ipinr);
 }
@@ -829,9 +918,26 @@ void arch_irq_work_raise(void)
 }
 #endif
 
+static DEFINE_RAW_SPINLOCK(stop_lock);
+
+static DEFINE_PER_CPU(struct pt_regs, regs_before_stop);
+
 static void local_cpu_stop(void)
 {
-	set_cpu_online(smp_processor_id(), false);
+	unsigned int cpu = smp_processor_id();
+	struct pt_regs *regs = get_irq_regs();
+
+	if (system_state == SYSTEM_BOOTING ||
+	    system_state == SYSTEM_RUNNING) {
+		per_cpu(regs_before_stop, cpu) = *regs;
+		raw_spin_lock(&stop_lock);
+		pr_crit("CPU%u: stopping\n", cpu);
+		__show_regs(regs);
+		dump_stack();
+		raw_spin_unlock(&stop_lock);
+	}
+
+	set_cpu_online(cpu, false);
 
 	local_daif_mask();
 	sdei_mask_local_cpu();
@@ -897,6 +1003,7 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 		break;
 
 	case IPI_CPU_STOP:
+		trace_android_vh_ipi_stop_rcuidle(regs);
 		irq_enter();
 		local_cpu_stop();
 		irq_exit();
@@ -942,11 +1049,17 @@ void handle_IPI(int ipinr, struct pt_regs *regs)
 
 	if ((unsigned)ipinr < NR_IPI)
 		trace_ipi_exit_rcuidle(ipi_types[ipinr]);
+
+#ifdef CONFIG_QGKI_LPM_IPI_CHECK
+	this_cpu_write(pending_ipi, false);
+#endif /* CONFIG_QGKI_LPM_IPI_CHECK */
+
 	set_irq_regs(old_regs);
 }
 
 void smp_send_reschedule(int cpu)
 {
+	update_ipi_history(cpu);
 	smp_cross_call(cpumask_of(cpu), IPI_RESCHEDULE);
 }
 

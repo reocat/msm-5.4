@@ -688,6 +688,41 @@ static void armv8pmu_stop(struct arm_pmu *cpu_pmu)
 	armv8pmu_pmcr_write(armv8pmu_pmcr_read() & ~ARMV8_PMU_PMCR_E);
 	raw_spin_unlock_irqrestore(&events->pmu_lock, flags);
 }
+#ifdef CONFIG_KRYO_PMU_WORKAROUND
+static inline u32 armv8pmu_get_enabled_ints(void)
+{
+	u32 int_enset;
+
+	int_enset = read_sysreg(pmintenset_el1);
+	write_sysreg(0xffffffff, pmintenclr_el1);
+	isb();
+	return int_enset;
+}
+
+static inline u32 armv8pmu_update_enabled_ints(u32 value, int idx, int set)
+{
+	if (set)
+		value |=  BIT(ARMV8_IDX_TO_COUNTER(idx));
+	else
+		value &= ~(BIT(ARMV8_IDX_TO_COUNTER(idx)));
+
+	return value;
+}
+
+static inline void armv8pmu_set_enabled_ints(u32 mask)
+{
+	write_sysreg(mask, pmintenset_el1);
+	isb();
+}
+#else
+static inline u32 armv8pmu_get_enabled_ints(void)
+{ return 0; }
+
+static inline u32 armv8pmu_update_enabled_ints(u32 value, int idx, int set)
+{ return value; }
+
+static inline void armv8pmu_set_enabled_ints(u32 mask) { }
+#endif
 
 static irqreturn_t armv8pmu_handle_irq(struct arm_pmu *cpu_pmu)
 {
@@ -696,6 +731,12 @@ static irqreturn_t armv8pmu_handle_irq(struct arm_pmu *cpu_pmu)
 	struct pmu_hw_events *cpuc = this_cpu_ptr(cpu_pmu->hw_events);
 	struct pt_regs *regs;
 	int idx;
+	u32 enabled_ints;
+
+	/*
+	 * Get enabled the PMU interrupts and mask all PMU interrupts.
+	 */
+	enabled_ints = armv8pmu_get_enabled_ints();
 
 	/*
 	 * Get and reset the IRQ flags
@@ -739,8 +780,16 @@ static irqreturn_t armv8pmu_handle_irq(struct arm_pmu *cpu_pmu)
 		if (!armpmu_event_set_period(event))
 			continue;
 
-		if (perf_event_overflow(event, &data, regs))
+		if (perf_event_overflow(event, &data, regs)) {
 			cpu_pmu->disable(event);
+
+			/*
+			 * Update the list of interrupts
+			 * that should be reenabled.
+			 */
+			enabled_ints = armv8pmu_update_enabled_ints(
+					enabled_ints, idx, 0);
+		}
 	}
 	armv8pmu_start(cpu_pmu);
 
@@ -752,6 +801,11 @@ static irqreturn_t armv8pmu_handle_irq(struct arm_pmu *cpu_pmu)
 	 * will not work.
 	 */
 	irq_work_run();
+
+	/*
+	 * Re-enable the PMU interrupts
+	 */
+	armv8pmu_set_enabled_ints(enabled_ints);
 
 	return IRQ_HANDLED;
 }
@@ -1015,7 +1069,10 @@ static int armv8pmu_probe_pmu(struct arm_pmu *cpu_pmu)
 	return probe.present ? 0 : -ENODEV;
 }
 
-static int armv8_pmu_init(struct arm_pmu *cpu_pmu)
+static int armv8_pmu_init(struct arm_pmu *cpu_pmu, char *name,
+			  int (*map_event)(struct perf_event *event),
+			  const struct attribute_group *events,
+			  const struct attribute_group *format)
 {
 	int ret = armv8pmu_probe_pmu(cpu_pmu);
 	if (ret)
@@ -1034,144 +1091,127 @@ static int armv8_pmu_init(struct arm_pmu *cpu_pmu)
 	cpu_pmu->set_event_filter	= armv8pmu_set_event_filter;
 	cpu_pmu->filter_match		= armv8pmu_filter_match;
 
+	cpu_pmu->name			= name;
+	cpu_pmu->map_event		= map_event;
+	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] = events ?
+			events : &armv8_pmuv3_events_attr_group;
+	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] = format ?
+			format : &armv8_pmuv3_format_attr_group;
+
 	return 0;
 }
 
 static int armv8_pmuv3_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
+	return armv8_pmu_init(cpu_pmu, "armv8_pmuv3",
+			      armv8_pmuv3_map_event, NULL, NULL);
+}
 
-	cpu_pmu->name			= "armv8_pmuv3";
-	cpu_pmu->map_event		= armv8_pmuv3_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+static int armv8_a34_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a34",
+			      armv8_pmuv3_map_event, NULL, NULL);
 }
 
 static int armv8_a35_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
-
-	cpu_pmu->name			= "armv8_cortex_a35";
-	cpu_pmu->map_event		= armv8_a53_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a35",
+			      armv8_a53_map_event, NULL, NULL);
 }
 
 static int armv8_a53_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a53",
+			      armv8_a53_map_event, NULL, NULL);
+}
 
-	cpu_pmu->name			= "armv8_cortex_a53";
-	cpu_pmu->map_event		= armv8_a53_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+static int armv8_a55_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a55",
+			      armv8_pmuv3_map_event, NULL, NULL);
 }
 
 static int armv8_a57_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a57",
+			      armv8_a57_map_event, NULL, NULL);
+}
 
-	cpu_pmu->name			= "armv8_cortex_a57";
-	cpu_pmu->map_event		= armv8_a57_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+static int armv8_a65_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a65",
+			      armv8_pmuv3_map_event, NULL, NULL);
 }
 
 static int armv8_a72_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
-
-	cpu_pmu->name			= "armv8_cortex_a72";
-	cpu_pmu->map_event		= armv8_a57_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a72",
+			      armv8_a57_map_event, NULL, NULL);
 }
 
 static int armv8_a73_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a73",
+			      armv8_a73_map_event, NULL, NULL);
+}
 
-	cpu_pmu->name			= "armv8_cortex_a73";
-	cpu_pmu->map_event		= armv8_a73_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
+static int armv8_a75_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a75",
+			      armv8_pmuv3_map_event, NULL, NULL);
+}
 
-	return 0;
+static int armv8_a76_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a76",
+			      armv8_pmuv3_map_event, NULL, NULL);
+}
+
+static int armv8_a77_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_cortex_a77",
+			      armv8_pmuv3_map_event, NULL, NULL);
+}
+
+static int armv8_e1_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_neoverse_e1",
+			      armv8_pmuv3_map_event, NULL, NULL);
+}
+
+static int armv8_n1_pmu_init(struct arm_pmu *cpu_pmu)
+{
+	return armv8_pmu_init(cpu_pmu, "armv8_neoverse_n1",
+			      armv8_pmuv3_map_event, NULL, NULL);
 }
 
 static int armv8_thunder_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
-
-	cpu_pmu->name			= "armv8_cavium_thunder";
-	cpu_pmu->map_event		= armv8_thunder_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+	return armv8_pmu_init(cpu_pmu, "armv8_cavium_thunder",
+			      armv8_thunder_map_event, NULL, NULL);
 }
 
 static int armv8_vulcan_pmu_init(struct arm_pmu *cpu_pmu)
 {
-	int ret = armv8_pmu_init(cpu_pmu);
-	if (ret)
-		return ret;
-
-	cpu_pmu->name			= "armv8_brcm_vulcan";
-	cpu_pmu->map_event		= armv8_vulcan_map_event;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_EVENTS] =
-		&armv8_pmuv3_events_attr_group;
-	cpu_pmu->attr_groups[ARMPMU_ATTR_GROUP_FORMATS] =
-		&armv8_pmuv3_format_attr_group;
-
-	return 0;
+	return armv8_pmu_init(cpu_pmu, "armv8_brcm_vulcan",
+			      armv8_vulcan_map_event, NULL, NULL);
 }
 
 static const struct of_device_id armv8_pmu_of_device_ids[] = {
 	{.compatible = "arm,armv8-pmuv3",	.data = armv8_pmuv3_init},
+	{.compatible = "arm,cortex-a34-pmu",	.data = armv8_a34_pmu_init},
 	{.compatible = "arm,cortex-a35-pmu",	.data = armv8_a35_pmu_init},
 	{.compatible = "arm,cortex-a53-pmu",	.data = armv8_a53_pmu_init},
+	{.compatible = "arm,cortex-a55-pmu",	.data = armv8_a55_pmu_init},
 	{.compatible = "arm,cortex-a57-pmu",	.data = armv8_a57_pmu_init},
+	{.compatible = "arm,cortex-a65-pmu",	.data = armv8_a65_pmu_init},
 	{.compatible = "arm,cortex-a72-pmu",	.data = armv8_a72_pmu_init},
 	{.compatible = "arm,cortex-a73-pmu",	.data = armv8_a73_pmu_init},
+	{.compatible = "arm,cortex-a75-pmu",	.data = armv8_a75_pmu_init},
+	{.compatible = "arm,cortex-a76-pmu",	.data = armv8_a76_pmu_init},
+	{.compatible = "arm,cortex-a77-pmu",	.data = armv8_a77_pmu_init},
+	{.compatible = "arm,neoverse-e1-pmu",	.data = armv8_e1_pmu_init},
+	{.compatible = "arm,neoverse-n1-pmu",	.data = armv8_n1_pmu_init},
 	{.compatible = "cavium,thunder-pmu",	.data = armv8_thunder_pmu_init},
 	{.compatible = "brcm,vulcan-pmu",	.data = armv8_vulcan_pmu_init},
 	{},

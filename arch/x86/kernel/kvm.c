@@ -374,8 +374,6 @@ static u64 kvm_steal_clock(int cpu)
 	} while ((version & 1) || (version != src->version));
 
 	return steal;
-}
-
 static inline void __set_percpu_decrypted(void *ptr, unsigned long size)
 {
 	early_set_memory_decrypted((unsigned long) ptr, size);

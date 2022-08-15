@@ -466,6 +466,9 @@ int kvm_arm_copy_fw_reg_indices(struct kvm_vcpu *vcpu, u64 __user *uindices)
 	if (put_user(KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_2, uindices++))
 		return -EFAULT;
 
+	if (put_user(KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_3, uindices++))
+		return -EFAULT;
+
 #ifdef CONFIG_ARM64
 	if (put_user(KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_3, uindices++))
 		return -EFAULT;
@@ -510,7 +513,7 @@ static int get_kernel_wa_level(u64 regid)
 		return KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_2_UNKNOWN;
 #ifdef CONFIG_ARM64
 	case KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_3:
-		switch (arm64_get_spectre_bhb_state()) {
+		switch (kvm_arm_get_spectre_bhb_state()) {
 		case SPECTRE_VULNERABLE:
 			return KVM_REG_ARM_SMCCC_ARCH_WORKAROUND_3_NOT_AVAIL;
 		case SPECTRE_MITIGATED:

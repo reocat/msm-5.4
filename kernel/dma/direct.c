@@ -50,6 +50,7 @@ u64 dma_direct_get_required_mask(struct device *dev)
 
 	return (1ULL << (fls64(max_dma) - 1)) * 2 - 1;
 }
+EXPORT_SYMBOL_GPL(dma_direct_get_required_mask);
 
 static gfp_t __dma_direct_optimal_gfp_mask(struct device *dev, u64 dma_mask,
 		u64 *phys_mask)
@@ -202,6 +203,18 @@ void dma_direct_free_pages(struct device *dev, size_t size, void *cpu_addr,
 	__dma_direct_free_pages(dev, size, virt_to_page(cpu_addr));
 }
 
+static bool is_dma_coherent(struct device *dev, unsigned long attrs)
+{
+	if (attrs & DMA_ATTR_FORCE_COHERENT)
+		return true;
+	else if (attrs & DMA_ATTR_FORCE_NON_COHERENT)
+		return false;
+	else if (dev_is_dma_coherent(dev))
+		return true;
+	else
+		return false;
+}
+
 void *dma_direct_alloc(struct device *dev, size_t size,
 		dma_addr_t *dma_handle, gfp_t gfp, unsigned long attrs)
 {
@@ -210,6 +223,7 @@ void *dma_direct_alloc(struct device *dev, size_t size,
 		return arch_dma_alloc(dev, size, dma_handle, gfp, attrs);
 	return dma_direct_alloc_pages(dev, size, dma_handle, gfp, attrs);
 }
+EXPORT_SYMBOL_GPL(dma_direct_alloc);
 
 void dma_direct_free(struct device *dev, size_t size,
 		void *cpu_addr, dma_addr_t dma_addr, unsigned long attrs)
@@ -220,6 +234,7 @@ void dma_direct_free(struct device *dev, size_t size,
 	else
 		dma_direct_free_pages(dev, size, cpu_addr, dma_addr, attrs);
 }
+EXPORT_SYMBOL_GPL(dma_direct_free);
 
 #if defined(CONFIG_ARCH_HAS_SYNC_DMA_FOR_DEVICE) || \
     defined(CONFIG_SWIOTLB)
@@ -302,7 +317,7 @@ void dma_direct_unmap_page(struct device *dev, dma_addr_t addr,
 {
 	phys_addr_t phys = dma_to_phys(dev, addr);
 
-	if (!(attrs & DMA_ATTR_SKIP_CPU_SYNC))
+	if (!is_dma_coherent(dev, attrs) && !(attrs & DMA_ATTR_SKIP_CPU_SYNC))
 		dma_direct_sync_single_for_cpu(dev, addr, size, dir);
 
 	if (unlikely(is_swiotlb_buffer(phys)))
@@ -343,7 +358,7 @@ dma_addr_t dma_direct_map_page(struct device *dev, struct page *page,
 		return DMA_MAPPING_ERROR;
 	}
 
-	if (!dev_is_dma_coherent(dev) && !(attrs & DMA_ATTR_SKIP_CPU_SYNC))
+	if (!is_dma_coherent(dev, attrs) && !(attrs & DMA_ATTR_SKIP_CPU_SYNC))
 		arch_sync_dma_for_device(dev, phys, size, dir);
 	return dma_addr;
 }

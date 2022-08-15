@@ -382,7 +382,7 @@ ENTRY(__spectre_bhb_loop_k24_start)
 	esb
 	sub	sp, sp, #(8 * 2)
 	stp	x0, x1, [sp, #(8 * 0)]
-	mov	x0, #8
+	mov	x0, #24
 2:	b	. + 4
 	subs	x0, x0, #1
 	b.ne	2b
@@ -396,7 +396,7 @@ ENTRY(__spectre_bhb_loop_k32_start)
 	esb
 	sub	sp, sp, #(8 * 2)
 	stp	x0, x1, [sp, #(8 * 0)]
-	mov     x0, #8
+	mov     x0, #32
 2:	b	. + 4
 	subs	x0, x0, #1
 	b.ne	2b

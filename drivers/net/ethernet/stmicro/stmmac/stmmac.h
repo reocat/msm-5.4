@@ -22,6 +22,9 @@
 #include <linux/net_tstamp.h>
 #include <linux/reset.h>
 #include <net/page_pool.h>
+#ifdef CONFIG_QGKI_MSM_BOOT_TIME_MARKER
+#include <soc/qcom/boot_stats.h>
+#endif
 
 struct stmmac_resources {
 	void __iomem *addr;
@@ -143,6 +146,7 @@ struct stmmac_priv {
 	u32 tx_coal_frames;
 	u32 tx_coal_timer;
 	u32 rx_coal_frames;
+	bool tx_coal_timer_disable;
 
 	int tx_coalesce;
 	int hwts_tx_en;
@@ -162,6 +166,7 @@ struct stmmac_priv {
 	struct mac_device_info *hw;
 	int (*hwif_quirks)(struct stmmac_priv *priv);
 	struct mutex lock;
+	struct phy_device *phydev;
 
 	/* RX Queue */
 	struct stmmac_rx_queue rx_queue[MTL_MAX_RX_QUEUES];
@@ -213,7 +218,8 @@ struct stmmac_priv {
 	void __iomem *mmcaddr;
 	void __iomem *ptpaddr;
 	unsigned long active_vlans[BITS_TO_LONGS(VLAN_N_VID)];
-
+	bool boot_kpi;
+	bool early_eth_config_set;
 #ifdef CONFIG_DEBUG_FS
 	struct dentry *dbgfs_dir;
 #endif
@@ -234,6 +240,9 @@ struct stmmac_priv {
 
 	/* Receive Side Scaling */
 	struct stmmac_rss rss;
+	bool phy_irq_enabled;
+
+	int phy_intr_wol_irq;
 };
 
 enum stmmac_state {
@@ -242,6 +251,9 @@ enum stmmac_state {
 	STMMAC_RESETING,
 	STMMAC_SERVICE_SCHED,
 };
+
+#define GET_MEM_PDEV_DEV (priv->plat->stmmac_emb_smmu_ctx.valid ? \
+			&priv->plat->stmmac_emb_smmu_ctx.smmu_pdev->dev : priv->device)
 
 int stmmac_mdio_unregister(struct net_device *ndev);
 int stmmac_mdio_register(struct net_device *ndev);
@@ -258,6 +270,7 @@ int stmmac_dvr_probe(struct device *device,
 		     struct stmmac_resources *res);
 void stmmac_disable_eee_mode(struct stmmac_priv *priv);
 bool stmmac_eee_init(struct stmmac_priv *priv);
+void stmmac_mac2mac_adjust_link(int speed, struct stmmac_priv *priv);
 
 #if IS_ENABLED(CONFIG_STMMAC_SELFTESTS)
 void stmmac_selftest_run(struct net_device *dev,

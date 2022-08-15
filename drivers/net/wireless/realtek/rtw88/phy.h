@@ -163,6 +163,15 @@ enum rtw_phy_cck_pd_lv {
 	CCK_PD_LV_MAX,
 };
 
+enum rtw_phy_cck_pd_lv {
+	CCK_PD_LV0,
+	CCK_PD_LV1,
+	CCK_PD_LV2,
+	CCK_PD_LV3,
+	CCK_PD_LV4,
+	CCK_PD_LV_MAX,
+};
+
 #define	MASKBYTE0		0xff
 #define	MASKBYTE1		0xff00
 #define	MASKBYTE2		0xff0000

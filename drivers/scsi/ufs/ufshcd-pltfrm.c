@@ -129,10 +129,11 @@ out:
 static int ufshcd_populate_vreg(struct device *dev, const char *name,
 		struct ufs_vreg **out_vreg)
 {
-	int ret = 0;
+	int len, ret = 0;
 	char prop_name[MAX_PROP_SIZE];
 	struct ufs_vreg *vreg = NULL;
 	struct device_node *np = dev->of_node;
+	const __be32 *prop;
 
 	if (!np) {
 		dev_err(dev, "%s: non DT initialization\n", __func__);
@@ -151,27 +152,57 @@ static int ufshcd_populate_vreg(struct device *dev, const char *name,
 		return -ENOMEM;
 
 	vreg->name = kstrdup(name, GFP_KERNEL);
-
 	snprintf(prop_name, MAX_PROP_SIZE, "%s-max-microamp", name);
 	if (of_property_read_u32(np, prop_name, &vreg->max_uA)) {
 		dev_info(dev, "%s: unable to find %s\n", __func__, prop_name);
 		vreg->max_uA = 0;
 	}
 
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+	snprintf(prop_name, MAX_PROP_SIZE, "%s-min-microamp", name);
+	if (of_property_read_u32(np, prop_name, &vreg->min_uA))
+		vreg->min_uA = UFS_VREG_LPM_LOAD_UA;
+#endif
+
 	if (!strcmp(name, "vcc")) {
 		if (of_property_read_bool(np, "vcc-supply-1p8")) {
 			vreg->min_uV = UFS_VREG_VCC_1P8_MIN_UV;
 			vreg->max_uV = UFS_VREG_VCC_1P8_MAX_UV;
 		} else {
-			vreg->min_uV = UFS_VREG_VCC_MIN_UV;
-			vreg->max_uV = UFS_VREG_VCC_MAX_UV;
+			prop = of_get_property(np, "vcc-voltage-level", &len);
+			if (!prop || (len != (2 * sizeof(__be32)))) {
+				dev_warn(dev, "%s vcc-voltage-level property.\n",
+					prop ? "invalid format" : "no");
+				vreg->min_uV = UFS_VREG_VCC_MIN_UV;
+				vreg->max_uV = UFS_VREG_VCC_MAX_UV;
+			} else {
+				vreg->min_uV = be32_to_cpup(&prop[0]);
+				vreg->max_uV = be32_to_cpup(&prop[1]);
+			}
+ #if defined(CONFIG_SCSI_UFSHCD_QTI)
+			if (of_property_read_bool(np, "vcc-low-voltage-sup"))
+				vreg->low_voltage_sup = true;
+ #endif
 		}
 	} else if (!strcmp(name, "vccq")) {
 		vreg->min_uV = UFS_VREG_VCCQ_MIN_UV;
 		vreg->max_uV = UFS_VREG_VCCQ_MAX_UV;
 	} else if (!strcmp(name, "vccq2")) {
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+		prop = of_get_property(np, "vccq2-voltage-level", &len);
+		if (!prop || (len != (2 * sizeof(__be32)))) {
+			dev_warn(dev, "%s vccq2-voltage-level property.\n",
+				prop ? "invalid format" : "no");
+			vreg->min_uV = UFS_VREG_VCCQ2_MIN_UV;
+			vreg->max_uV = UFS_VREG_VCCQ2_MAX_UV;
+		} else {
+			vreg->min_uV = be32_to_cpup(&prop[0]);
+			vreg->max_uV = be32_to_cpup(&prop[1]);
+		}
+#else
 		vreg->min_uV = UFS_VREG_VCCQ2_MIN_UV;
 		vreg->max_uV = UFS_VREG_VCCQ2_MAX_UV;
+#endif
 	}
 
 	goto out;
@@ -214,7 +245,57 @@ out:
 	return err;
 }
 
+static void ufshcd_parse_delay_ssu_flag(struct ufs_hba *hba)
+{
+	if (device_property_read_bool(hba->dev, "qcom,delay-ssu"))
+		hba->delay_ssu = true;
+	else
+		hba->delay_ssu = false;
+}
+
 #ifdef CONFIG_PM
+
+#if defined(CONFIG_SCSI_UFSHCD_QTI)
+/**
+ * ufshcd_pltfrm_restore - restore power management function
+ * @dev: pointer to device handle
+ *
+ * Returns 0 if successful
+ * Returns non-zero otherwise
+ */
+int ufshcd_pltfrm_restore(struct device *dev)
+{
+	return ufshcd_system_restore(dev_get_drvdata(dev));
+}
+EXPORT_SYMBOL(ufshcd_pltfrm_restore);
+
+/**
+ * ufshcd_pltfrm_freeze - freeze power management function
+ * @dev: pointer to device handle
+ *
+ * Returns 0 if successful
+ * Returns non-zero otherwise
+ */
+int ufshcd_pltfrm_freeze(struct device *dev)
+{
+	return ufshcd_system_freeze(dev_get_drvdata(dev));
+}
+EXPORT_SYMBOL(ufshcd_pltfrm_freeze);
+
+/**
+ * ufshcd_pltfrm_thaw - freeze power management function
+ * @dev: pointer to device handle
+ *
+ * Returns 0 if successful
+ * Returns non-zero otherwise
+ */
+int ufshcd_pltfrm_thaw(struct device *dev)
+{
+	return ufshcd_system_thaw(dev_get_drvdata(dev));
+}
+EXPORT_SYMBOL(ufshcd_pltfrm_thaw);
+
+#endif /* CONFIG_SCSI_UFSHCD_QTI */
 /**
  * ufshcd_pltfrm_suspend - suspend power management function
  * @dev: pointer to device handle
@@ -427,6 +508,8 @@ int ufshcd_pltfrm_init(struct platform_device *pdev,
 				__func__, err);
 		goto dealloc_host;
 	}
+
+	ufshcd_parse_delay_ssu_flag(hba);
 
 	ufshcd_init_lanes_per_dir(hba);
 

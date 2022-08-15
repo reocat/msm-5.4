@@ -218,6 +218,8 @@ extern ssize_t memory_read_from_buffer(void *to, size_t count, loff_t *ppos,
 extern ssize_t memory_read_from_io_buffer(void *to, size_t count, loff_t *ppos,
 					  const void *from, size_t available);
 
+int ptr_to_hashval(const void *ptr, unsigned long *hashval_out);
+
 /**
  * strstarts - does @str start with @prefix?
  * @str: string to examine

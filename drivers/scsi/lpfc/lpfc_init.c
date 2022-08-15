@@ -11070,6 +11070,7 @@ static int
 lpfc_cpuhp_get_eq(struct lpfc_hba *phba, unsigned int cpu,
 		  struct list_head *eqlist)
 {
+	struct lpfc_vector_map_info *map;
 	const struct cpumask *maskp;
 	struct lpfc_queue *eq;
 	struct cpumask *tmp;

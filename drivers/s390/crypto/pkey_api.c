@@ -33,7 +33,6 @@ MODULE_DESCRIPTION("s390 protected key interface");
 
 #define KEYBLOBBUFSIZE 8192  /* key buffer size used for internal processing */
 #define MAXAPQNSINLIST 64    /* max 64 apqns within a apqn list */
-
 /*
  * debug feature data and functions
  */

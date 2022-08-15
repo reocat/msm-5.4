@@ -264,6 +264,12 @@ int stmmac_mdio_reset(struct mii_bus *bus)
 	struct net_device *ndev = bus->priv;
 	struct stmmac_priv *priv = netdev_priv(ndev);
 	unsigned int mii_address = priv->hw->mii.addr;
+	bool active_high = true;
+
+	active_high = false;
+
+	if (priv->plat->early_eth)
+		return 0;
 
 #ifdef CONFIG_OF
 	if (priv->device->of_node) {
@@ -283,11 +289,11 @@ int stmmac_mdio_reset(struct mii_bus *bus)
 		if (delays[0])
 			msleep(DIV_ROUND_UP(delays[0], 1000));
 
-		gpiod_set_value_cansleep(reset_gpio, 1);
+		gpiod_set_value_cansleep(reset_gpio, active_high ? 1 : 0);
 		if (delays[1])
 			msleep(DIV_ROUND_UP(delays[1], 1000));
 
-		gpiod_set_value_cansleep(reset_gpio, 0);
+		gpiod_set_value_cansleep(reset_gpio, active_high ? 0 : 1);
 		if (delays[2])
 			msleep(DIV_ROUND_UP(delays[2], 1000));
 	}
@@ -321,6 +327,14 @@ int stmmac_mdio_register(struct net_device *ndev)
 
 	if (!mdio_bus_data)
 		return 0;
+
+	if (priv->plat->phyad_change) {
+		priv->speed = SPEED_100;
+		if (priv->plat->fix_mac_speed)
+			priv->plat->fix_mac_speed(priv->plat->bsp_priv, priv->speed);
+		if (priv->mii && priv->plat->is_gpio_phy_reset)
+			stmmac_mdio_reset(priv->mii);
+	}
 
 	new_bus = mdiobus_alloc();
 	if (!new_bus)

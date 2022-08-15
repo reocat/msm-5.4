@@ -127,6 +127,7 @@ parameter is applicable::
 	NET	Appropriate network support is enabled.
 	NUMA	NUMA support is enabled.
 	NFS	Appropriate NFS support is enabled.
+	OF	Devicetree is enabled.
 	OSS	OSS sound support is enabled.
 	PV_OPS	A paravirtualized kernel is enabled.
 	PARIDE	The ParIDE (parallel port IDE) subsystem is enabled.
@@ -210,3 +211,9 @@ Todo
 ----
 
 	Add more DRM drivers.
+
+eipv4=	[KNL] Sets ipv4 address at boot up for early ethernet.
+
+eipv6=	[KNL] Sets ipv6 address at boot up for early ethernet.
+
+ermac=	[KNL] Sets mac address at boot up for early ethernet.
