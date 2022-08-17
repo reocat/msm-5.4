@@ -36,6 +36,7 @@ static int vdd_corner[] = {
 	[VDD_HIGH_L1]   = RPMH_REGULATOR_LEVEL_TURBO_L1,
 };
 
+#ifdef CONFIG_SA_CAMCC_LEMANS
 static int vdd_dual_corner[] = {
 	0, 0,
 	RPMH_REGULATOR_LEVEL_MIN_SVS, RPMH_REGULATOR_LEVEL_MIN_SVS,
@@ -47,5 +48,6 @@ static int vdd_dual_corner[] = {
 	RPMH_REGULATOR_LEVEL_TURBO, RPMH_REGULATOR_LEVEL_TURBO,
 	RPMH_REGULATOR_LEVEL_TURBO_L1, RPMH_REGULATOR_LEVEL_TURBO_L1,
 };
+#endif
 
 #endif

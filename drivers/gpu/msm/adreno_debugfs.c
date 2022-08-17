@@ -151,7 +151,7 @@ static void sync_event_print(struct seq_file *s,
 		struct event_timeline_info *info = sync_event->priv;
 
 		for (j = 0; info && info[j].timeline; j++)
-			seq_printf(s, "timeline: %d seqno: %d",
+			seq_printf(s, "timeline: %d seqno: %llu",
 				info[j].timeline, info[j].seqno);
 		break;
 	}

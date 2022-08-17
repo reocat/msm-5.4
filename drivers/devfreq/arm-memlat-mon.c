@@ -474,7 +474,7 @@ static int memlat_hp_restart_events(unsigned int cpu, bool cpu_up)
 							mon->miss_ev_id, attr);
 			if (ret) {
 				pr_err("event %d not set for cpu %d ret %d\n",
-					mon->miss_ev[idx], cpu, ret);
+					 mon->miss_ev_id, cpu, ret);
 				goto exit;
 			}
 		} else {

@@ -202,7 +202,7 @@ early_param("sched_predl", set_sched_predl);
 static __read_mostly unsigned int walt_scale_demand_divisor;
 #define scale_demand(d) ((d)/walt_scale_demand_divisor)
 
-#define SCHED_PRINT(arg)        printk_deferred("%s=%llu", #arg, arg)
+#define SCHED_PRINT(arg)        printk_deferred("%s=%llu", #arg, (unsigned long long)arg)
 #define STRG(arg)               #arg
 
 static inline void walt_task_dump(struct task_struct *p)
@@ -286,7 +286,7 @@ static inline void walt_dump(void)
 
 	printk_deferred("============ WALT RQ DUMP START ==============\n");
 	printk_deferred("Sched ktime_get: %llu\n", sched_ktime_clock());
-	printk_deferred("Time last window changed=%lu\n",
+	printk_deferred("Time last window changed=%llu\n",
 			sched_ravg_window_change_time);
 	for_each_online_cpu(cpu)
 		walt_rq_dump(cpu);
@@ -806,7 +806,7 @@ static inline void inter_cluster_migration_fixup
 	dest_rq->wrq.prev_runnable_sum += p->wts.prev_window;
 
 	if (src_rq->wrq.curr_runnable_sum < p->wts.curr_window_cpu[task_cpu]) {
-		printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_crs=%llu is lesser than task_contrib=%llu",
+		printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_crs=%llu is lesser than task_contrib=%u",
 				p->pid, src_rq->cpu, dest_rq->cpu,
 				src_rq->wrq.curr_runnable_sum,
 				p->wts.curr_window_cpu[task_cpu]);
@@ -816,7 +816,7 @@ static inline void inter_cluster_migration_fixup
 	src_rq->wrq.curr_runnable_sum -=  p->wts.curr_window_cpu[task_cpu];
 
 	if (src_rq->wrq.prev_runnable_sum < p->wts.prev_window_cpu[task_cpu]) {
-		printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_prs=%llu is lesser than task_contrib=%llu",
+		printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_prs=%llu is lesser than task_contrib=%u",
 				p->pid, src_rq->cpu, dest_rq->cpu,
 				src_rq->wrq.prev_runnable_sum,
 				p->wts.prev_window_cpu[task_cpu]);
@@ -831,7 +831,7 @@ static inline void inter_cluster_migration_fixup
 
 		if (src_rq->wrq.nt_curr_runnable_sum <
 				p->wts.curr_window_cpu[task_cpu]) {
-			printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_nt_crs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_nt_crs=%llu is lesser than task_contrib=%u",
 					p->pid, src_rq->cpu, dest_rq->cpu,
 					src_rq->wrq.nt_curr_runnable_sum,
 					p->wts.curr_window_cpu[task_cpu]);
@@ -843,7 +843,7 @@ static inline void inter_cluster_migration_fixup
 
 		if (src_rq->wrq.nt_prev_runnable_sum <
 				p->wts.prev_window_cpu[task_cpu]) {
-			printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_nt_prs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-BUG pid=%u CPU%d -> CPU%d src_nt_prs=%llu is lesser than task_contrib=%u",
 					p->pid, src_rq->cpu, dest_rq->cpu,
 					src_rq->wrq.nt_prev_runnable_sum,
 					p->wts.prev_window_cpu[task_cpu]);
@@ -2704,6 +2704,7 @@ int register_cpu_cycle_counter_cb(struct cpu_cycle_counter_cb *cb)
 				    CPUFREQ_TRANSITION_NOTIFIER);
 	return 0;
 }
+EXPORT_SYMBOL(register_cpu_cycle_counter_cb);
 
 static void transfer_busy_time(struct rq *rq,
 				struct walt_related_thread_group *grp,
@@ -3168,6 +3169,7 @@ void sched_update_cpu_freq_min_max(const cpumask_t *cpus, u32 fmin, u32 fmax)
 
 	spin_unlock_irqrestore(&cpu_freq_min_max_lock, flags);
 }
+EXPORT_SYMBOL(sched_update_cpu_freq_min_max);
 
 void note_task_waking(struct task_struct *p, u64 wallclock)
 {
@@ -3218,7 +3220,7 @@ static void transfer_busy_time(struct rq *rq,
 		dst_nt_prev_runnable_sum = &cpu_time->nt_prev_runnable_sum;
 
 		if (*src_curr_runnable_sum < p->wts.curr_window_cpu[cpu]) {
-			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_crs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_crs=%llu is lesser than task_contrib=%u",
 					p->pid, cpu, event, *src_curr_runnable_sum,
 					p->wts.curr_window_cpu[cpu]);
 			walt_task_dump(p);
@@ -3227,7 +3229,7 @@ static void transfer_busy_time(struct rq *rq,
 		*src_curr_runnable_sum -= p->wts.curr_window_cpu[cpu];
 
 		if (*src_prev_runnable_sum < p->wts.prev_window_cpu[cpu]) {
-			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_prs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_prs=%llu is lesser than task_contrib=%u",
 					p->pid, cpu, event, *src_prev_runnable_sum,
 					p->wts.prev_window_cpu[cpu]);
 			walt_task_dump(p);
@@ -3238,7 +3240,7 @@ static void transfer_busy_time(struct rq *rq,
 		if (new_task) {
 			if (*src_nt_curr_runnable_sum <
 					p->wts.curr_window_cpu[cpu]) {
-				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_crs=%llu is lesser than task_contrib=%llu",
+				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_crs=%llu is lesser than task_contrib=%u",
 						p->pid, cpu, event,
 						*src_nt_curr_runnable_sum,
 						p->wts.curr_window_cpu[cpu]);
@@ -3250,7 +3252,7 @@ static void transfer_busy_time(struct rq *rq,
 
 			if (*src_nt_prev_runnable_sum <
 					p->wts.prev_window_cpu[cpu]) {
-				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_prs=%llu is lesser than task_contrib=%llu",
+				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_prs=%llu is lesser than task_contrib=%u",
 						p->pid, cpu, event,
 						*src_nt_prev_runnable_sum,
 						p->wts.prev_window_cpu[cpu]);
@@ -3278,7 +3280,7 @@ static void transfer_busy_time(struct rq *rq,
 		dst_nt_prev_runnable_sum = &rq->wrq.nt_prev_runnable_sum;
 
 		if (*src_curr_runnable_sum < p->wts.curr_window) {
-			printk_deferred("WALT-UG pid=%u CPU=%d event=%d src_crs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-UG pid=%u CPU=%d event=%d src_crs=%llu is lesser than task_contrib=%u",
 					p->pid, cpu, event, *src_curr_runnable_sum,
 					p->wts.curr_window);
 			walt_task_dump(p);
@@ -3287,7 +3289,7 @@ static void transfer_busy_time(struct rq *rq,
 		*src_curr_runnable_sum -= p->wts.curr_window;
 
 		if (*src_prev_runnable_sum < p->wts.prev_window) {
-			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_prs=%llu is lesser than task_contrib=%llu",
+			printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_prs=%llu is lesser than task_contrib=%u",
 					p->pid, cpu, event, *src_prev_runnable_sum,
 					p->wts.prev_window);
 			walt_task_dump(p);
@@ -3297,7 +3299,7 @@ static void transfer_busy_time(struct rq *rq,
 
 		if (new_task) {
 			if (*src_nt_curr_runnable_sum < p->wts.curr_window) {
-				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_crs=%llu is lesser than task_contrib=%llu",
+				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_crs=%llu is lesser than task_contrib=%u",
 						p->pid, cpu, event,
 						*src_nt_curr_runnable_sum,
 						p->wts.curr_window);
@@ -3307,7 +3309,7 @@ static void transfer_busy_time(struct rq *rq,
 			*src_nt_curr_runnable_sum -= p->wts.curr_window;
 
 			if (*src_nt_prev_runnable_sum < p->wts.prev_window) {
-				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_prs=%llu is lesser than task_contrib=%llu",
+				printk_deferred("WALT-BUG pid=%u CPU=%d event=%d src_nt_prs=%llu is lesser than task_contrib=%u",
 						p->pid, cpu, event,
 						*src_nt_prev_runnable_sum,
 						p->wts.prev_window);
@@ -3537,7 +3539,7 @@ static void walt_irq_work(struct irq_work *irq_work)
 		if ((sched_ravg_window != new_sched_ravg_window) &&
 		    (wc < this_rq()->wrq.window_start + new_sched_ravg_window)) {
 			sched_ravg_window_change_time = sched_ktime_clock();
-			printk_deferred("ALERT: changing window size from %u to %u at %lu\n",
+			printk_deferred("ALERT: changing window size from %u to %u at %llu\n",
 					sched_ravg_window,
 					new_sched_ravg_window,
 					sched_ravg_window_change_time);

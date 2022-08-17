@@ -192,8 +192,8 @@ void pt_pr_buf(struct device *dev, u8 debug_level, u8 *buf,
 		max_size = (PT_MAX_PR_BUF_SIZE - sizeof(data_name) - 11) / 3;
 
 		/* Ensure pr_buf_index stays within the 1018 size */
-		pr_buf_index += scnprintf(pr_buf, PT_MAX_PR_BUF_SIZE, "%s [0..%d]: ",
-			data_name);
+		pr_buf_index += scnprintf(pr_buf, PT_MAX_PR_BUF_SIZE, "%s [0..%zu]: ",
+			data_name, sizeof(data_name));
 		for (i = 0; i < buf_len && i < max_size; i++)
 			pr_buf_index += scnprintf(pr_buf + pr_buf_index,
 				PT_MAX_PR_BUF_SIZE, "%02X ", buf[i]);
@@ -9606,7 +9606,7 @@ static int pt_core_easywake_off_(struct pt_core_data *cd)
 			rc = pt_core_wake_device_from_easy_wake_(cd);
 		if (rc < 0)
 			pt_debug(cd->dev, DL_ERROR,
-				"%s - %d failed %d\n", __func__, rc);
+				"%s - %d failed\n", __func__, rc);
 	}
 
 	mutex_lock(&cd->system_lock);
@@ -13694,7 +13694,7 @@ static ssize_t pt_pip2_cmd_rsp_show(struct device *dev,
 			data_len - PIP1_RESP_COMMAND_ID_OFFSET);
 	} else {
 		index += scnprintf(buf + index, PT_MAX_PRBUF_SIZE - index,
-			"\n(%zd bytes)\n", 0);
+			"\n(%d bytes)\n", 0);
 	}
 
 error:
@@ -14208,7 +14208,7 @@ static ssize_t pt_drv_debug_store(struct device *dev,
 				__func__, rc);
 		else
 			pt_debug(dev, DL_INFO,
-				"%s: CAL Cleared, Chip ID=0x%04X size=%d\n",
+				"%s: CAL Cleared, Chip ID=0x%04X size=%zu\n",
 				__func__, crc, size);
 		break;
 

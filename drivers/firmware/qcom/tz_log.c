@@ -1181,7 +1181,7 @@ static ssize_t tzdbgfs_read_encrypted(struct file *file, char __user *buf,
 	stat->display_offset += ret;
 	stat->display_len -= ret;
 	pr_debug("ret = %d, offset = %d\n", ret, (int)(*offp));
-	pr_debug("display_len = %d, offset = %d\n",
+	pr_debug("display_len = %lu, offset = %ld\n",
 			stat->display_len, stat->display_offset);
 	return ret;
 }
@@ -1251,7 +1251,7 @@ static int tzdbg_register_qsee_log_buf(struct platform_device *pdev)
 	ret = qcom_scm_register_qsee_log_buf(coh_pmem, qseelog_buf_size);
 	if (ret != QSEOS_RESULT_SUCCESS) {
 		pr_err(
-		"%s: scm_call to register log buf failed, resp result =%lld\n",
+		"%s: scm_call to register log buf failed, resp result =%d\n",
 		__func__, ret);
 		goto exit_dereg_bridge;
 	}
@@ -1447,7 +1447,7 @@ static int tzdbg_get_tz_version(void)
 				__func__, ret);
 		return ret;
 	}
-	pr_warn("tz diag version is %x\n", version);
+	pr_warn("tz diag version is %llu\n", version);
 	if (
 	(((version >> TZBSP_FVER_MAJOR_SHIFT) & TZBSP_FVER_MAJOR_MINOR_MASK)
 			== TZBSP_DIAG_MAJOR_VERSION_V9) &&
@@ -1471,7 +1471,7 @@ static void tzdbg_query_encrypted_log(void)
 		pr_err("scm_call QUERY_ENCR_LOG_FEATURE failed ret %d\n", ret);
 		tzdbg.is_encrypted_log_enabled = false;
 	} else {
-		pr_warn("encrypted qseelog enabled is %d\n", enabled);
+		pr_warn("encrypted qseelog enabled is %llu\n", enabled);
 		tzdbg.is_encrypted_log_enabled = enabled;
 	}
 }
@@ -1573,7 +1573,7 @@ static int tz_log_probe(struct platform_device *pdev)
 	ret = tzdbg_allocate_encrypted_log_buf(pdev);
 	if (ret) {
 		dev_err(&pdev->dev,
-			"Failed to allocate encrypted log buffer\n",
+			"%s: Failed to allocate encrypted log buffer\n",
 			__func__);
 		goto exit_free_qsee_log_buf;
 	}

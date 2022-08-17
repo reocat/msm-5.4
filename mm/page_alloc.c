@@ -7045,8 +7045,10 @@ void __init free_area_init_node(int nid, unsigned long *zones_size,
 	pg_data_t *pgdat = NODE_DATA(nid);
 	unsigned long start_pfn = 0;
 	unsigned long end_pfn = 0;
+#ifndef CONFIG_HAVE_MEMBLOCK_NODE_MAP
 	u64 i;
 	phys_addr_t start, end;
+#endif
 
 	/* pg_data_t should be reset to zero when it's allocated */
 	WARN_ON(pgdat->nr_zones || pgdat->kswapd_classzone_idx);

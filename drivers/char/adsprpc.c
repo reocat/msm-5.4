@@ -1895,7 +1895,7 @@ static int context_build_overlap(struct smq_invoke_ctx *ctx)
 			if (err) {
 				err = -EFAULT;
 				ADSPRPC_ERR(
-					"Invalid address 0x%llx and size %zu\n",
+					"Invalid address 0x%lx and size %zu\n",
 					(uintptr_t)lpra[i].buf.pv,
 					lpra[i].buf.len);
 				goto bail;
@@ -2212,6 +2212,7 @@ static void context_notify_user(struct smq_invoke_ctx *ctx,
 		ctx->early_wake_time = early_wake_time;
 		if (ctx->asyncjob.isasyncjob)
 			break;
+		/* fall through */
 	case EARLY_RESPONSE:
 		/* rpc framework early response with return value */
 		if (ctx->asyncjob.isasyncjob)
@@ -2606,7 +2607,7 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 				VERIFY(err, offset + len <= (uintptr_t)map->size);
 				if (err) {
 					ADSPRPC_ERR(
-						"buffer address is invalid for the fd passed for %d address 0x%llx and size %zu\n",
+						"buffer address is invalid for the fd passed for %d address 0x%lx and size %zu\n",
 						i, (uintptr_t)lpra[i].buf.pv,
 						lpra[i].buf.len);
 					err = -EFAULT;
@@ -2676,7 +2677,7 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 		}
 		if (len > DEBUG_PRINT_SIZE_LIMIT)
 			ADSPRPC_DEBUG(
-				"copied non ion buffer sc 0x%x pv 0x%llx, mend 0x%llx mstart 0x%llx, len %zu\n",
+				"copied non ion buffer sc 0x%x pv 0x%llx, mend 0x%lx mstart 0x%lx, len %zu\n",
 				sc, rpra[i].buf.pv,
 				ctx->overps[oix]->mend,
 				ctx->overps[oix]->mstart, len);
@@ -2710,7 +2711,7 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 					dma_buf_end_cpu_access(map->buf,
 						DMA_TO_DEVICE);
 					ADSPRPC_DEBUG(
-						"sc 0x%x pv 0x%llx, mend 0x%llx mstart 0x%llx, len %zu size %zu\n",
+						"sc 0x%x pv 0x%llx, mend 0x%lx mstart 0x%lx, len %llu size %zu\n",
 						sc, rpra[i].buf.pv,
 						ctx->overps[oix]->mend,
 						ctx->overps[oix]->mstart,
@@ -2747,7 +2748,7 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 						map->buf, DMA_TO_DEVICE, offset,
 						flush_len);
 					ADSPRPC_DEBUG(
-						"sc 0x%x vm_start 0x%llx pv 0x%llx, offset 0x%llx, mend 0x%llx mstart 0x%llx, len %zu size %zu\n",
+						"sc 0x%x vm_start 0x%lx pv 0x%llx, offset 0x%lx, mend 0x%lx mstart 0x%lx, len %llu size %zu\n",
 						sc, vma->vm_start,
 						rpra[i].buf.pv, offset,
 						ctx->overps[oix]->mend,
@@ -2806,7 +2807,7 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 				rpra[i].buf.len);
 			if (err) {
 				ADSPRPC_ERR(
-					"Invalid size 0x%llx for output argument %d ret %ld\n",
+					"Invalid size 0x%llx for output argument %d ret %d\n",
 					rpra[i].buf.len, i+1, err);
 				err = -EFAULT;
 				goto bail;
@@ -2877,7 +2878,7 @@ static void inv_args(struct smq_invoke_ctx *ctx)
 					dma_buf_end_cpu_access(map->buf,
 						DMA_FROM_DEVICE);
 					ADSPRPC_DEBUG(
-						"sc 0x%x pv 0x%llx, mend 0x%llx mstart 0x%llx, len %zu size %zu\n",
+						"sc 0x%x pv 0x%llx, mend 0x%lx mstart 0x%lx, len %llu size %zu\n",
 						sc, rpra[over].buf.pv,
 						ctx->overps[i]->mend,
 						ctx->overps[i]->mstart,
@@ -2915,7 +2916,7 @@ static void inv_args(struct smq_invoke_ctx *ctx)
 						DMA_FROM_DEVICE, offset,
 						inv_len);
 					ADSPRPC_DEBUG(
-						"sc 0x%x vm_start 0x%llx pv 0x%llx, offset 0x%llx, mend 0x%llx mstart 0x%llx, len %zu size %zu\n",
+						"sc 0x%x vm_start 0x%lx pv 0x%llx, offset 0x%lx, mend 0x%lx mstart 0x%lx, len %llu size %zu\n",
 						sc, vma->vm_start,
 						rpra[over].buf.pv,
 						offset, ctx->overps[i]->mend,
@@ -3213,8 +3214,8 @@ static int fastrpc_internal_invoke(struct fastrpc_file *fl, uint32_t mode,
 		if (err) {
 			err = -EINVAL;
 			ADSPRPC_ERR(
-				"user application %s trying to send a kernel RPC message to channel %d, handle 0x%x\n",
-				cid, invoke->handle);
+				"user application trying to send a kernel RPC message to channel %d, handle 0x%x\n",
+				 cid, invoke->handle);
 			goto bail;
 		}
 	}
@@ -4328,7 +4329,7 @@ static int fastrpc_mem_map_to_dsp(struct fastrpc_file *fl, int fd, int offset,
 		*raddr = (uintptr_t)routargs.vaddrout;
 bail:
 	if (err) {
-		pr_err("adsprpc: %s failed. err 0x%x fd %d len 0x%x\n",
+		pr_err("adsprpc: %s failed. err 0x%x fd %d len 0x%lx\n",
 			__func__, err, fd, size);
 	}
 	return err;
@@ -4370,7 +4371,7 @@ static int fastrpc_mem_unmap_to_dsp(struct fastrpc_file *fl, int fd,
 		goto bail;
 bail:
 	if (err) {
-		pr_err("adsprpc: %s failed. err 0x%x fd %d len 0x%x\n",
+		pr_err("adsprpc: %s failed. err 0x%x fd %d len 0x%lx\n",
 			__func__, err, fd, size);
 	}
 	return err;
@@ -4929,7 +4930,7 @@ static int fastrpc_internal_mem_unmap(struct fastrpc_file *fl,
 	map = NULL;
 bail:
 	if (err) {
-		pr_err("adsprpc: %s failed to unmap fd %d addr 0x%llx length 0x%x err 0x%x\n",
+		pr_err("adsprpc: %s failed to unmap fd %d addr 0x%llx length 0x%lx err 0x%x\n",
 			__func__, ud->um.fd, ud->um.vaddr, ud->um.length, err);
 		/* Add back to map list in case of error to unmap on DSP */
 		if (map) {
@@ -5038,7 +5039,7 @@ static int fastrpc_session_alloc_locked(struct fastrpc_channel_ctx *chan,
 		if (idx >= chan->sesscount) {
 			err = -EUSERS;
 			ADSPRPC_ERR(
-				"max concurrent sessions limit (%d) already reached on %s err %d\n",
+				"max concurrent sessions limit (%llu) already reached on %s err %d\n",
 				chan->sesscount, chan->subsys, err);
 			goto bail;
 		}
@@ -5372,13 +5373,13 @@ static ssize_t fastrpc_debugfs_read(struct file *filp, char __user *buffer,
 			len += scnprintf(fileinfo + len,
 				DEBUGFS_SIZE - len, "%-7s", chan->subsys);
 			len += scnprintf(fileinfo + len,
-				DEBUGFS_SIZE - len, "|%-10u",
+				DEBUGFS_SIZE - len, "|%-10llu",
 				chan->sesscount);
 			len += scnprintf(fileinfo + len,
 				DEBUGFS_SIZE - len, "|%-14d",
 				chan->issubsystemup);
 			len += scnprintf(fileinfo + len,
-				DEBUGFS_SIZE - len, "|%-9u",
+				DEBUGFS_SIZE - len, "|%-9llu",
 				chan->ssrcount);
 			for (j = 0; j < chan->sesscount; j++)
 				sess_used += chan->session[j].used;
@@ -5433,7 +5434,7 @@ static ssize_t fastrpc_debugfs_read(struct file *filp, char __user *buffer,
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
 			"%s %7s %d\n", "sessionid", ":", fl->sessionid);
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
-			"%s %8s %u\n", "ssrcount", ":", fl->ssrcount);
+			"%s %8s %llu\n", "ssrcount", ":", fl->ssrcount);
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
 			"%s %14s %d\n", "pd", ":", fl->pd);
 		len += scnprintf(fileinfo + len, DEBUGFS_SIZE - len,
@@ -6234,6 +6235,7 @@ static long fastrpc_device_ioctl(struct file *file, unsigned int ioctl_num,
 	case FASTRPC_IOCTL_INVOKE_CRC:
 		if (!size)
 			size = sizeof(struct fastrpc_ioctl_invoke_crc);
+		/* fall through */
 	case FASTRPC_IOCTL_INVOKE_PERF:
 		if (!size)
 			size = sizeof(struct fastrpc_ioctl_invoke_perf);
@@ -7020,7 +7022,7 @@ static int __init fastrpc_device_init(void)
 							gcinfo[i].subsys,
 							&me->channel[i].nb);
 		if (IS_ERR_OR_NULL(me->channel[i].handle))
-			pr_warn("adsprpc: %s: SSR notifier register failed for %s with err %d\n",
+			pr_warn("adsprpc: %s: SSR notifier register failed for %s with err %ld\n",
 				__func__, gcinfo[i].subsys,
 				PTR_ERR(me->channel[i].handle));
 		else

@@ -5236,7 +5236,7 @@ static int wcd9335_slim_status(struct slim_device *sdev,
 }
 
 static const struct slim_device_id wcd9335_slim_id[] = {
-	{SLIM_MANF_ID_QCOM, SLIM_PROD_CODE_WCD9335, 0x1, 0x0},
+	{SLIM_SLAVE_COMPATIBLE_STR, 0x0},
 	{}
 };
 MODULE_DEVICE_TABLE(slim, wcd9335_slim_id);

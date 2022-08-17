@@ -3,6 +3,7 @@
 #define _LINUX_SCHED_STAT_H
 
 #include <linux/percpu.h>
+#include <linux/fs.h>
 
 /*
  * Various counters maintained by the scheduler and fork(),

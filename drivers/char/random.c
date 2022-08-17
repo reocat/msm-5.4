@@ -843,38 +843,6 @@ static void crng_finalize_init(struct crng_state *crng)
 	}
 }
 
-static void crng_finalize_init(struct crng_state *crng)
-{
-	if (crng != &primary_crng || crng_init >= 2)
-		return;
-	if (!system_wq) {
-		/* We can't call numa_crng_init until we have workqueues,
-		 * so mark this for processing later. */
-		crng_need_final_init = true;
-		return;
-	}
-
-	invalidate_batched_entropy();
-	numa_crng_init();
-	crng_init = 2;
-	process_random_ready_list();
-	wake_up_interruptible(&crng_init_wait);
-	kill_fasync(&fasync, SIGIO, POLL_IN);
-	pr_notice("crng init done\n");
-	if (unseeded_warning.missed) {
-		pr_notice("random: %d get_random_xx warning(s) missed "
-			  "due to ratelimiting\n",
-			  unseeded_warning.missed);
-		unseeded_warning.missed = 0;
-	}
-	if (urandom_warning.missed) {
-		pr_notice("random: %d urandom warning(s) missed "
-			  "due to ratelimiting\n",
-			  urandom_warning.missed);
-		urandom_warning.missed = 0;
-	}
-}
-
 #ifdef CONFIG_NUMA
 static void do_numa_crng_init(struct work_struct *work)
 {

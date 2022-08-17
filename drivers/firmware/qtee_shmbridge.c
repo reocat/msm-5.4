@@ -295,7 +295,7 @@ int32_t qtee_shmbridge_allocate_shm(size_t size, struct qtee_shm *shm)
 	}
 
 	if (size > default_bridge.size) {
-		pr_err("requestd size %zu is larger than bridge size %d\n",
+		pr_err("requestd size %zu is larger than bridge size %zu\n",
 			size, default_bridge.size);
 		ret = -EINVAL;
 		goto exit;
@@ -384,7 +384,7 @@ static int qtee_shmbridge_init(struct platform_device *pdev)
 	else
 		default_bridge.size = custom_bridge_size * MIN_BRIDGE_SIZE;
 
-	pr_debug("qtee shmbridge registered default bridge with size %x bytes\n",
+	pr_debug("qtee shmbridge registered default bridge with size %zu bytes\n",
 		default_bridge.size);
 
 	default_bridge.vaddr = (void *)__get_free_pages(GFP_KERNEL|__GFP_COMP,
@@ -449,7 +449,7 @@ static int qtee_shmbridge_init(struct platform_device *pdev)
 		goto exit_deregister_default_bridge;
 	}
 
-	pr_debug("qtee shmbridge registered default bridge with size %d bytes\n",
+	pr_debug("qtee shmbridge registered default bridge with size %zu bytes\n",
 			default_bridge.size);
 
 	return 0;

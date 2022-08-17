@@ -178,7 +178,7 @@ int virtio_gpu_init(struct drm_device *dev)
 		if (!ret)
 			pr_info("virthab alloc done\n");
 		else {
-			pr_err("failed to allocate virthab ret %d\n");
+			pr_err("failed to allocate virthab ret %d\n", ret);
 			return ret;
 		}
 		ret = virthab_init_vqs_pre(vh);

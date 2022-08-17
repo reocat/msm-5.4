@@ -4375,6 +4375,9 @@ int __handle_speculative_fault(struct mm_struct *mm, unsigned long address,
 	p4d_t *p4d, p4dval;
 	pud_t pudval;
 	int seq, ret;
+#ifdef CONFIG_NUMA
+	struct mempolicy *pol;
+#endif
 
 	/* Clear flags that may lead to release the mmap_sem to retry */
 	flags &= ~(FAULT_FLAG_ALLOW_RETRY|FAULT_FLAG_KILLABLE);
@@ -4434,8 +4437,6 @@ int __handle_speculative_fault(struct mm_struct *mm, unsigned long address,
 		goto out_segv;
 
 #ifdef CONFIG_NUMA
-	struct mempolicy *pol;
-
 	/*
 	 * MPOL_INTERLEAVE implies additional checks in
 	 * mpol_misplaced() which are not compatible with the

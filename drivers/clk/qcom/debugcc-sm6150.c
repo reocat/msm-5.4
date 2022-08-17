@@ -687,7 +687,7 @@ static int clk_debug_sm6150_probe(struct platform_device *pdev)
 
 		clk = devm_clk_register(&pdev->dev, &mux_list[i].mux->hw);
 		if (IS_ERR(clk)) {
-			dev_err(&pdev->dev, "Unable to register %s, err:(%d)\n",
+			dev_err(&pdev->dev, "Unable to register %s, err:(%lu)\n",
 				clk_hw_get_name(&mux_list[i].mux->hw),
 				PTR_ERR(clk));
 			return PTR_ERR(clk);
@@ -697,7 +697,7 @@ static int clk_debug_sm6150_probe(struct platform_device *pdev)
 	for (i = 0; i < ARRAY_SIZE(debugcc_sm6150_hws); i++) {
 		clk = devm_clk_register(&pdev->dev, debugcc_sm6150_hws[i]);
 		if (IS_ERR(clk)) {
-			dev_err(&pdev->dev, "Unable to register %s, err:(%d)\n",
+			dev_err(&pdev->dev, "Unable to register %s, err:(%lu)\n",
 				clk_hw_get_name(debugcc_sm6150_hws[i]),
 				PTR_ERR(clk));
 			return PTR_ERR(clk);

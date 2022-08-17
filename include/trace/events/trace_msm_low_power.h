@@ -32,7 +32,7 @@ TRACE_EVENT(cpu_power_select,
 		__entry->sched_bias = sched_bias;
 	),
 
-	TP_printk("idx:%d sleep_time:%u latency:%u sched_bias:%lu",
+	TP_printk("idx:%d sleep_time:%u latency:%u sched_bias:%llu",
 		__entry->index, __entry->sleep_us, __entry->latency,
 		__entry->sched_bias)
 );

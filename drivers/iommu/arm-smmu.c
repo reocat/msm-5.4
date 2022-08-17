@@ -1440,7 +1440,7 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 				"Unhandled context fault: iova=0x%08lx, cb=%d, fsr=0x%x, fsynr0=0x%x, fsynr1=0x%x\n",
 				iova, cfg->cbndx, fsr, fsynr0, fsynr1);
 
-			dev_err(smmu->dev, "SSD=0x%x SID=0x%x\n",
+			dev_err(smmu->dev, "SSD=0x%lx SID=0x%lx\n",
 				FIELD_GET(CBFRSYNRA_SSD, frsynra),
 				FIELD_GET(CBFRSYNRA_SID, frsynra));
 
@@ -1831,7 +1831,7 @@ static int get_range_prop(struct device *dev, const char *prop,
 		return -EINVAL;
 	}
 	if (naddr == 0 || nsize == 0) {
-		dev_err(dev, "Invalid #address-cells %d or #size-cells %d for %s\n",
+		dev_err(dev, "Invalid #address-cells %s or #size-cells %d for %d\n",
 			prop, naddr, nsize);
 		return -EINVAL;
 	}
@@ -2458,7 +2458,7 @@ static int arm_smmu_write_smr(struct arm_smmu_device *smmu, int idx)
 	 */
 	val = arm_smmu_gr0_read(smmu, ARM_SMMU_GR0_SMR(idx));
 	if (val != reg) {
-		dev_err(smmu->dev, "SMR[%d] write err write:0x%lx, read:0x%lx\n",
+		dev_err(smmu->dev, "SMR[%d] write err write:0x%x, read:0x%x\n",
 				idx, reg, val);
 		return -EINVAL;
 	}

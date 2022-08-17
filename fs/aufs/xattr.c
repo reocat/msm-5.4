@@ -321,7 +321,8 @@ static int au_setxattr(struct dentry *dentry, struct inode *inode,
 
 static int au_xattr_get(const struct xattr_handler *handler,
 			struct dentry *dentry, struct inode *inode,
-			const char *name, void *buffer, size_t size)
+			const char *name, void *buffer, size_t size,
+			int flags)
 {
 	return au_getxattr(dentry, inode, name, buffer, size);
 }

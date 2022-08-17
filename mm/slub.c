@@ -6167,12 +6167,12 @@ static int alloc_trace_locations(struct seq_file *seq, struct kmem_cache *s,
 		unsigned int j = 0;
 
 		seq_printf(seq,
-		"alloc_list: call_site=%pS count=%zu object_size=%zu slab_size=%zu slab_name=%s\n",
+		"alloc_list: call_site=%pS count=%zu object_size=%u slab_size=%u slab_name=%s\n",
 			(void *)l->addr, l->count, s->object_size, s->size, s->name);
 #ifdef CONFIG_STACKTRACE
 		for (j = 0; j < TRACK_ADDRS_COUNT; j++)
 			if (l->addrs[j]) {
-				seq_printf(seq, "%pS\n", l->addrs[j]);
+				seq_printf(seq, "%luS\n", l->addrs[j]);
 				continue;
 			} else
 				break;

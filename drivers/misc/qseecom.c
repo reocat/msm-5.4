@@ -1328,7 +1328,7 @@ static int qseecom_create_bridge_for_secbuf(int ion_fd, struct dma_buf *dmabuf,
 
 	nelems = ion_get_flags_num_vm_elems(dma_buf_flags);
 	if (nelems == 0) {
-		pr_err("failed to get vm num from flag = %x\n", dma_buf_flags);
+		pr_err("failed to get vm num from flag = %lx\n", dma_buf_flags);
 		ret = -EINVAL;
 		goto exit;
 	}
@@ -3690,6 +3690,7 @@ static int __qseecom_process_reentrancy(struct qseecom_command_scm_resp *resp,
 			return ret;
 		}
 		/* fall through to process incomplete request */
+		/* fall through */
 	case QSEOS_RESULT_INCOMPLETE:
 		qseecom.app_block_ref_cnt++;
 		ptr_app->app_blocked = true;

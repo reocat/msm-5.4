@@ -428,12 +428,6 @@ static inline void put_tcp_super(struct super_block *sb)
 		cifs_sb_deactive(sb);
 }
 
-static inline void put_tcp_super(struct super_block *sb)
-{
-	if (!IS_ERR_OR_NULL(sb))
-		cifs_sb_deactive(sb);
-}
-
 static void reconn_set_next_dfs_target(struct TCP_Server_Info *server,
 				       struct cifs_sb_info *cifs_sb,
 				       struct dfs_cache_tgt_list *tgt_list,

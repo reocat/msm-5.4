@@ -285,7 +285,7 @@ static void pt_get_mt_touches(struct pt_mt_data *md,
 
 	if (PT_TOUCH_ID_MAX < si->tch_abs[PT_TCH_T].max) {
 		pt_debug(dev, DL_ERROR,
-			"%s: Touch ID num %d is allocated less than needed %d\n",
+			"%s: Touch ID num %d is allocated less than needed %zu\n",
 			__func__, PT_TOUCH_ID_MAX, si->tch_abs[PT_TCH_T].max);
 		return;
 	}

@@ -309,7 +309,7 @@ static ssize_t pps_fops_read(struct file *filp, char __user *buf,
 						  temp_buf, len);
 		kfree(temp_buf);
 		if (pethqos)
-			ETHQOSERR("poll pps2intr info=%d sent by kernel\n",
+			ETHQOSERR("poll pps2intr info=%ld sent by kernel\n",
 				  pethqos->avb_class_a_intr_cnt);
 	} else if (info->channel_no == AVB_CLASS_B_CHANNEL_NUM) {
 		avb_class_b_msg_wq_flag = false;

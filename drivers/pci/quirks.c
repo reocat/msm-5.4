@@ -5824,16 +5824,5 @@ static void nvidia_ion_ahci_fixup(struct pci_dev *pdev)
 	pdev->dev_flags |= PCI_DEV_FLAGS_HAS_MSI_MASKING;
 }
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_NVIDIA, 0x0ab8, nvidia_ion_ahci_fixup);
-
-/*
- * Device [12d8:0x400e] and [12d8:0x400f]
- * These devices advertise PME# support in all power states but don't
- * reliably assert it.
- */
-static void pci_fixup_no_pme(struct pci_dev *dev)
-{
-	pci_info(dev, "PME# is unreliable, disabling it\n");
-	dev->pme_support = 0;
-}
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_PERICOM, 0x400e, pci_fixup_no_pme);
 DECLARE_PCI_FIXUP_FINAL(PCI_VENDOR_ID_PERICOM, 0x400f, pci_fixup_no_pme);

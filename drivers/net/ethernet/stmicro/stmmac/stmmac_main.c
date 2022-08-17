@@ -4169,6 +4169,7 @@ static int stmmac_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 		break;
 	case SIOCGHWTSTAMP:
 		ret = stmmac_hwtstamp_get(dev, rq);
+		/* fall through */
 	case SIOCDEVPRIVATE:
 		ret = priv->plat->handle_prv_ioctl(dev, rq, cmd);
 		break;

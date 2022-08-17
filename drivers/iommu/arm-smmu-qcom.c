@@ -1038,7 +1038,7 @@ static ssize_t arm_smmu_debug_capturebus_config_read(struct file *file,
 		scnprintf(buf + strlen(buf), buf_len - strlen(buf),
 				"Match_%d : 0x%0llx\n", i+1, match[i]);
 	}
-	scnprintf(buf + strlen(buf), buf_len - strlen(buf), "0x%0lx\n", val);
+	scnprintf(buf + strlen(buf), buf_len - strlen(buf), "0x%0llx\n", val);
 
 	buflen = min(count, strlen(buf));
 	if (copy_to_user(ubuf, buf, buflen)) {
