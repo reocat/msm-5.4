@@ -1277,9 +1277,9 @@ static int npu_cc_kona_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = npu_clocks_kona_probe(pdev, &npu_qdsp6ss_pll_kona_desc);
+	ret = npu_clocks_kona_probe(pdev, &npu_cc_kona_desc);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "npu_qdsp6ss_pll clock registration failed, ret=%d\n",
+		dev_err(&pdev->dev, "npu_cc clock registration failed, ret=%d\n",
 			ret);
 		return ret;
 	}
@@ -1291,9 +1291,9 @@ static int npu_cc_kona_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = npu_clocks_kona_probe(pdev, &npu_cc_kona_desc);
+	ret = npu_clocks_kona_probe(pdev, &npu_qdsp6ss_pll_kona_desc);
 	if (ret < 0) {
-		dev_err(&pdev->dev, "npu_cc clock registration failed, ret=%d\n",
+		dev_err(&pdev->dev, "npu_qdsp6ss_pll clock registration failed, ret=%d\n",
 			ret);
 		return ret;
 	}
