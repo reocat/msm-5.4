@@ -1,0 +1,9 @@
+/dts-v1/;
+
+#include "lemans.dtsi"
+#include "lemans-adp-star.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Lemans ADP STAR";
+	compatible = "qcom,lemans", "qcom,adp-star", "qcom,lemans-adp-star";
+};
