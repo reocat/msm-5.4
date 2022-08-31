@@ -30,8 +30,8 @@ fi
 	while read name
 	do
 		link=$( readlink "$name" )
-
-		echo "[ ! -L '$name' ] && ln -sf '$link' '$name'"
+		dir=$( dirname "$name" )
+		echo "[ ! -L '$name' ] && mkdir -p '$dir' && ln -sf '$link' '$name'"
 	done
 
 	# Identify all removed files since the proffered tag.
