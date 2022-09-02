@@ -55,3 +55,7 @@ build-packages:
     - else:
         - binutils-${SNAPCRAFT_ARCH_TRIPLET}
         - gcc-${SNAPCRAFT_ARCH_TRIPLET}
+
+package-repositories:
+    - type: apt
+      ppa: snappy-dev/image
