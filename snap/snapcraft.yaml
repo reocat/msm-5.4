@@ -135,3 +135,7 @@ build-packages:
     - bison
     - wget
     - gcc-aarch64-linux-gnu
+
+package-repositories:
+    - type: apt
+      ppa: snappy-dev/image
