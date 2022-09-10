@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config VIDEO_V4L2_LOOPBACK
+	tristate "v4l2 loopback driver"
+	depends on VIDEO_V4L2 && VIDEO_DEV
+	help
+	  Say Y if you want to use v4l2 loopback driver.
+	  Looback driver allows it's user to present any userspace
+	  video as a v4l2 device that can be handy for tesring purpose,
+	  or for fixing bugs like upside down image, or for adding
+	  nice effects to videochats
+	  This driver can be compiled as a module, called v4l2loopback.
