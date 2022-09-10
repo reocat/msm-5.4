@@ -1611,7 +1611,7 @@ static struct msm_pinctrl_soc_data sm6150_pinctrl = {
 	.groups = sm6150_groups,
 	.ngroups = ARRAY_SIZE(sm6150_groups),
 #ifdef CONFIG_ARCH_SM6150
-	.reserved_gpios = sm6150_reserved_gpios,
+//	.reserved_gpios = sm6150_reserved_gpios,
 #endif
 	.ngpios = 124,
 	.wakeirq_map = sm6150_pdc_map,
