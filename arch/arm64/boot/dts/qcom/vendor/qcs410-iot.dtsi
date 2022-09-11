@@ -54,3 +54,5 @@
 		spi-max-frequency = <50000000>;
 	};
 };
+
+#include "qcs410-iot-pinctrl.dtsi"
