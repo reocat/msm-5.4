@@ -29,3 +29,28 @@
 	qcom,default-mode-host;
 	qcom,ignore-wakeup-src-in-hostmode;
 };
+
+&aliases {
+	spi2 = &qupv3_se2_spi;
+	spi6 = &qupv3_se6_spi;
+};
+
+&qupv3_se2_spi {
+	status = "ok";
+	spidev@1 {
+		status = "ok";
+		compatible = "qcom,spidev";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+	};
+};
+
+&qupv3_se6_spi {
+	status = "ok";
+	spidev@2 {
+		status = "ok";
+		compatible = "qcom,spidev";
+		reg = <0>;
+		spi-max-frequency = <50000000>;
+	};
+};
