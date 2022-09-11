@@ -13,11 +13,19 @@
 #include "qcs610-iot.dtsi"
 
 / {
-       model = "Qualcomm Technologies, Inc. QCS410 IOT";
-       compatible = "qcom,qcs410-iot", "qcom,qcs410", "qcom,iot";
+	model = "Qualcomm Technologies, Inc. QCS410 IOT";
+	compatible = "qcom,qcs410-iot", "qcom,qcs410", "qcom,iot";
 };
 
 &ir_led {
-       gpios = <&tlmm 74 0>,
-               <&tlmm 73 0>;
+	gpios = <&tlmm 74 0>,
+		<&tlmm 73 0>;
+};
+
+&usb1 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_typea_host_en>;
+	qcom,default-mode-host;
+	qcom,ignore-wakeup-src-in-hostmode;
 };
