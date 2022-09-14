@@ -1,36 +1,66 @@
-name: pc-kernel
-version: null
-version-script: |
-    . debian/debian.env
-    dpkg-parsechangelog -l $DEBIAN/changelog -S version
-summary: The Ubuntu generic Linux kernel
-description: This Ubuntu generic Linux kernel
-grade: stable
-confinement: strict
+name: mic-qcom-kernel
+adopt-info: kernel
+summary: Mobility IoT Core linux kernel
+description: This is the kernel snap for Mobility IoT Core based on Qualcomm QCS410/610 SOC
 type: kernel
+confinement: strict
+build-base: core20
+license: GPL-2.0-or-later
+
+environment:
+  LD_LIBRARY_PATH: ${SNAP}/usr/lib
 
 parts:
   kernel:
-    plugin: kernel
-    source: .
-    source-type: git
-    kconfigflavour: generic
-    kconfigs:
-      - CONFIG_DEBUG_INFO=n
-    override-build: |
-      cp debian/scripts/retpoline-extract-one \
-        $SNAPCRAFT_PART_BUILD/scripts/ubuntu-retpoline-extract-one
-      snapcraftctl build
-    kernel-with-firmware: false
-  firmware:
     plugin: nil
-    stage-packages:
-      - linux-firmware
-    organize:
-      lib/firmware: firmware
-    prime:
-      - -usr
-      - -lib
     build-packages:
-      - cpio
-      - libssl-dev
+      - kmod
+    stage-packages:
+      - linux-image-unsigned-5.4.0-1001-qcom-qcs410
+      - linux-modules-5.4.0-1001-qcom-qcs410
+    organize:
+      boot: ./
+      lib/firmware: firmware
+      lib/modules: modules
+      usr/share/doc: doc
+    override-build: |
+      snapcraftctl set-version "$(apt show linux-image-unsigned-5.4.0-1001-qcom-qcs410 2>/dev/null | sed -n 's/^Version: //p' | head -n1)"
+      mv "$SNAPCRAFT_PART_INSTALL"/boot/vmlinuz-* "$SNAPCRAFT_PART_INSTALL"/boot/boot.img
+      depmod -b "$SNAPCRAFT_PART_INSTALL" $(basename "$SNAPCRAFT_PART_INSTALL"/lib/modules/*)
+      snapcraftctl build
+    stage:
+      - -doc/crda
+      - -doc/linux-base
+      - -doc/iw
+      - -etc
+      - -firmware/amd
+      - -firmware/amdgpu
+      - -firmware/asihpi
+      - -firmware/cavium
+      - -firmware/cxgb3
+      - -firmware/cxgb4
+      - -firmware/dpaa2
+      - -firmware/i915
+      - -firmware/intel
+      - -firmware/iwlwifi-*
+      - -firmware/liquidio
+      - -firmware/matrox
+      - -firmware/mellanox
+      - -firmware/mrvl/pcie*
+      - -firmware/mrvl/sd8*
+      - -firmware/mrvl/sdsd8977*
+      - -firmware/mrvl/usb*
+      - -firmware/moxa
+      - -firmware/netronome
+      - -firmware/nvidia
+      - -firmware/qed
+      - -firmware/radeon
+      - -firmware/rockchip
+      - -firmware/ath10k
+      - -firmware/ath3k-1.fw
+      - -firmware/qca/htbtfw20.tlv
+      - -firmware/qcom
+      - -firmware/s5p*
+      - -lib
+      - -sbin
+      - -usr
