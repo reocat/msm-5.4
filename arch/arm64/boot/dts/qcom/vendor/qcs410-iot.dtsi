@@ -62,4 +62,16 @@
 	};
 };
 
+&pm6150_charger{
+	status = "disabled";
+};
+
+&pm6150_qg{
+	status = "disabled";
+};
+
+&pm6150_bcl{
+	status = "disabled";
+};
+
 #include "qcs410-iot-pinctrl.dtsi"
