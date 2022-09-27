@@ -8,21 +8,21 @@ adopt-info: kernel
 
 architectures:
   - build-on: [amd64, arm64]
-    run-on: arm64
+    build-for: arm64
 
-build-base: core20
+build-base: core22
 
 parts:
   kernel:
     after:
       - firmware
-    plugin: x-kernel
-    source-type: git
-    kdefconfig: [ "snappy_defconfig" ]
+    plugin: kernel
+    kernel-kdefconfig:
+      - snappy_defconfig
     kernel-with-firmware: false
     kernel-image-target: Image.gz
     kernel-enable-zfs-support: true
-    kernel-initrd-compression: lz4
+    kernel-initrd-compression: zstd
     kernel-initrd-modules:
       - atl1c
       - qcom-emac
@@ -30,15 +30,15 @@ parts:
       - slimbus
       - xhci-hcd
       - libarc4
-    kconfigs:
+    kernel-kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
-      snapcraftctl build
-      kernel_version="$(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 14-)"
-      snapcraftctl set-version ${kernel_version}
+      craftctl default
+      kernel_version="$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags  | cut -c 14-)"
+      craftctl set version=${kernel_version}
     override-prime: |
-      snapcraftctl prime
-      ${SNAPCRAFT_STAGE}/trim-firmware ${SNAPCRAFT_PRIME}
+      craftctl default
+      ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
     stage:
       - dtbs
       - System.map-*
@@ -47,23 +47,23 @@ parts:
       - kernel.img
       - modules
     prime:
-      - -dtbs
-      - -initrd.img
-      - -kernel.img
+      - -"dtbs"
+      - -"initrd.img"
+      - -"kernel.img"
 
   bootimg:
     plugin: nil
     after:
       - kernel
     override-build: |
-      cat ${SNAPCRAFT_STAGE}/kernel.img \
-          ${SNAPCRAFT_STAGE}/dtbs/qcom/sa8155p-adp.dtb \
-          ${SNAPCRAFT_STAGE}/dtbs/qcom/sa8155p-iot-v2-adp.dtb \
+      cat ${CRAFT_STAGE}/kernel.img \
+          ${CRAFT_STAGE}/dtbs/qcom/sa8155p-adp.dtb \
+          ${CRAFT_STAGE}/dtbs/qcom/sa8155p-iot-v2-adp.dtb \
           > Image.gz+dtbs
       mkbootimg \
         --kernel Image.gz+dtbs \
-        --ramdisk ${SNAPCRAFT_STAGE}/initrd.img \
-        --output ${SNAPCRAFT_PART_INSTALL}/boot.img.nonsecure \
+        --ramdisk ${CRAFT_STAGE}/initrd.img \
+        --output ${CRAFT_PART_INSTALL}/boot.img.nonsecure \
         --pagesize 4096 \
         --base 0x80000000 \
         --kernel_offset 0x8000 \
@@ -109,13 +109,13 @@ parts:
       openssl \
         dgst \
         -${TARGET_SHA_TYPE} \
-        -binary ${SNAPCRAFT_STAGE}/${BOOT_IMG}.nonsecure \
+        -binary ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure \
         > ${BOOT_IMG}.${TARGET_SHA_TYPE}
       openssl \
         pkeyutl \
         -sign \
         -in ${BOOT_IMG}.${TARGET_SHA_TYPE} \
-        -inkey ${SNAPCRAFT_STAGE}/signing-keys/${KEY_NAME}.key \
+        -inkey ${CRAFT_STAGE}/signing-keys/${KEY_NAME}.key \
         -out ${BOOT_IMG}.sig \
         -pkeyopt digest:sha256 \
         -pkeyopt rsa_padding_mode:pkcs1
@@ -123,7 +123,7 @@ parts:
       # append it to the image
       dd if=/dev/zero of=${BOOT_IMG}.sig.padded bs=${BOARD_KERNEL_PAGESIZE} count=1
       dd if=${BOOT_IMG}.sig of=${BOOT_IMG}.sig.padded conv=notrunc
-      cat ${SNAPCRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${SNAPCRAFT_PART_INSTALL}/${BOOT_IMG}
+      cat ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${CRAFT_PART_INSTALL}/${BOOT_IMG}
 
 build-packages:
     - dpkg-dev
