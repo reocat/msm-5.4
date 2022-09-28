@@ -1371,7 +1371,7 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 	struct fastrpc_mmap *map = NULL;
 	dma_addr_t region_phys = 0;
 	void *region_vaddr = NULL;
-	unsigned long flags;
+	unsigned long flags = 0;
 	int err = 0, vmid, sgl_index = 0;
 	struct scatterlist *sgl = NULL;
 
