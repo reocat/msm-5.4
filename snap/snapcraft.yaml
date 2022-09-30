@@ -16,6 +16,8 @@ parts:
   kernel:
     after:
       - firmware
+      - cryptsetup
+      - fde-helper
     plugin: kernel
     kernel-kdefconfig:
       - snappy_defconfig
@@ -31,6 +33,11 @@ parts:
       - slimbus
       - xhci-hcd
       - libarc4
+    kernel-initrd-addons:
+      - usr/bin/fde-reveal-key
+      - usr/sbin/cryptsetup*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libcryptsetup.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/cryptsetup/libcryptsetup-token-ssh.so
     kernel-kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
@@ -127,6 +134,48 @@ parts:
       dd if=${BOOT_IMG}.sig of=${BOOT_IMG}.sig.padded conv=notrunc
       cat ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${CRAFT_PART_INSTALL}/${BOOT_IMG}
 
+  cryptsetup:
+    source: https://github.com/kubiko/cryptsetup.git
+    source-type: git
+    source-branch: v2.4.x-ice
+    plugin: autotools
+    autotools-configure-parameters:
+      - --host ${CRAFT_ARCH_TRIPLET}
+      - --prefix=/usr
+      - --libdir=/usr/lib/${CRAFT_ARCH_TRIPLET}
+    stage:
+      - -"usr/include"
+      - -"usr/lib/*.la"
+      - -"usr/lib/*/*.la"
+      - -"usr/lib/*/pkgconfig"
+      - -"usr/lib/*/tmpfiles.d"
+      - -"usr/share"
+    prime:
+      - -"*"
+
+  fde-helper:
+    source: https://git.launchpad.net/~ondrak/+git/optee-uc-fde
+    source-type: git
+    source-branch: dummy-fde-hook
+    plugin: nil
+    override-build: |
+      export CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-"
+      export ARCH="${CRAFT_TARGET_ARCH}"
+      if [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+        echo "Building for armhf"
+        export ARCH="arm"
+      fi
+      export DESTDIR=${CRAFT_PART_INSTALL}
+      make O=${CRAFT_PART_BUILD}/out
+      make O=${CRAFT_PART_BUILD}/out install
+    organize:
+      usr/bin/fde-setup: meta/hooks/fde-setup
+    stage:
+      - meta/
+      - usr/bin/fde-reveal-key
+    prime:
+      - meta/
+
 build-packages:
     - android-tools-mkbootimg
     - bison
@@ -134,5 +183,13 @@ build-packages:
     - dpkg-dev
     - flex
     - gcc-aarch64-linux-gnu
+    - gettext
+    - libblkid-dev:${CRAFT_TARGET_ARCH}
+    - libcryptsetup-dev:${CRAFT_TARGET_ARCH}
+    - libdevmapper-dev:${CRAFT_TARGET_ARCH}
     - libfdt-dev
+    - libjson-c-dev:${CRAFT_TARGET_ARCH}
+    - libpopt-dev:${CRAFT_TARGET_ARCH}
+    - libssh-dev:${CRAFT_TARGET_ARCH}
     - libssl-dev
+    - uuid-dev:${CRAFT_TARGET_ARCH}
