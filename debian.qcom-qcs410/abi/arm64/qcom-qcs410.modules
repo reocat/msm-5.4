@@ -2417,7 +2417,6 @@ qemu_fw_cfg
 qinfo_probe
 qm1d1c0042
 qmi_wwan
-qmi_wwan_q
 qnoc-qcs404
 qnoc-sdm845
 qnx4
