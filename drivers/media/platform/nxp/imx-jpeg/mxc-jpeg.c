@@ -1721,10 +1721,6 @@ static int mxc_jpeg_buf_prepare(struct vb2_buffer *vb)
 		vb2_set_plane_payload(vb, 0, 0);
 		vb2_set_plane_payload(vb, 1, 0);
 	}
-	if (V4L2_TYPE_IS_CAPTURE(vb->vb2_queue->type)) {
-		vb2_set_plane_payload(vb, 0, 0);
-		vb2_set_plane_payload(vb, 1, 0);
-	}
 	return 0;
 }
 
