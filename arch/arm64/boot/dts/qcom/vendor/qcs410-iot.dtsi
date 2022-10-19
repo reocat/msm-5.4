@@ -62,15 +62,19 @@
 	};
 };
 
-&pm6150_charger{
+&pm6150_charger {
 	status = "disabled";
 };
 
-&pm6150_qg{
+&pm6150_qg {
 	status = "disabled";
 };
 
-&pm6150_bcl{
+&pm6150_bcl {
+	status = "disabled";
+};
+
+&wdog {
 	status = "disabled";
 };
 
