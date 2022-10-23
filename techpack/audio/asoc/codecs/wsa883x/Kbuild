@@ -9,7 +9,7 @@ endif
 ifeq ($(KERNEL_BUILD), 1)
 	# These are configurable via Kconfig for kernel-based builds
 	# Need to explicitly configure for Android-based builds
-	AUDIO_BLD_DIR := $(shell pwd)/kernel/msm-5.4
+	AUDIO_BLD_DIR := $(shell pwd)
 	AUDIO_ROOT := $(AUDIO_BLD_DIR)/techpack/audio
 endif
 
@@ -72,7 +72,6 @@ CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
 		-DANI_OS_TYPE_ANDROID=6 \
 		-DPTT_SOCK_SVC_ENABLE \
 		-Wall\
-		-Werror\
 		-D__linux__
 
 KBUILD_CPPFLAGS += $(CDEFINES)
@@ -97,6 +96,13 @@ KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/Modul
 KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/codecs/Module.symvers
 KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/soc/Module.symvers
 KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/codecs/wsa883x/Module.symvers
+else
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/ipc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/dsp/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/asoc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/asoc/codecs/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/soc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(AUDIO_ROOT)/asoc/codecs/wsa883x/Module.symvers
 endif
 
 # Module information used by KBuild framework
