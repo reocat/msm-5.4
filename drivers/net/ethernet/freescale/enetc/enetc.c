@@ -1726,17 +1726,20 @@ void enetc_get_si_caps(struct enetc_si *si)
 
 static int enetc_dma_alloc_bdr(struct enetc_bdr *r, size_t bd_size)
 {
-	r->bd_base = dma_alloc_coherent(r->dev, r->bd_count * bd_size,
-					&r->bd_dma_base, GFP_KERNEL);
+	size_t size = r->bd_count * bd_size;
+
+	r->bd_base = dma_alloc_coherent(r->dev, size, &r->bd_dma_base,
+					GFP_KERNEL);
 	if (!r->bd_base)
 		return -ENOMEM;
 
 	/* h/w requires 128B alignment */
 	if (!IS_ALIGNED(r->bd_dma_base, 128)) {
-		dma_free_coherent(r->dev, r->bd_count * bd_size, r->bd_base,
-				  r->bd_dma_base);
+		dma_free_coherent(r->dev, size, r->bd_base, r->bd_dma_base);
 		return -EINVAL;
 	}
+
+	memset(r->bd_base, 0, size);
 
 	return 0;
 }
