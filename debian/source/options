@@ -1,6 +1,12 @@
 # Ignore vbox symlinks, we will regenerate these at clean (LP:1426113)
 ## autoreconstruct -- begin
 # Ignore any symlinks created since the orig which are rebuilt by reconstruct.
+extend-diff-ignore=^arch/arm/boot/dts/vendor$
+extend-diff-ignore=^include/dt-bindings/arm/msm/msm_ion_ids.h$
+extend-diff-ignore=^techpack/audio/include/soc/internal.h$
+extend-diff-ignore=^techpack/audio/soc/core.h$
+extend-diff-ignore=^techpack/audio/soc/pinctrl-utils.h$
+extend-diff-ignore=^techpack/wlan/qcacld-3.0/cmn$
 ## autoreconstruct -- end
 
 # force "dpkg-source -I -i" behavior
