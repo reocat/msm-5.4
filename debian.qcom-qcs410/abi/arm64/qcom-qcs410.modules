@@ -160,6 +160,7 @@ adp8870_bl
 ads7828
 ads7846
 ads7871
+adsp_loader_dlkm
 adt7310
 adt7316
 adt7316-i2c
@@ -243,6 +244,7 @@ apds9960
 appledisplay
 appletalk
 apr
+apr_dlkm
 aqc111
 aquantia
 ar1021_i2c
@@ -387,6 +389,7 @@ bmp280-i2c
 bmp280-spi
 bnep
 bnxt_en
+bolero_cdc_dlkm
 bonding
 bpa10x
 bpfilter
@@ -1127,6 +1130,7 @@ hdlcd
 hdlcdrv
 hdma
 hdma_mgmt
+hdmi_dlkm
 hdpvr
 hfcsusb
 hfpll
@@ -1754,6 +1758,7 @@ mac80211_hwsim
 mac802154
 mac802154_hwsim
 macb
+machine_dlkm
 machxo2-spi
 macsec
 macvlan
@@ -1845,6 +1850,7 @@ max9611
 maxim_thermocouple
 mb1232
 mb86a20s
+mbhc_dlkm
 mc13783-adc
 mc13783-pwrbutton
 mc13783-regulator
@@ -2018,6 +2024,7 @@ nand_ecc
 nandcore
 nandsim
 national
+native_dlkm
 nau7802
 nb8800
 nbd
@@ -2304,6 +2311,8 @@ pinctrl-spmi-gpio
 pinctrl-spmi-mpp
 pinctrl-ssbi-gpio
 pinctrl-ssbi-mpp
+pinctrl_lpi_dlkm
+pinctrl_wcd_dlkm
 pixcir_i2c_ts
 pkcs7_test_key
 pkcs8_key_parser
@@ -2314,6 +2323,7 @@ pl172
 pl330
 plat-ram
 plat_nand
+platform_dlkm
 platform_lcd
 platform_mhu
 plip
@@ -2337,10 +2347,8 @@ port100
 powermate
 powr1220
 ppdev
-ppp_async
 ppp_deflate
 ppp_mppe
-ppp_synctty
 pppoatm
 pppoe
 pppox
@@ -2379,6 +2387,9 @@ pwrseq_sd8787
 pxa27x_udc
 pxe1610
 pxrc
+q6_dlkm
+q6_notifier_dlkm
+q6_pdr_dlkm
 qca8k
 qca_7k_common
 qcaspi
@@ -2765,6 +2776,7 @@ rtsx_usb
 rtsx_usb_ms
 rtsx_usb_sdmmc
 rx51_battery
+rx_macro_dlkm
 rxrpc
 s1d13xxxfb
 s2250
@@ -2962,6 +2974,7 @@ snd-timer
 snd-ua101
 snd-usb-6fire
 snd-usb-audio
+snd-usb-audio-qmi
 snd-usb-caiaq
 snd-usb-hiface
 snd-usb-line6
@@ -2971,6 +2984,7 @@ snd-usb-toneport
 snd-usb-variax
 snd-usbmidi-lib
 snd-virmidi
+snd_event_dlkm
 softdog
 softing
 sony-btf-mpx
@@ -3092,6 +3106,7 @@ stowaway
 streamzap
 streebog_generic
 stts751
+stub_dlkm
 stv0288
 stv0297
 stv0299
@@ -3104,6 +3119,8 @@ sunrpc
 sur40
 surface3_spi
 switchtec
+swr_ctrl_dlkm
+swr_dlkm
 sx8
 sx8654
 sx9500
@@ -3318,6 +3335,7 @@ twl6030-regulator
 twl6040-vibra
 twofish_common
 twofish_generic
+tx_macro_dlkm
 typec_displayport
 typec_ucsi
 u132-hcd
@@ -3398,6 +3416,7 @@ usbvision
 usdhi6rol0
 userio
 userspace-consumer
+usf_dlkm
 ushc
 uss720
 uvcvideo
@@ -3408,6 +3427,7 @@ v4l2-fwnode
 v4l2-mem2mem
 v4l2-tpg
 v4l2loopback
+va_macro_dlkm
 vcan
 vcnl4000
 vcnl4035
@@ -3519,8 +3539,15 @@ wacom_serial4
 wacom_w8001
 walkera0701
 warrior
+wcd934x_dlkm
+wcd937x_dlkm
+wcd937x_slave_dlkm
+wcd9xxx_dlkm
+wcd_core_dlkm
+wcd_spi_dlkm
 wcnss_ctrl
 wdt87xx_i2c
+wglink_dlkm
 wilc1000
 wilc1000-sdio
 wilc1000-spi
@@ -3548,6 +3575,8 @@ wm8775
 wm8994
 wm8994-regulator
 wp512
+wsa881x_dlkm
+wsa_macro_dlkm
 wusb-cbaf
 wusb-wa
 wusbcore
