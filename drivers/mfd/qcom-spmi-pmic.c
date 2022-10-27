@@ -124,10 +124,15 @@ static const struct regmap_config spmi_regmap_can_sleep_config = {
 	.fast_io	= false,
 };
 
+#define MIN_MICROVOLT 2700
+#define MAX_MICROVOLT 4095
+#define L19A_LDO_BASE 0x5200
+#define ULS_VSET_LB   0x39
 static int pmic_spmi_probe(struct spmi_device *sdev)
 {
 	struct device_node *root = sdev->dev.of_node;
 	struct regmap *regmap;
+	u32 pval;
 
 	if (of_property_read_bool(root, "qcom,can-sleep"))
 		regmap = devm_regmap_init_spmi_ext(sdev,
@@ -136,6 +141,21 @@ static int pmic_spmi_probe(struct spmi_device *sdev)
 		regmap = devm_regmap_init_spmi_ext(sdev, &spmi_regmap_config);
 	if (IS_ERR(regmap))
 		return PTR_ERR(regmap);
+
+	if (!of_property_read_u32(root, "l19a-max-uls-microvolt", &pval)) {
+		pval = DIV_ROUND_UP(pval, 1000);
+		if (pval > MIN_MICROVOLT && pval <= MAX_MICROVOLT) {
+			u8 reg[2];
+			int ret;
+
+			reg[0] = pval & 0xff;
+			reg[1] = (pval & 0xff00) >> 8;
+			ret = regmap_bulk_write(regmap,
+						L19A_LDO_BASE + ULS_VSET_LB, reg, 2);
+			if (ret < 0)
+				dev_warn (&sdev->dev, "fail to LDO19 uls_volt");
+		}
+	}
 
 	/* Only the first slave id for a PMIC contains this information */
 	if (sdev->usid % 2 == 0)

@@ -11,6 +11,7 @@
  */
 
 #include "qcs610-iot.dtsi"
+#define L19A_MAX_MICROVOLT 4095000
 
 / {
 	model = "Qualcomm Technologies, Inc. QCS410 IOT";
@@ -32,7 +33,7 @@
 };
 
 &L19A {
-       regulator-max-microvolt = <3304000>;
+       regulator-max-microvolt = <L19A_MAX_MICROVOLT>;
        qcom,init-voltage = <3300000>;
        regulator-always-on;
        qcom,init-mode = <RPMH_REGULATOR_MODE_HPM>;
@@ -79,6 +80,7 @@
 	status = "disabled";
 };
 
+
 &qupv3_se1_i2c {
 	/delete-property/ qcom,i2c-touch-active;
 	focaltech@38 {
@@ -91,6 +93,10 @@
 
 &emac_gdsc {
 	status = "disabled";
+};
+
+&pm6150_ldo {
+       l19a-max-uls-microvolt = <L19A_MAX_MICROVOLT>;
 };
 
 #include "qcs410-iot-pinctrl.dtsi"

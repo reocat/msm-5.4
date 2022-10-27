@@ -477,7 +477,7 @@
 		};
 	};
 
-	qcom,pm6150@1 {
+	pm6150_ldo: qcom,pm6150@1 {
 		compatible ="qcom,spmi-pmic";
 		reg = <1 SPMI_USID>;
 		#address-cells = <1>;
