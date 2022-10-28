@@ -17,11 +17,6 @@
 	compatible = "qcom,qcs410-iot", "qcom,qcs410", "qcom,iot";
 };
 
-&ir_led {
-	gpios = <&tlmm 74 0>,
-		<&tlmm 73 0>;
-};
-
 &usb1 {
 	status = "okay";
 	pinctrl-names = "default";
@@ -78,4 +73,21 @@
 	status = "disabled";
 };
 
+&qupv3_se1_i2c {
+	/delete-property/ qcom,i2c-touch-active;
+	focaltech@38 {
+		status = "disabled";
+	};
+	lt,lt9611@3b {
+		status = "disabled";
+	};
+};
+
+&emac_gdsc {
+	status = "disabled";
+};
+
 #include "qcs410-iot-pinctrl.dtsi"
+#include "display/denso-sde.dtsi"
+#include "camera/denso-camera.dtsi"
+#include "sm6150-ext-codec-audio-overlay.dtsi"

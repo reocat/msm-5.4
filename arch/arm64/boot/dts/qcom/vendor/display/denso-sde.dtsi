@@ -1,0 +1,79 @@
+&mdss_mdp {
+	status = "disabled";
+};
+
+&sde_rscc {
+	status = "disabled";
+};
+
+&mdss_rotator {
+	status = "disabled";
+};
+
+&mdss_dsi0 {
+	status = "disabled";
+};
+
+&mdss_dsi_phy0 {
+	status = "disabled";
+};
+
+&ext_disp {
+	status = "disabled";
+};
+
+&qcom_msmhdcp {
+	status = "disabled";
+};
+
+&sde_dp {
+	status = "disabled";
+};
+
+&smmu_sde_sec {
+	status = "disabled";
+};
+
+&smmu_sde_unsec {
+	status = "disabled";
+};
+
+&dsi_panel_pwr_supply {
+	status = "disabled";
+};
+
+&dsi_panel_pwr_supply_no_labibb {
+	status = "disabled";
+};
+
+&dsi_panel_pwr_supply_labibb_amoled {
+	status = "disabled";
+};
+
+&sde_dsi {
+	status = "disabled";
+};
+
+&sde_wb {
+	status = "disabled";
+};
+
+&dsi_ili9881c_720p_video {
+	status = "disabled";
+};
+
+&dsi_ext_bridge_1080p {
+	status = "disabled";
+};
+
+&dsi_hx83112a_truly_video {
+	status = "disabled";
+};
+
+&mdss_dsi0_pll {
+	status = "disabled";
+};
+
+&mdss_dp_pll {
+	status = "disabled";
+};

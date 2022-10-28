@@ -1,0 +1,117 @@
+&soc {
+	qcom,cam-req-mgr {
+		status = "disabled";
+	};
+
+	qcom,cam-sync {
+		status = "disabled";
+	};
+
+	qcom,cam_smmu {
+		status = "disabled";
+	};
+
+	qcom,cam-cdm-intf {
+		status = "disabled";
+	};
+
+	qcom,cpas-cdm0@ac48000 {
+		status = "disabled";
+	};
+
+	qcom,cam-icp {
+		status = "disabled";
+	};
+
+	qcom,cam-res-mgr {
+		status = "disabled";
+	};
+};
+
+&cam_csiphy0 {
+	status = "disabled";
+};
+
+&cam_csiphy1 {
+	status = "disabled";
+};
+
+&cam_csiphy2 {
+	status = "disabled";
+};
+
+&cam_cci {
+	status = "disabled";
+};
+
+&cam_cpas {
+	status = "disabled";
+};
+
+&cam_isp_mgr {
+	status = "disabled";
+};
+
+&cam_csid0 {
+	status = "disabled";
+};
+
+&cam_vfe0 {
+	status = "disabled";
+};
+
+&cam_csid1 {
+	status = "disabled";
+};
+
+&cam_vfe1 {
+	status = "disabled";
+};
+
+&cam_csid_lite {
+	status = "disabled";
+};
+
+&cam_vfe_lite {
+	status = "disabled";
+};
+
+&cam_a5 {
+	status = "disabled";
+};
+
+&cam_ipe0 {
+	status = "disabled";
+};
+
+&cam_bps {
+	status = "disabled";
+};
+
+&cam_jpeg_mgr {
+	status = "disabled";
+};
+
+&cam_jpeg_enc {
+	status = "disabled";
+};
+
+&cam_jpeg_dma {
+	status = "disabled";
+};
+
+&cam_lrme_mgr {
+	status = "disabled";
+};
+
+&cam_lrme {
+	status = "disabled";
+};
+
+&ir_led {
+	status = "disabled";
+};
+
+&camera_ldo {
+	status = "disabled";
+};
