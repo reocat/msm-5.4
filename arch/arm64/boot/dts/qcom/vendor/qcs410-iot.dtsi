@@ -17,6 +17,12 @@
 	compatible = "qcom,qcs410-iot", "qcom,qcs410", "qcom,iot";
 };
 
+&usb0 {
+        extcon = <&eud>;
+        /delete-property/ io-channels;
+        /delete-property/ io-channel-names;
+};
+
 &usb1 {
 	status = "okay";
 	pinctrl-names = "default";
