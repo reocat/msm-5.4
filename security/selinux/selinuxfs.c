@@ -610,6 +610,9 @@ static ssize_t sel_write_load(struct file *file, const char __user *buf,
 	ssize_t length;
 	void *data = NULL;
 
+	if (task_active_pid_ns(current) != &init_pid_ns)
+		return count;
+
 	mutex_lock(&fsi->mutex);
 
 	if (fsi->ns != current_selinux_ns)
