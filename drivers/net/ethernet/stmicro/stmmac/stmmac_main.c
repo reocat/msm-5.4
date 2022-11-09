@@ -2183,6 +2183,13 @@ void stmmac_tx_err(struct stmmac_priv *priv, u32 chan)
 	struct stmmac_tx_queue *tx_q = &priv->tx_queue[chan];
 	int i;
 
+	if (tx_q->skip_sw) {
+		ethqos_ipa_offload_event_handler(priv, EV_DEV_CLOSE);
+		ethqos_ipa_offload_event_handler(priv, EV_DEV_OPEN);
+		priv->dev->stats.tx_errors++;
+		return;
+	}
+
 	netif_tx_stop_queue(netdev_get_tx_queue(priv->dev, chan));
 
 	stmmac_stop_tx_dma(priv, chan);
@@ -3804,9 +3811,7 @@ static int stmmac_rx(struct stmmac_priv *priv, int limit, u32 queue)
 	int status = 0, coe = priv->hw->rx_csum;
 	unsigned int next_entry = rx_q->cur_rx;
 	struct sk_buff *skb = NULL;
-#ifndef CONFIG_ETH_IPA_OFFLOAD
 	unsigned int eth_type;
-#endif
 
 	if (netif_msg_rx_status(priv)) {
 		void *rx_head;
@@ -3979,13 +3984,12 @@ read_again:
 
 		stmmac_get_rx_hwtstamp(priv, p, np, skb);
 		stmmac_rx_vlan(priv->dev, skb);
-#ifndef CONFIG_ETH_IPA_OFFLOAD
-			eth_type = dwmac_qcom_get_eth_type(skb->data);
 
-			if (priv->current_loopback > 0 &&
-			    eth_type == ETH_P_IP)
-				swap_ip_port(skb, eth_type);
-#endif
+		eth_type = dwmac_qcom_get_eth_type(skb->data);
+		if (priv->current_loopback > 0 &&
+		    eth_type == ETH_P_IP)
+			swap_ip_port(skb, eth_type);
+
 		skb->protocol = eth_type_trans(skb, priv->dev);
 
 		if (unlikely(!coe))
