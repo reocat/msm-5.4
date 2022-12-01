@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Always pefer to use modeevn if it is available
+if [ -e "/run/mnt/data/system-data/var/lib/snapd/modeenv" ]; then
+  mode="$(sed -n 's/mode=\([^[:space:]]*\)/\1/p' /run/mnt/data/system-data/var/lib/snapd/modeenv)"
+else
+  mode="$(sed 's/.*snapd_recovery_mode=\([^[:space:]]*\)[[:space:]].*/\1/' /proc/cmdline))"
+fi
+
+if [ "${mode}" != "install" ]; then
+then
+    exit 0
+fi
+

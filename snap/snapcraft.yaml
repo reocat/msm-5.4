@@ -6,7 +6,7 @@ description: The i.MX Ubuntu kernel package as a snap
 
 grade: stable
 build-base: core22
-confinement: devmode
+confinement: strict
 type: kernel
 adopt-info: kernel
 
@@ -20,17 +20,13 @@ architectures:
 environment:
   LD_LIBRARY_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET}
 
-hooks:
-  fde-setup:
-    plugs:
-      - tee
-      - home
-
 parts:
   kernel:
     after:
       - firmware
       - optee-uc-fde-client
+      - initrd-tools
+      - snap-bootstrap
     plugin: kernel
     kernel-kdefconfig: [ "snappy_defconfig" ]
     kernel-with-firmware: false
@@ -42,6 +38,8 @@ parts:
     kernel-initrd-addons:
       - usr/bin/fde-reveal-key
       - usr/lib/${CRAFT_ARCH_TRIPLET}/libteec.so*
+      - usr/lib/snapd/snap-bootstrap
+    kernel-initrd-overlay: initrd-tools
     kernel-initrd-firmware:
       - firmware/imx/sdma/sdma-imx7d.bin
       - firmware/regulatory.db
@@ -231,6 +229,52 @@ parts:
       - usr/bin/fde-reveal-key
     prime:
       - meta/
+
+  initrd-tools:
+    plugin: nil
+    stage-packages: # extra tools needed to PoC
+      - cryptsetup
+      - cryptsetup-bin
+      - dosfstools
+      - e2fsprogs
+      - fdisk
+      - libfdisk1
+      - libpopt0
+      - libreadline8
+      - libsmartcols1
+      - libtinfo6
+      - tar
+    override-build: |
+      # we want only partx from util-linux
+      # reset path so we don't pick tools from part install (not a best of ideas while cross building)
+      export PATH="/usr/lib/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+      apt-get download util-linux
+      dpkg -x ${CRAFT_PART_BUILD}/util-linux*.deb ${CRAFT_PART_BUILD}/unpacked
+      cp ${CRAFT_PART_BUILD}/unpacked/usr/bin/partx ${CRAFT_PART_INSTALL}/usr/bin/partx
+      # manually organize otherwise craft fails to merge dirs
+      mv ${CRAFT_PART_INSTALL}/bin/*       ${CRAFT_PART_INSTALL}/usr/bin
+      mv ${CRAFT_PART_INSTALL}/sbin/*      ${CRAFT_PART_INSTALL}/usr/bin
+      mv ${CRAFT_PART_INSTALL}/usr/sbin/*  ${CRAFT_PART_INSTALL}/usr/bin
+      mv ${CRAFT_PART_INSTALL}/lib/${CRAFT_ARCH_TRIPLET}/* ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}
+      cp ${CRAFT_PROJECT_DIR}/initrd-overlay/the-modeenv-focal ${CRAFT_PART_INSTALL}/usr/lib/the-modeenv
+      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/systemd/system-generators
+      cp ${CRAFT_PROJECT_DIR}/initrd-overlay/journald-console-focal ${CRAFT_PART_INSTALL}/usr/lib/systemd/system-generators/journald-console
+    organize:
+      etc:      initrd-tools/etc
+      usr/bin:  initrd-tools/usr/bin
+      usr/lib:  initrd-tools/usr/lib
+    stage:
+      - initrd-tools
+    prime:
+      - -*
+
+  snap-bootstrap:
+    plugin: nil
+    override-build: |
+      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/snapd
+      cp ${CRAFT_PROJECT_DIR}/../snapd-build/snap-bootstrap.${CRAFT_TARGET_ARCH} ${CRAFT_PART_INSTALL}/usr/lib/snapd/snap-bootstrap
+    prime:
+      - -*
 
   test-keys:
     plugin: dump
