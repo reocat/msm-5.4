@@ -5,20 +5,22 @@ summary: i.mx linux kernel
 description: The i.MX Ubuntu kernel package as a snap
 
 grade: stable
-build-base: core22
+build-base: core20
 confinement: strict
 type: kernel
 adopt-info: kernel
 
 architectures:
-  - build-on: [amd64, arm64]
-    build-for: arm64
-  - build-on: [amd64, arm64, armhf]
-    build-for: armhf
+  - build-on: amd64
+    run-on: armhf, arm64
+  - build-on: armhf
+    run-on: armhf
+  - build-on: arm64
+    run-on: arm64
 
 # environment to run fde-setup hook
 environment:
-  LD_LIBRARY_PATH: ${SNAP}/usr/lib/${CRAFT_ARCH_TRIPLET}
+  LD_LIBRARY_PATH: ${SNAP}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}
 
 parts:
   kernel:
@@ -37,7 +39,7 @@ parts:
     kernel-initrd-stage-firmware: true
     kernel-initrd-addons:
       - usr/bin/fde-reveal-key
-      - usr/lib/${CRAFT_ARCH_TRIPLET}/libteec.so*
+      - usr/lib/${SNAPCRAFT_ARCH_TRIPLET}/libteec.so*
       - usr/lib/snapd/snap-bootstrap
     kernel-initrd-overlay: initrd-tools
     kernel-initrd-firmware:
@@ -47,16 +49,16 @@ parts:
     build-environment:
       - PATH: "/usr/lib/ccache:${PATH}"
     override-build: |
-      craftctl default
-      craftctl set version=$(git --git-dir=${CRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
+      snapcraftctl build
+      snapcraftctl set-version $(git --git-dir=${SNAPCRAFT_PROJECT_DIR}/.git describe --tags | cut -c 12-42)
     organize:
       kernel.img: Image
     override-prime: |
-      craftctl default
+      snapcraftctl prime
       # Trim firmware
-      ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
+      ${SNAPCRAFT_STAGE}/trim-firmware ${SNAPCRAFT_PRIME}
       # make sure we have all ath10 firmware files
-      cp ${CRAFT_STAGE}/firmware/ath10k/QCA9377/hw1.0/* ${CRAFT_PRIME}/firmware/ath10k/QCA9377/hw1.0
+      cp ${SNAPCRAFT_STAGE}/firmware/ath10k/QCA9377/hw1.0/* ${SNAPCRAFT_PRIME}/firmware/ath10k/QCA9377/hw1.0
     prime:
       - -initrd.img*
       - -Image*
@@ -123,17 +125,17 @@ parts:
       # depending on architecture
       # on arm64: we are building optee-os only to get build export dependency to build REE app
       # on armhf: we are building optee-os to be included in FIT image
-      export CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-"
-      export CROSS_COMPILE_core="${CRAFT_ARCH_TRIPLET}-"
+      export CROSS_COMPILE="${SNAPCRAFT_ARCH_TRIPLET}-"
+      export CROSS_COMPILE_core="${SNAPCRAFT_ARCH_TRIPLET}-"
       export ARCH="arm"
-      if [ "${CRAFT_TARGET_ARCH}" = "arm64" ]; then
-        export CROSS_COMPILE_ta_arm64="${CRAFT_ARCH_TRIPLET}-"
+      if [ "${SNAPCRAFT_TARGET_ARCH}" = "arm64" ]; then
+        export CROSS_COMPILE_ta_arm64="${SNAPCRAFT_ARCH_TRIPLET}-"
         export CFG_ARM64_core="y"
         export PLATFORM="vexpress-qemu_armv8a"
         export CFG_USER_TA_TARGETS="ta_arm64"
-      elif [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+      elif [ "${SNAPCRAFT_TARGET_ARCH}" = "armhf" ]; then
         export ARCH="arm"
-        export CROSS_COMPILE_ta_arm32="${CRAFT_ARCH_TRIPLET}-"
+        export CROSS_COMPILE_ta_arm32="${SNAPCRAFT_ARCH_TRIPLET}-"
         export PLATFORM="vexpress-qemu_virt"
         export CFG_USER_TA_TARGETS="ta_arm32"
         export CFG_NS_ENTRY_ADDR=0x82100000
@@ -148,24 +150,24 @@ parts:
         export PLATFORM_FLAVOR=mx6sxsabreauto
         CFG_WERROR=y
         # add optee-uc-fde TA
-        cp -r ${CRAFT_STAGE}/optee-uc-fde/ta/fde_key_handler ${CRAFT_PART_BUILD}/ta/
+        cp -r ${SNAPCRAFT_STAGE}/optee-uc-fde/ta/fde_key_handler ${SNAPCRAFT_PART_BUILD}/ta/
       fi
       export DEBUG=0
       export CFG_TEE_CORE_DEBUG=n
       export CFG_TEE_BENCHMARK=n
-      export TA_PUBLIC_KEY="${CRAFT_STAGE}/ta-keys/ta_public.pem"
-      make O=${CRAFT_PART_BUILD}/out -j$(nproc)
-      if [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+      export TA_PUBLIC_KEY="${SNAPCRAFT_STAGE}/ta-keys/ta_public.pem"
+      make O=${SNAPCRAFT_PART_BUILD}/out -j$(nproc)
+      if [ "${SNAPCRAFT_TARGET_ARCH}" = "armhf" ]; then
         # now build optee-os once more with added early TAs
-        make O=${CRAFT_PART_BUILD}/out -j$(nproc) \
+        make O=${SNAPCRAFT_PART_BUILD}/out -j$(nproc) \
           CFG_EARLY_TA=y \
           EARLY_TA_PATHS="out/ta/pkcs11/fd02c9da-306c-48c7-a49c-bbd827ae86ee.stripped.elf \
                   out/ta/fde_key_handler/fd1b2a86-3668-11eb-adc1-0242ac120002.stripped.elf"
 
-        cp ${CRAFT_PART_BUILD}/out/core/tee-raw.bin \
-          ${CRAFT_PART_INSTALL}/tee.mx6sx.bin
+        cp ${SNAPCRAFT_PART_BUILD}/out/core/tee-raw.bin \
+          ${SNAPCRAFT_PART_INSTALL}/tee.mx6sx.bin
       fi
-      cp -r ${CRAFT_PART_BUILD}/out/export-ta_arm* ${CRAFT_PART_INSTALL}/export-ta_arm
+      cp -r ${SNAPCRAFT_PART_BUILD}/out/export-ta_arm* ${SNAPCRAFT_PART_INSTALL}/export-ta_arm
     prime:
       - -*
 
@@ -175,19 +177,19 @@ parts:
     source-type: git
     source-tag: 3.18.0
     override-build: |
-      export ARCH="${CRAFT_TARGET_ARCH}"
-      if [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+      export ARCH="${SNAPCRAFT_TARGET_ARCH}"
+      if [ "${SNAPCRAFT_TARGET_ARCH}" = "armhf" ]; then
         export ARCH="arm"
       fi
       export DEBUG=0
-      export CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-"
+      export CROSS_COMPILE="${SNAPCRAFT_ARCH_TRIPLET}-"
       export CFG_TEE_CLIENT_LOAD_PATH=""
       export CFG_TA_TEST_PATH=0
       export SBINDIR=/usr/sbin
-      export LIBDIR=/usr/lib/${CRAFT_ARCH_TRIPLET}
-      export DESTDIR=${CRAFT_PART_INSTALL}
-      make O=${CRAFT_PART_BUILD}/out -j$(nproc)
-      make install O=${CRAFT_PART_BUILD}/out
+      export LIBDIR=/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}
+      export DESTDIR=${SNAPCRAFT_PART_INSTALL}
+      make O=${SNAPCRAFT_PART_BUILD}/out -j$(nproc)
+      make install O=${SNAPCRAFT_PART_BUILD}/out
     prime:
       - usr/lib/*/lib*so*
 
@@ -211,17 +213,17 @@ parts:
       - to armhf:
         - ARCH: "arm"
       - else:
-        - ARCH: "${CRAFT_TARGET_ARCH}"
-      - CROSS_COMPILE: "${CRAFT_ARCH_TRIPLET}-"
+        - ARCH: "${SNAPCRAFT_TARGET_ARCH}"
+      - CROSS_COMPILE: "${SNAPCRAFT_ARCH_TRIPLET}-"
       # we are not using TA build here (early TA is used), so
       # it does not matter what key is used to sign built TA
       # support cross build
-      - TA_DEV_KIT_DIR: "${CRAFT_STAGE}/export-ta_arm"
-      - OPTEE_CLIENT_EXPORT: "${CRAFT_STAGE}/usr"
-      - DESTDIR: "${CRAFT_PART_INSTALL}"
+      - TA_DEV_KIT_DIR: "${SNAPCRAFT_STAGE}/export-ta_arm"
+      - OPTEE_CLIENT_EXPORT: "${SNAPCRAFT_STAGE}/usr"
+      - DESTDIR: "${SNAPCRAFT_PART_INSTALL}"
     override-build: |
-      make -C ${CRAFT_STAGE}/optee-uc-fde O=${CRAFT_PART_BUILD}/out fde-key-manager fde-reveal-key fde-setup
-      make -C ${CRAFT_STAGE}/optee-uc-fde O=${CRAFT_PART_BUILD}/out fde-key-manager fde-reveal-key fde-setup install
+      make -C ${SNAPCRAFT_STAGE}/optee-uc-fde O=${SNAPCRAFT_PART_BUILD}/out fde-key-manager fde-reveal-key fde-setup
+      make -C ${SNAPCRAFT_STAGE}/optee-uc-fde O=${SNAPCRAFT_PART_BUILD}/out fde-key-manager fde-reveal-key fde-setup install
     organize:
       usr/bin/fde-setup: meta/hooks/fde-setup
     stage:
@@ -249,16 +251,16 @@ parts:
       # reset path so we don't pick tools from part install (not a best of ideas while cross building)
       export PATH="/usr/lib/ccache:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
       apt-get download util-linux
-      dpkg -x ${CRAFT_PART_BUILD}/util-linux*.deb ${CRAFT_PART_BUILD}/unpacked
-      cp ${CRAFT_PART_BUILD}/unpacked/usr/bin/partx ${CRAFT_PART_INSTALL}/usr/bin/partx
+      dpkg -x ${SNAPCRAFT_PART_BUILD}/util-linux*.deb ${SNAPCRAFT_PART_BUILD}/unpacked
+      cp ${SNAPCRAFT_PART_BUILD}/unpacked/usr/bin/partx ${SNAPCRAFT_PART_INSTALL}/usr/bin/partx
       # manually organize otherwise craft fails to merge dirs
-      mv ${CRAFT_PART_INSTALL}/bin/*       ${CRAFT_PART_INSTALL}/usr/bin
-      mv ${CRAFT_PART_INSTALL}/sbin/*      ${CRAFT_PART_INSTALL}/usr/bin
-      mv ${CRAFT_PART_INSTALL}/usr/sbin/*  ${CRAFT_PART_INSTALL}/usr/bin
-      mv ${CRAFT_PART_INSTALL}/lib/${CRAFT_ARCH_TRIPLET}/* ${CRAFT_PART_INSTALL}/usr/lib/${CRAFT_ARCH_TRIPLET}
-      cp ${CRAFT_PROJECT_DIR}/initrd-overlay/the-modeenv-focal ${CRAFT_PART_INSTALL}/usr/lib/the-modeenv
-      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/systemd/system-generators
-      cp ${CRAFT_PROJECT_DIR}/initrd-overlay/journald-console-focal ${CRAFT_PART_INSTALL}/usr/lib/systemd/system-generators/journald-console
+      mv ${SNAPCRAFT_PART_INSTALL}/bin/*       ${SNAPCRAFT_PART_INSTALL}/usr/bin
+      mv ${SNAPCRAFT_PART_INSTALL}/sbin/*      ${SNAPCRAFT_PART_INSTALL}/usr/bin
+      mv ${SNAPCRAFT_PART_INSTALL}/usr/sbin/*  ${SNAPCRAFT_PART_INSTALL}/usr/bin
+      mv ${SNAPCRAFT_PART_INSTALL}/lib/${SNAPCRAFT_ARCH_TRIPLET}/* ${SNAPCRAFT_PART_INSTALL}/usr/lib/${SNAPCRAFT_ARCH_TRIPLET}
+      cp ${SNAPCRAFT_PROJECT_DIR}/initrd-overlay/the-modeenv-focal ${SNAPCRAFT_PART_INSTALL}/usr/lib/the-modeenv
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr/lib/systemd/system-generators
+      cp ${SNAPCRAFT_PROJECT_DIR}/initrd-overlay/journald-console-focal ${SNAPCRAFT_PART_INSTALL}/usr/lib/systemd/system-generators/journald-console
     organize:
       etc:      initrd-tools/etc
       usr/bin:  initrd-tools/usr/bin
@@ -271,8 +273,8 @@ parts:
   snap-bootstrap:
     plugin: nil
     override-build: |
-      mkdir -p ${CRAFT_PART_INSTALL}/usr/lib/snapd
-      cp ${CRAFT_PROJECT_DIR}/../snapd-build/snap-bootstrap.${CRAFT_TARGET_ARCH} ${CRAFT_PART_INSTALL}/usr/lib/snapd/snap-bootstrap
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/usr/lib/snapd
+      cp /home/ubuntu/snapd-build/snap-bootstrap.${SNAPCRAFT_TARGET_ARCH} ${SNAPCRAFT_PART_INSTALL}/usr/lib/snapd/snap-bootstrap
     prime:
       - -*
 
@@ -293,12 +295,12 @@ parts:
       - optee-os
     plugin: nil
     override-build: |
-      cp ${CRAFT_PROJECT_DIR}/kernel_*.its ${CRAFT_STAGE}
+      cp ${SNAPCRAFT_PROJECT_DIR}/kernel_*.its ${SNAPCRAFT_STAGE}
       # include key dir in case there are keys available
       mkimage \
-        -f ${CRAFT_STAGE}/kernel_${CRAFT_TARGET_ARCH}.its \
-        -r ${CRAFT_PART_INSTALL}/kernel.img \
-        -k ${CRAFT_STAGE}/signing-key
+        -f ${SNAPCRAFT_STAGE}/kernel_${SNAPCRAFT_TARGET_ARCH}.its \
+        -r ${SNAPCRAFT_PART_INSTALL}/kernel.img \
+        -k ${SNAPCRAFT_STAGE}/signing-key
 
 build-packages:
   - bison
@@ -313,8 +315,8 @@ build-packages:
   - python3-serial
   - u-boot-tools
   - wget
-  - libjson-c-dev:${CRAFT_TARGET_ARCH}
-  - libcryptsetup-dev:${CRAFT_TARGET_ARCH}
+  - libjson-c-dev:${SNAPCRAFT_TARGET_ARCH}
+  - libcryptsetup-dev:${SNAPCRAFT_TARGET_ARCH}
   - to armhf:
     - binutils-arm-linux-gnueabi
     - gcc-arm-linux-gnueabi
