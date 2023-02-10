@@ -651,7 +651,7 @@ struct fastrpc_file {
 	/* Flag to indicate ram dump collection status*/
 	bool is_ramdump_pend;
 	/* Flag to indicate dynamic process creation status*/
-	bool in_process_create;
+	enum fastrpc_process_create_state dsp_process_state;
 };
 
 static struct fastrpc_apps gfa;
@@ -1357,7 +1357,7 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 {
 	struct fastrpc_apps *me = &gfa;
 	struct fastrpc_session_ctx *sess;
-	struct fastrpc_apps *apps = fl->apps;
+	struct fastrpc_apps *apps = NULL;
 	int cid = -1;
 	struct fastrpc_channel_ctx *chan = NULL;
 	struct fastrpc_mmap *map = NULL;
@@ -1372,6 +1372,7 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 		goto bail;
 	}
 	cid = fl->cid;
+	apps = fl->apps;
 	VERIFY(err, cid >= ADSP_DOMAIN_ID && cid < NUM_CHANNELS);
 	if (err) {
 		err = -ECHRNG;
@@ -1710,11 +1711,6 @@ static int fastrpc_buf_alloc(struct fastrpc_file *fl, size_t size,
 		goto bail;
 	}
 
-	VERIFY(err, fl && fl->sctx != NULL);
-	if (err) {
-		err = -EBADR;
-		goto bail;
-	}
 	VERIFY(err, size > 0 && fl->sctx->smmu.dev);
 	if (err) {
 		err = (fl->sctx->smmu.dev == NULL) ? -ENODEV : err;
@@ -2924,11 +2920,13 @@ static int fastrpc_invoke_send(struct smq_invoke_ctx *ctx,
 			       uint32_t kernel, uint32_t handle)
 {
 	struct smq_msg *msg = &ctx->msg;
+	struct smq_msg msg_temp;
 	struct fastrpc_file *fl = ctx->fl;
 	struct fastrpc_channel_ctx *channel_ctx = NULL;
 	int err = 0, cid = -1;
 	uint32_t sc = ctx->sc;
 	int64_t ns = 0;
+	int isasync = (ctx->asyncjob.isasyncjob ? true : false);
 
 	if (!fl) {
 		err = -EBADF;
@@ -2969,6 +2967,17 @@ static int fastrpc_invoke_send(struct smq_invoke_ctx *ctx,
 		mutex_unlock(&channel_ctx->rpmsg_mutex);
 		goto bail;
 	}
+
+	if (isasync) {
+		/*
+		 * After message is sent to DSP, async response thread could immediately
+		 * get the response and free context, which will result in a use-after-free
+		 * in this function. So use a local variable for message.
+		*/
+		memcpy(&msg_temp, msg, sizeof(struct smq_msg));
+		msg = &msg_temp;
+	}
+
 	err = rpmsg_send(channel_ctx->rpdev->ept, (void *)msg, sizeof(*msg));
 	mutex_unlock(&channel_ctx->rpmsg_mutex);
 	trace_fastrpc_rpmsg_send(cid, (uint64_t)ctx, msg->invoke.header.ctx,
@@ -3678,13 +3687,13 @@ static int fastrpc_init_create_dynamic_process(struct fastrpc_file *fl,
 	} inbuf;
 
 	spin_lock(&fl->hlock);
-	if (fl->in_process_create) {
+	if (fl->dsp_process_state) {
 		err = -EALREADY;
 		ADSPRPC_ERR("Already in create dynamic process\n");
 		spin_unlock(&fl->hlock);
 		return err;
 	}
-	fl->in_process_create = true;
+	fl->dsp_process_state = PROCESS_CREATE_IS_INPROGRESS;
 	spin_unlock(&fl->hlock);
 	inbuf.pgid = fl->tgid;
 	inbuf.namelen = strlen(current->comm) + 1;
@@ -3839,9 +3848,11 @@ bail:
 		fastrpc_mmap_free(file, 0);
 		mutex_unlock(&fl->map_mutex);
 	}
+
+	spin_lock(&fl->hlock);
+	locked = 1;
 	if (err) {
-		spin_lock(&fl->hlock);
-		locked = 1;
+		fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 		if (!IS_ERR_OR_NULL(fl->init_mem)) {
 			init_mem = fl->init_mem;
 			fl->init_mem = NULL;
@@ -3849,14 +3860,14 @@ bail:
 			locked = 0;
 			fastrpc_buf_free(init_mem, 0);
 		}
-		if (locked) {
-			spin_unlock(&fl->hlock);
-			locked = 0;
-		}
+	} else {
+		fl->dsp_process_state = PROCESS_CREATE_SUCCESS;
 	}
-	spin_lock(&fl->hlock);
-	fl->in_process_create = false;
-	spin_unlock(&fl->hlock);
+	if (locked) {
+		spin_unlock(&fl->hlock);
+		locked = 0;
+	}
+
 	return err;
 }
 
@@ -5280,7 +5291,7 @@ skip_dump_wait:
 	spin_lock(&fl->apps->hlock);
 	hlist_del_init(&fl->hn);
 	fl->is_ramdump_pend = false;
-	fl->in_process_create = false;
+	fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 	spin_unlock(&fl->apps->hlock);
 	kfree(fl->debug_buf);
 	kfree(fl->gidlist.gids);
@@ -5699,7 +5710,7 @@ static int fastrpc_device_open(struct inode *inode, struct file *filp)
 	fl->qos_request = 0;
 	fl->dsp_proc_init = 0;
 	fl->is_ramdump_pend = false;
-	fl->in_process_create = false;
+	fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 	init_completion(&fl->work);
 	fl->file_close = FASTRPC_PROCESS_DEFAULT_STATE;
 	filp->private_data = fl;
