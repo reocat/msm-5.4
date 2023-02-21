@@ -1,0 +1,196 @@
+name: qti-sa8155p-kernel
+summary: Snapdragon kernel
+description: This is a snapdragon snapped kernel, based off linaro kernel
+grade: stable
+confinement: strict
+type: kernel
+adopt-info: kernel
+
+architectures:
+  - build-on: [amd64, arm64]
+    build-for: arm64
+
+build-base: core22
+
+parts:
+  kernel:
+    after:
+      - firmware
+      - cryptsetup
+      - fde-helper
+    plugin: kernel
+    kernel-kconfigflavour: "iot"
+    kernel-with-firmware: false
+    kernel-image-target: Image.gz
+    kernel-enable-zfs-support: true
+    kernel-initrd-compression: zstd
+    kernel-initrd-stage-firmware: true
+    kernel-initrd-modules:
+      - atl1c
+      - qcom-emac
+      - phy-qcom-qusb2
+      - slimbus
+      - xhci-hcd
+      - libarc4
+    kernel-initrd-addons:
+      - usr/bin/fde-reveal-key
+      - usr/sbin/cryptsetup*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libcryptsetup.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/cryptsetup/libcryptsetup-token-ssh.so
+    kernel-kconfigs:
+      - CONFIG_DEBUG_INFO=n
+      - CONFIG_SYSTEM_TRUSTED_KEYS=""
+      - CONFIG_SYSTEM_REVOCATION_KEYS=""
+    override-build: |
+      craftctl default
+      kernel_version=$(dpkg-parsechangelog -l ${SNAPCRAFT_PROJECT_DIR}/debian.iot/changelog -S version)
+      craftctl set version=${kernel_version}
+    override-prime: |
+      craftctl default
+      ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
+    stage:
+      - config-*
+      - dtbs
+      - initrd.img
+      - kernel.img
+      - lib
+      - modules
+      - System.map-*
+    prime:
+      - -dtbs
+      - -initrd.img
+      - -kernel.img
+
+  bootimg:
+    plugin: nil
+    after:
+      - kernel
+    override-build: |
+      cat ${CRAFT_STAGE}/kernel.img \
+          ${CRAFT_STAGE}/dtbs/qcom/sa8155p-adp.dtb \
+          ${CRAFT_STAGE}/dtbs/qcom/sa8155p-iot-v2-adp.dtb \
+          > Image.gz+dtbs
+      mkbootimg \
+        --kernel Image.gz+dtbs \
+        --ramdisk ${CRAFT_STAGE}/initrd.img \
+        --output ${CRAFT_PART_INSTALL}/boot.img.nonsecure \
+        --pagesize 4096 \
+        --base 0x80000000 \
+        --kernel_offset 0x8000 \
+        --ramdisk_offset 0x1000000 \
+        --tags_offset 0x100 \
+        --cmdline 'console=tty0 console=ttyMSM0,115200n8 clk_ignore_unused pd_ignore_unused'
+    prime:
+      - boot.img
+
+  firmware:
+    plugin: dump
+    source: https://git.launchpad.net/~canonical-kernel-snaps/+git/kernel-snaps-uc22
+    source-type: git
+    source-branch: main
+    stage-packages:
+      - linux-firmware
+      - wireless-regdb
+    organize:
+      lib/firmware: firmware
+    prime:
+      - firmware
+
+  signing-test-keys:
+    plugin: dump
+    source: https://git.launchpad.net/~ubuntu-cervinia/+git/cervinia-test-keys
+    source-type: git
+    organize:
+      '*': signing-keys/
+    prime:
+      - -*
+
+  sign-bootimg:
+    plugin: nil
+    after:
+      - bootimg
+      - signing-test-keys
+    override-build: |
+      KEY_NAME="bootimg-key"
+      BOOT_IMG="boot.img"
+      TARGET_SHA_TYPE=sha256
+      BOARD_KERNEL_PAGESIZE=2048
+      # create signature block
+      openssl \
+        dgst \
+        -${TARGET_SHA_TYPE} \
+        -binary ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure \
+        > ${BOOT_IMG}.${TARGET_SHA_TYPE}
+      openssl \
+        pkeyutl \
+        -sign \
+        -in ${BOOT_IMG}.${TARGET_SHA_TYPE} \
+        -inkey ${CRAFT_STAGE}/signing-keys/${KEY_NAME}.key \
+        -out ${BOOT_IMG}.sig \
+        -pkeyopt digest:sha256 \
+        -pkeyopt rsa_padding_mode:pkcs1
+
+      # append it to the image
+      dd if=/dev/zero of=${BOOT_IMG}.sig.padded bs=${BOARD_KERNEL_PAGESIZE} count=1
+      dd if=${BOOT_IMG}.sig of=${BOOT_IMG}.sig.padded conv=notrunc
+      cat ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${CRAFT_PART_INSTALL}/${BOOT_IMG}
+
+  cryptsetup:
+    source: https://github.com/kubiko/cryptsetup.git
+    source-type: git
+    source-branch: v2.4.x-ice
+    plugin: autotools
+    autotools-configure-parameters:
+      - --host ${CRAFT_ARCH_TRIPLET}
+      - --prefix=/usr
+      - --libdir=/usr/lib/${CRAFT_ARCH_TRIPLET}
+    stage:
+      - -"usr/include"
+      - -"usr/lib/*.la"
+      - -"usr/lib/*/*.la"
+      - -"usr/lib/*/pkgconfig"
+      - -"usr/lib/*/tmpfiles.d"
+      - -"usr/share"
+    prime:
+      - -"*"
+
+  fde-helper:
+    source: https://git.launchpad.net/~ondrak/+git/optee-uc-fde
+    source-type: git
+    source-branch: dummy-fde-hook
+    plugin: nil
+    override-build: |
+      export CROSS_COMPILE="${CRAFT_ARCH_TRIPLET}-"
+      export ARCH="${CRAFT_TARGET_ARCH}"
+      if [ "${CRAFT_TARGET_ARCH}" = "armhf" ]; then
+        echo "Building for armhf"
+        export ARCH="arm"
+      fi
+      export DESTDIR=${CRAFT_PART_INSTALL}
+      make O=${CRAFT_PART_BUILD}/out
+      make O=${CRAFT_PART_BUILD}/out install
+    organize:
+      usr/bin/fde-setup: meta/hooks/fde-setup
+    stage:
+      - meta/
+      - usr/bin/fde-reveal-key
+    prime:
+      - meta/
+
+build-packages:
+    - android-tools-mkbootimg
+    - bison
+    - cpio
+    - dpkg-dev
+    - flex
+    - gcc-aarch64-linux-gnu
+    - gettext
+    - libblkid-dev:${CRAFT_TARGET_ARCH}
+    - libcryptsetup-dev:${CRAFT_TARGET_ARCH}
+    - libdevmapper-dev:${CRAFT_TARGET_ARCH}
+    - libfdt-dev
+    - libjson-c-dev:${CRAFT_TARGET_ARCH}
+    - libpopt-dev:${CRAFT_TARGET_ARCH}
+    - libssh-dev:${CRAFT_TARGET_ARCH}
+    - libssl-dev
+    - uuid-dev:${CRAFT_TARGET_ARCH}
