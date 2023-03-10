@@ -12,10 +12,14 @@ architectures:
 
 build-base: core22
 
+environment:
+  LD_LIBRARY_PATH: :$SNAP/usr/lib/${CRAFT_ARCH_TRIPLET}
+
 parts:
   kernel:
     after:
       - firmware
+      - fde-hooks
     plugin: kernel
     kernel-kdefconfig:
       - snappy_defconfig
@@ -29,6 +33,15 @@ parts:
       - qcom-emac
       - slimbus
       - libarc4
+    kernel-initrd-firmware:
+      - firmware/ubuntufde*.mbn
+    kernel-initrd-addons:
+      - usr/bin/fde-reveal-key
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libbase.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libdmabufheap.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/liblog.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libQseeComApi.so*
+      - usr/lib/${CRAFT_ARCH_TRIPLET}/libstdc*
     kernel-kconfigs:
       - CONFIG_DEBUG_INFO=n
     override-build: |
@@ -38,6 +51,8 @@ parts:
     override-prime: |
       craftctl default
       ${CRAFT_STAGE}/trim-firmware ${CRAFT_PRIME}
+      # ensure ubuntu fde TA is included
+      ln -f ${CRAFT_STAGE}/firmware/ubuntufde64.mbn ${CRAFT_PRIME}/firmware/ubuntufde64.mbn
     stage:
       - config-*
       - dtbs
@@ -144,6 +159,39 @@ parts:
       dd if=/dev/zero of=${BOOT_IMG}.sig.padded bs=${BOARD_KERNEL_PAGESIZE} count=1
       dd if=${BOOT_IMG}.sig of=${BOOT_IMG}.sig.padded conv=notrunc
       cat ${CRAFT_STAGE}/${BOOT_IMG}.nonsecure ${BOOT_IMG}.sig.padded > ${CRAFT_PART_INSTALL}/${BOOT_IMG}
+
+  # this part if optional, it enables FDE functionality
+  fde-hooks:
+    plugin: dump
+    source: .
+    source-type: local
+    stage-packages:
+      - libstdc++6
+    override-pull: |
+      # allow custom source definition
+      if [ -n "${SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE:-}" ]; then
+        if [ -d ${SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE} ]; then
+          cp -r ${SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE}/* ${SNAPCRAFT_PART_SRC}
+        else
+          git clone --depth 1 ${SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE} ${SNAPCRAFT_PART_SRC}
+        fi
+      else
+        echo "Missing env SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE, FDE functionality won't be included"
+      fi
+    organize:
+      lib/firmware/: firmware/
+      usr/bin/fde-setup: meta/hooks/fde-setup
+    stage:
+      # clean any test bins from reference build
+      - meta/hooks/fde-setup
+      - firmware
+      - usr
+      - -usr/bin/snapctl
+      - -usr/bin/test-fde-setup-reveal
+    prime:
+      - firmware
+      - meta/hooks/fde-setup
+      - usr/lib/
 
 build-packages:
     - android-tools-mkbootimg
