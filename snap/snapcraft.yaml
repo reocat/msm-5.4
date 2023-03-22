@@ -166,7 +166,7 @@ parts:
     source: .
     source-type: local
     stage-packages:
-      - libstdc++6
+      - libstdc++6:${CRAFT_TARGET_ARCH}
     override-pull: |
       # allow custom source definition
       if [ -n "${SNAPDRAGON_KERNEL_FDE_HOOK_BUNDLE:-}" ]; then
