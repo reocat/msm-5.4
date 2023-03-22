@@ -86,6 +86,26 @@ parts:
     prime:
       - firmware
 
+  firmware-custom:
+    after:
+      - kernel
+    plugin: nil
+    override-pull: |
+      # allow custom source definition
+      if [ -n "${SNAPDRAGON_KERNEL_SNAP_FIRMWARE:-}" ]; then
+        if [ -d ${SNAPDRAGON_KERNEL_SNAP_FIRMWARE} ]; then
+          cp -r ${SNAPDRAGON_KERNEL_SNAP_FIRMWARE}/* ${SNAPCRAFT_PART_SRC}
+        else
+          git clone --depth 1 ${SNAPDRAGON_KERNEL_SNAP_FIRMWARE} ${SNAPCRAFT_PART_SRC}
+        fi
+      else
+        echo "Missing env SNAPDRAGON_KERNEL_SNAP_FIRMWARE no custom firmware will be included"
+        touch no-snapdragon-kernel-snap-firmware
+      fi
+    override-build: |
+      mkdir -p ${SNAPCRAFT_PART_INSTALL}/firmware/qcom/sa8155p
+      cp -r * ${SNAPCRAFT_PART_INSTALL}/firmware/qcom/sa8155p
+
   signing-test-keys:
     plugin: dump
     source: https://git.launchpad.net/~ubuntu-cervinia/+git/cervinia-test-keys
