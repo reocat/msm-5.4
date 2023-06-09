@@ -58,6 +58,8 @@ properties:
     minItems: 1
     maxItems: 2
 
+  ieee80211-freq-limit: true
+
   wifi-firmware:
     type: object
     description: |
