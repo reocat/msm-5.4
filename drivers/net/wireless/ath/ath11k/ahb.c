@@ -734,7 +734,7 @@ static int ath11k_ahb_hif_suspend(struct ath11k_base *ab)
 		return ret;
 	}
 
-	ath11k_dbg(ab, ATH11K_DBG_AHB, "ahb device suspended\n");
+	ath11k_dbg(ab, ATH11K_DBG_AHB, "device suspended\n");
 
 	return ret;
 }
@@ -777,7 +777,7 @@ static int ath11k_ahb_hif_resume(struct ath11k_base *ab)
 		return -ETIMEDOUT;
 	}
 
-	ath11k_dbg(ab, ATH11K_DBG_AHB, "ahb device resumed\n");
+	ath11k_dbg(ab, ATH11K_DBG_AHB, "device resumed\n");
 
 	return 0;
 }
@@ -1127,6 +1127,7 @@ static int ath11k_ahb_probe(struct platform_device *pdev)
 	switch (hw_rev) {
 	case ATH11K_HW_IPQ8074:
 	case ATH11K_HW_IPQ6018_HW10:
+	case ATH11K_HW_IPQ5018_HW10:
 		hif_ops = &ath11k_ahb_hif_ops_ipq8074;
 		pci_ops = NULL;
 		break;
