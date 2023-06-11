@@ -26,6 +26,7 @@
 #include "testmode.h"
 #include "wmi-ops.h"
 #include "coredump.h"
+#include "leds.h"
 
 unsigned int ath10k_debug_mask;
 EXPORT_SYMBOL(ath10k_debug_mask);
@@ -65,6 +66,7 @@ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
 		.dev_id = QCA988X_2_0_DEVICE_ID,
 		.bus = ATH10K_BUS_PCI,
 		.name = "qca988x hw2.0",
+		.led_pin = 1,
 		.patch_load_addr = QCA988X_HW_2_0_PATCH_LOAD_ADDR,
 		.uart_pin = 7,
 		.cc_wraparound_type = ATH10K_HW_CC_WRAP_SHIFTED_ALL,
@@ -146,6 +148,7 @@ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
 		.dev_id = QCA9887_1_0_DEVICE_ID,
 		.bus = ATH10K_BUS_PCI,
 		.name = "qca9887 hw1.0",
+		.led_pin = 1,
 		.patch_load_addr = QCA9887_HW_1_0_PATCH_LOAD_ADDR,
 		.uart_pin = 7,
 		.cc_wraparound_type = ATH10K_HW_CC_WRAP_SHIFTED_ALL,
@@ -387,6 +390,7 @@ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
 		.dev_id = QCA99X0_2_0_DEVICE_ID,
 		.bus = ATH10K_BUS_PCI,
 		.name = "qca99x0 hw2.0",
+		.led_pin = 17,
 		.patch_load_addr = QCA99X0_HW_2_0_PATCH_LOAD_ADDR,
 		.uart_pin = 7,
 		.otp_exe_param = 0x00000700,
@@ -433,6 +437,7 @@ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
 		.dev_id = QCA9984_1_0_DEVICE_ID,
 		.bus = ATH10K_BUS_PCI,
 		.name = "qca9984/qca9994 hw1.0",
+		.led_pin = 17,
 		.patch_load_addr = QCA9984_HW_1_0_PATCH_LOAD_ADDR,
 		.uart_pin = 7,
 		.cc_wraparound_type = ATH10K_HW_CC_WRAP_SHIFTED_EACH,
@@ -486,6 +491,7 @@ static const struct ath10k_hw_params ath10k_hw_params_list[] = {
 		.dev_id = QCA9888_2_0_DEVICE_ID,
 		.bus = ATH10K_BUS_PCI,
 		.name = "qca9888 hw2.0",
+		.led_pin = 17,
 		.patch_load_addr = QCA9888_HW_2_0_PATCH_LOAD_ADDR,
 		.uart_pin = 7,
 		.cc_wraparound_type = ATH10K_HW_CC_WRAP_SHIFTED_EACH,
@@ -3222,6 +3228,10 @@ int ath10k_core_start(struct ath10k *ar, enum ath10k_firmware_mode mode,
 		goto err_hif_stop;
 	}
 
+	status = ath10k_leds_start(ar);
+	if (status)
+		goto err_hif_stop;
+
 	return 0;
 
 err_hif_stop:
@@ -3480,9 +3490,18 @@ static void ath10k_core_register_work(struct work_struct *work)
 		goto err_spectral_destroy;
 	}
 
+	status = ath10k_leds_register(ar);
+	if (status) {
+		ath10k_err(ar, "could not register leds: %d\n",
+			   status);
+		goto err_thermal_unregister;
+	}
+
 	set_bit(ATH10K_FLAG_CORE_REGISTERED, &ar->dev_flags);
 	return;
 
+err_thermal_unregister:
+	ath10k_thermal_unregister(ar);
 err_spectral_destroy:
 	ath10k_spectral_destroy(ar);
 err_debug_destroy:
@@ -3517,6 +3536,8 @@ void ath10k_core_unregister(struct ath10k *ar)
 
 	if (!test_bit(ATH10K_FLAG_CORE_REGISTERED, &ar->dev_flags))
 		return;
+
+	ath10k_leds_unregister(ar);
 
 	ath10k_thermal_unregister(ar);
 	/* Stop spectral before unregistering from mac80211 to remove the
