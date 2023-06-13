@@ -67,6 +67,23 @@ config ATH10K_DEBUGFS
 
 	  If unsure, say Y to make it easier to debug problems.
 
+config ATH10K_LEDS
+	bool "Atheros ath10k LED support"
+	depends on ATH10K
+	select MAC80211_LEDS
+	select LEDS_CLASS
+	select NEW_LEDS
+	default y
+	help
+	  This option enables LEDs support for chipset LED pins.
+	  Each pin is connected via GPIO and can be controlled using
+	  WMI Firmware API.
+
+	  The LED device will get available named as "ath10k-phyX" at sysfs and
+    	  can be controlled with various triggers.
+
+	  Say Y, if you have LED pins connected to the ath10k wireless card.
+
 config ATH10K_SPECTRAL
 	bool "Atheros ath10k spectral scan support"
 	depends on ATH10K_DEBUGFS
