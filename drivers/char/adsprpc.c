@@ -583,9 +583,11 @@ struct fastrpc_mmap {
 	bool is_persistent;                     //the map is persistenet across sessions
 	int frpc_md_index;                      //Minidump unique index
 	uintptr_t attr;
+	bool in_use;			/* Indicates if persistent map is in use */
 	struct timespec64 map_start_time;
 	struct timespec64 map_end_time;
-	bool is_filemap; /*flag to indicate map used in process init*/
+	bool is_filemap; /* flag to indicate map used in process init */
+	unsigned int ctx_refs; /* Indicates reference count for context map */
 };
 
 enum fastrpc_perfkeys {
@@ -659,7 +661,7 @@ struct fastrpc_file {
 	/* Flag to indicate ram dump collection status*/
 	bool is_ramdump_pend;
 	/* Flag to indicate dynamic process creation status*/
-	bool in_process_create;
+	enum fastrpc_process_create_state dsp_process_state;
 };
 
 static struct fastrpc_apps gfa;
@@ -1019,8 +1021,8 @@ static void fastrpc_buf_free(struct fastrpc_buf *buf, int cache)
 		}
 		hlist_add_head(&buf->hn, &fl->cached_bufs);
 		fl->num_cached_buf++;
-		spin_unlock(&fl->hlock);
 		buf->type = -1;
+		spin_unlock(&fl->hlock);
 		return;
 	}
 skip_buf_cache:
@@ -1224,7 +1226,7 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, int fd, uintptr_t va,
 		if ((fd < 0 || map->fd == fd) && map->raddr == va &&
 			map->raddr + map->len == va + len &&
 			map->refs == 1 && !map->is_persistent &&
-			/*Remove map if not used in process initialization*/
+			/* Remove map if not used in process initialization */
 			!map->is_filemap) {
 			match = map;
 			hlist_del_init(&map->hn);
@@ -1239,8 +1241,9 @@ static int fastrpc_mmap_remove(struct fastrpc_file *fl, int fd, uintptr_t va,
 	hlist_for_each_entry_safe(map, n, &fl->maps, hn) {
 		if ((fd < 0 || map->fd == fd) && map->raddr == va &&
 			map->raddr + map->len == va + len &&
-			map->refs == 1 &&
-			/*Remove map if not used in process initializaton*/
+			/* Remove if only one reference map and no context map */
+			map->refs == 1 && !map->ctx_refs &&
+			/* Remove map if not used in process initialization */
 			!map->is_filemap) {
 			match = map;
 			hlist_del_init(&map->hn);
@@ -1279,7 +1282,7 @@ static void fastrpc_mmap_free(struct fastrpc_mmap *map, uint32_t flags)
 				map->flags == ADSP_MMAP_REMOTE_HEAP_ADDR) {
 		spin_lock(&me->hlock);
 		map->refs--;
-		if (!map->refs && !map->is_persistent)
+		if (!map->refs && !map->is_persistent && !map->ctx_refs)
 			hlist_del_init(&map->hn);
 		spin_unlock(&me->hlock);
 		if (map->refs > 0) {
@@ -1290,7 +1293,7 @@ static void fastrpc_mmap_free(struct fastrpc_mmap *map, uint32_t flags)
 		}
 	} else {
 		map->refs--;
-		if (!map->refs)
+		if (!map->refs && !map->ctx_refs)
 			hlist_del_init(&map->hn);
 		if (map->refs > 0 && !flags)
 			return;
@@ -1405,6 +1408,7 @@ static int fastrpc_mmap_create(struct fastrpc_file *fl, int fd,
 	map->attr = attr;
 	map->frpc_md_index = -1;
 	map->is_filemap = false;
+	map->ctx_refs = 0;
 	ktime_get_real_ts64(&map->map_start_time);
 	if (mflags == ADSP_MMAP_HEAP_ADDR ||
 				mflags == ADSP_MMAP_REMOTE_HEAP_ADDR) {
@@ -2162,8 +2166,11 @@ static void context_free(struct smq_invoke_ctx *ctx)
 	spin_unlock(&ctx->fl->hlock);
 
 	mutex_lock(&ctx->fl->map_mutex);
-	for (i = 0; i < nbufs; ++i)
+	for (i = 0; i < nbufs; ++i) {
+		if (ctx->maps[i] && ctx->maps[i]->ctx_refs)
+			ctx->maps[i]->ctx_refs--;
 		fastrpc_mmap_free(ctx->maps[i], 0);
+	}
 	mutex_unlock(&ctx->fl->map_mutex);
 
 	fastrpc_buf_free(ctx->buf, 1);
@@ -2465,6 +2472,8 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 			err = fastrpc_mmap_create(ctx->fl, ctx->fds[i],
 					ctx->attrs[i], buf, len,
 					mflags, &ctx->maps[i]);
+		if (ctx->maps[i])
+			ctx->maps[i]->ctx_refs++;
 		mutex_unlock(&ctx->fl->map_mutex);
 		if (err)
 			goto bail;
@@ -2482,9 +2491,14 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 			err = fastrpc_mmap_create(ctx->fl, ctx->fds[i],
 					FASTRPC_ATTR_NOVA, 0, 0, dmaflags,
 					&ctx->maps[i]);
+		if (!err && ctx->maps[i])
+			ctx->maps[i]->ctx_refs++;
 		if (err) {
-			for (j = bufs; j < i; j++)
+			for (j = bufs; j < i; j++) {
+				if (ctx->maps[j] && ctx->maps[j]->ctx_refs)
+					ctx->maps[j]->ctx_refs--;
 				fastrpc_mmap_free(ctx->maps[j], 0);
+			}
 			mutex_unlock(&ctx->fl->map_mutex);
 			goto bail;
 		}
@@ -2544,8 +2558,8 @@ static int get_args(uint32_t kernel, struct smq_invoke_ctx *ctx)
 	totallen = ALIGN(totallen, BALIGN) + copylen;
 
 	/* allocate non -ion copy buffer */
-	/* Checking if copylen can be accomodated in metalen*/
-	/*if not allocating new buffer */
+	/* Checking if copylen can be accomodated in metalen */
+	/* if not allocating new buffer */
 	if (totallen <= (size_t)buf_page_size(metalen)) {
 		args = (uintptr_t)ctx->buf->virt + metalen;
 		ctx->copybuf = ctx->buf;
@@ -2851,6 +2865,8 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 			}
 		} else {
 			mutex_lock(&ctx->fl->map_mutex);
+			if (ctx->maps[i]->ctx_refs)
+				ctx->maps[i]->ctx_refs--;
 			fastrpc_mmap_free(ctx->maps[i], 0);
 			mutex_unlock(&ctx->fl->map_mutex);
 			ctx->maps[i] = NULL;
@@ -2861,8 +2877,11 @@ static int put_args(uint32_t kernel, struct smq_invoke_ctx *ctx,
 		if (!fdlist[i])
 			break;
 		if (!fastrpc_mmap_find(ctx->fl, (int)fdlist[i], 0, 0,
-					0, 0, &mmap))
+					0, 0, &mmap)) {
+			if (mmap && mmap->ctx_refs)
+				mmap->ctx_refs--;
 			fastrpc_mmap_free(mmap, 0);
+		}
 	}
 	mutex_unlock(&ctx->fl->map_mutex);
 	if (ctx->crc && crclist && rpra)
@@ -3789,13 +3808,13 @@ static int fastrpc_init_create_dynamic_process(struct fastrpc_file *fl,
 	} inbuf;
 
 	spin_lock(&fl->hlock);
-	if (fl->in_process_create) {
+	if (fl->dsp_process_state) {
 		err = -EALREADY;
 		ADSPRPC_ERR("Already in create dynamic process\n");
 		spin_unlock(&fl->hlock);
 		return err;
 	}
-	fl->in_process_create = true;
+	fl->dsp_process_state = PROCESS_CREATE_IS_INPROGRESS;
 	spin_unlock(&fl->hlock);
 	inbuf.pgid = fl->tgid;
 	inbuf.namelen = strlen(current->comm) + 1;
@@ -3950,9 +3969,11 @@ bail:
 		fastrpc_mmap_free(file, 0);
 		mutex_unlock(&fl->map_mutex);
 	}
+
+	spin_lock(&fl->hlock);
+	locked = 1;
 	if (err) {
-		spin_lock(&fl->hlock);
-		locked = 1;
+		fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 		if (!IS_ERR_OR_NULL(fl->init_mem)) {
 			init_mem = fl->init_mem;
 			fl->init_mem = NULL;
@@ -3960,14 +3981,14 @@ bail:
 			locked = 0;
 			fastrpc_buf_free(init_mem, 0);
 		}
-		if (locked) {
-			spin_unlock(&fl->hlock);
-			locked = 0;
-		}
+	} else {
+		fl->dsp_process_state = PROCESS_CREATE_SUCCESS;
 	}
-	spin_lock(&fl->hlock);
-	fl->in_process_create = false;
-	spin_unlock(&fl->hlock);
+	if (locked) {
+		spin_unlock(&fl->hlock);
+		locked = 0;
+	}
+
 	return err;
 }
 
@@ -5391,7 +5412,7 @@ skip_dump_wait:
 	spin_lock(&fl->apps->hlock);
 	hlist_del_init(&fl->hn);
 	fl->is_ramdump_pend = false;
-	fl->in_process_create = false;
+	fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 	spin_unlock(&fl->apps->hlock);
 	kfree(fl->debug_buf);
 	kfree(fl->gidlist.gids);
@@ -5810,7 +5831,7 @@ static int fastrpc_device_open(struct inode *inode, struct file *filp)
 	fl->qos_request = 0;
 	fl->dsp_proc_init = 0;
 	fl->is_ramdump_pend = false;
-	fl->in_process_create = false;
+	fl->dsp_process_state = PROCESS_CREATE_DEFAULT;
 	init_completion(&fl->work);
 	fl->file_close = FASTRPC_PROCESS_DEFAULT_STATE;
 	filp->private_data = fl;
